@@ -15,11 +15,18 @@
  * the app can add `:root.reduce-effects { ... }` overrides the same way it
  * already adds `@media (prefers-reduced-motion: reduce) { ... }` blocks.
  *
- * SCOPE NOTE (from the Settings lane's build pass): this module only owns the
- * flag + the `reduce-effects` class infrastructure. It does NOT yet chase
- * down every animated component in the app to make it consume the class —
- * that's real follow-up work once this lands. See OnboardingSettingsSection's
- * file header for the current list of what still needs wiring.
+ * FOLLOW-UP (closed): this module now also exports `isReduceEffectsActive()`
+ * (a synchronous, non-React read of the live `<html>` class — safe to call
+ * from a one-off effect or event handler) and `onReduceEffectsChange()` (a
+ * MutationObserver-based subscription for components that stay mounted
+ * across a screen switch and need to react live when a *different* mounted
+ * component — e.g. the Settings toggle — flips the flag; the two hook
+ * instances have independent React state and don't otherwise know about each
+ * other). Consumers: AmbientGlow.tsx (live), IntroCinematic.tsx and
+ * OnboardingOverlay.tsx (one-off reads), plus the `:root.reduce-effects`
+ * CSS overrides in globals.css and AgentPoolWorld.css. Not every animated
+ * component in the app consumes this yet — see those files' own comments for
+ * what's covered vs. still outstanding.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -41,6 +48,38 @@ function readStoredValue(): boolean {
 function applyHtmlClass(enabled: boolean): void {
   if (typeof document === 'undefined') return;
   document.documentElement.classList.toggle(HTML_CLASS, enabled);
+}
+
+/** Synchronous, non-React read of the live `<html class="reduce-effects">`
+ *  marker. Use this in one-off checks (a gate that only runs once, or a
+ *  `useLayoutEffect` that already reruns per relevant event) where mounting
+ *  the full `useReduceEffects()` hook would be overkill. Always reflects the
+ *  current DOM state, regardless of which component last changed it. */
+export function isReduceEffectsActive(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.documentElement.classList.contains(HTML_CLASS);
+}
+
+/** Subscribes to changes in the manual reduce-effects flag by watching the
+ *  `<html>` element's `class` attribute directly — the actual source of
+ *  truth once `applyHtmlClass()` has run — rather than relying on React
+ *  state from a particular `useReduceEffects()` instance. This is what lets
+ *  a long-lived component (mounted once at the page root, e.g. AmbientGlow)
+ *  react live when a completely different mounted component (e.g. the
+ *  Settings toggle, in another part of the tree) flips the flag. Calls back
+ *  immediately with the current value, then on every subsequent change.
+ *  Returns an unsubscribe function. */
+export function onReduceEffectsChange(callback: (enabled: boolean) => void): () => void {
+  if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') {
+    callback(false);
+    return () => {};
+  }
+  callback(isReduceEffectsActive());
+  const observer = new MutationObserver(() => {
+    callback(isReduceEffectsActive());
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  return () => observer.disconnect();
 }
 
 export interface ReduceEffectsControls {

@@ -30,7 +30,10 @@
  * "jump straight to end state, no animation" means jumping straight to the
  * end state of the WHOLE FEATURE — the app — so reduced-motion visitors never
  * see the overlay at all: the intro is marked seen immediately and no WebGL
- * context is ever spun up for it.
+ * context is ever spun up for it. The manual reduce-effects toggle
+ * (src/lib/reduce-effects.ts) takes the exact same branch — this only reads
+ * it once, in the gate-check effect below, since the intro plays at most once
+ * ever and the flag can't meaningfully change mid-check.
  *
  * Teardown: unmounting <Flubber3D> runs that component's own effect cleanup,
  * which calls slotHandle.dispose() exactly the way every other Flubber3D
@@ -44,6 +47,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import gsap from 'gsap';
 import Flubber3D from './Flubber3D';
 import type { FlubberSlotHandle } from '../lib/flubber3d/host';
+import { isReduceEffectsActive } from '../lib/reduce-effects';
 import './IntroCinematic.css';
 
 type Phase = 'checking' | 'playing' | 'done';
@@ -89,9 +93,10 @@ export default function IntroCinematic({ children }: { children: ReactNode }) {
           return;
         }
         const reduced =
-          typeof window !== 'undefined' &&
-          typeof window.matchMedia === 'function' &&
-          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          (typeof window !== 'undefined' &&
+            typeof window.matchMedia === 'function' &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+          isReduceEffectsActive();
         if (reduced) {
           completeIntro();
           return;

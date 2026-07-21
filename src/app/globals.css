@@ -122,6 +122,22 @@ body::after {
   }
 }
 
+/* Manual override (src/lib/reduce-effects.ts, flipped from Settings) — same
+   effect as the OS-level query above, applied whenever <html> carries
+   .reduce-effects, independent of the visitor's actual OS preference. */
+:root.reduce-effects body::before,
+:root.reduce-effects body::after {
+  animation: none;
+}
+:root.reduce-effects body::before {
+  opacity: 0.85;
+  transform: none;
+}
+:root.reduce-effects body::after {
+  opacity: 0.7;
+  transform: none;
+}
+
 /* BackgroundField removed (LANE 7). These rules kept for reference only if
    the component ever re-mounts. The breathing wash above + the AmbientGlow
    2D-canvas mote layer now provide the living green base; per-panel slime
@@ -183,4 +199,19 @@ body::after {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Manual override twin of the universal kill-switch above — same effect,
+   gated on :root.reduce-effects instead of the OS media query. This is the
+   one rule that gives the Settings toggle real teeth across the whole app
+   for anything driven by CSS animation/transition (GSAP timelines set inline
+   styles directly and aren't touched by either rule — see IntroCinematic.tsx
+   and OnboardingOverlay.tsx, which gate those in JS instead). */
+:root.reduce-effects *,
+:root.reduce-effects *::before,
+:root.reduce-effects *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

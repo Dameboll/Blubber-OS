@@ -32,11 +32,14 @@
  *
  * Visuals are intentionally restrained (dark card, single green accent,
  * GSAP fade/rise between steps) — no WebGL/3D reuse here, that's explicitly
- * out of scope for a first-run overlay that has to feel instant.
+ * out of scope for a first-run overlay that has to feel instant. The one GSAP
+ * beat (card fade/rise on step change) is skipped under prefers-reduced-motion
+ * AND the manual reduce-effects toggle — see shouldSkipMotion() below.
  */
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
+import { isReduceEffectsActive } from '../../lib/reduce-effects';
 import './OnboardingOverlay.css';
 
 type Step = 'welcome' | 'detecting' | 'found' | 'empty' | 'notfound' | 'summary';
@@ -56,8 +59,16 @@ export interface OnboardingOverlayProps {
 
 const MIN_DETECT_DISPLAY_MS = 550;
 
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Checked once per step transition (see the useLayoutEffect below, which
+// reruns on every `step` change) — so this doubles as a live-enough read of
+// the manual reduce-effects toggle without needing a subscription: honors
+// both the OS-level preference and the Settings-driven flag, same as
+// IntroCinematic and AmbientGlow.
+function shouldSkipMotion(): boolean {
+  return (
+    (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+    isReduceEffectsActive()
+  );
 }
 
 export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps) {
@@ -70,7 +81,7 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
   // overlay uses. Skipped entirely under prefers-reduced-motion.
   useLayoutEffect(() => {
     const node = cardRef.current;
-    if (!node || prefersReducedMotion()) return;
+    if (!node || shouldSkipMotion()) return;
     gsap.fromTo(node, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out' });
   }, [step]);
 

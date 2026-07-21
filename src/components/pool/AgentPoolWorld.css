@@ -315,3 +315,10 @@
   .pw-resident--splat .pw-resident__shadow { animation: none; }
   .pw__ball { transition: none; }
 }
+
+/* Manual override twin (src/lib/reduce-effects.ts, flipped from Settings) —
+   same effect as the OS-level query above, gated on :root.reduce-effects. */
+:root.reduce-effects .pw__sheen { animation: none; }
+:root.reduce-effects .pw-resident--nap .pw-resident__z { animation: none; opacity: 0.7; }
+:root.reduce-effects .pw-resident--splat .pw-resident__shadow { animation: none; }
+:root.reduce-effects .pw__ball { transition: none; }

@@ -18,6 +18,12 @@
  *     (IntersectionObserver), so it costs nothing in a background tab.
  *   - prefers-reduced-motion => render nothing; the breathing gradient in
  *     globals.css carries the look statically.
+ *   - the manual `reduce-effects` toggle (src/lib/reduce-effects.ts, flipped
+ *     from Settings) does the exact same thing. AmbientGlow is mounted once
+ *     at the page root and stays alive while Settings is opened elsewhere in
+ *     the tree, so this listens live via onReduceEffectsChange() rather than
+ *     a one-off read — the mote layer disappears the instant the toggle
+ *     flips, same as it already does for the OS-level preference.
  *
  * Living-system input: subscribes the existing useLiveUsage hook. When real
  * tokens burn, `intensity` rises and the motes glow brighter and drift faster
@@ -28,6 +34,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useLiveUsage } from '../hooks/useLiveUsage';
+import { onReduceEffectsChange } from '../lib/reduce-effects';
 import './AmbientGlow.css';
 
 const MAX_MOTES = 80;
@@ -69,15 +76,28 @@ export default function AmbientGlow() {
 
   // Start false so SSR and the first client render agree (canvas present),
   // then resolve the real preference on the client to avoid a hydration
-  // mismatch. When it flips true the canvas unmounts and the loop tears down.
+  // mismatch. When it flips true (OS-level OR the manual toggle) the canvas
+  // unmounts and the loop tears down. Two independent sources feed one flag:
+  // the OS media query (its own `change` event) and the manual reduce-effects
+  // class (via onReduceEffectsChange's MutationObserver) — either one being
+  // true wins.
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const apply = () => setReduced(mq.matches);
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
+    let manualReduced = false;
+    const recompute = () => setReduced(mq.matches || manualReduced);
+    mq.addEventListener('change', recompute);
+    // Fires immediately with the current value, then on every future change —
+    // this alone covers the initial read, no separate recompute() call needed.
+    const unsubscribeManual = onReduceEffectsChange((enabled) => {
+      manualReduced = enabled;
+      recompute();
+    });
+    return () => {
+      mq.removeEventListener('change', recompute);
+      unsubscribeManual();
+    };
   }, []);
 
   // Keep the live intensity in a ref so the SSE/decay re-renders never restart

@@ -39,6 +39,7 @@
   ],
   "exclude": [
     "node_modules",
-    "blender/v3/iterations"
+    "blender/v3/iterations",
+    "supabase/functions"
   ]
 }

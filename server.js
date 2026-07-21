@@ -89,6 +89,12 @@ function isValidWsToken(candidate) {
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
+// Next's own websocket upgrades (dev-mode HMR at /_next/webpack-hmr). Before
+// this, the upgrade handler below destroyed EVERY non-/ws upgrade socket, so
+// the dev client's HMR connection died on arrival and retried in a loop
+// forever — broken hot reload AND a steady drip of doomed connection attempts
+// competing for the browser's 6-per-origin connection budget.
+const nextUpgradeHandler = app.getUpgradeHandler();
 
 app.prepare().then(() => {
   const server = http.createServer((req, res) => {
@@ -113,7 +119,9 @@ app.prepare().then(() => {
   server.on("upgrade", (req, socket, head) => {
     const { pathname, query } = parse(req.url, true);
     if (pathname !== WS_PATH) {
-      socket.destroy();
+      // Hand everything that isn't OUR pty socket to Next (dev HMR etc.)
+      // instead of killing it — see nextUpgradeHandler comment above.
+      nextUpgradeHandler(req, socket, head);
       return;
     }
     if (!isValidWsToken(query.token)) {
@@ -202,6 +210,17 @@ app.prepare().then(() => {
     console.error("[server] listen error:", err);
     process.exit(1);
   });
+
+  // Node's default keepAliveTimeout is 5s. Any client that reuses a pooled
+  // keep-alive socket after >5s of idle (easy when dev-mode compiles make
+  // request gaps long) races the server's close and gets ECONNRESET.
+  // Browsers silently retry; plain HTTP clients (Playwright's request
+  // fixture, scripts, the Electron shell) surface it as a hard error.
+  // Standard remedy: hold sockets open longer than any sane client pool
+  // idle time, with headersTimeout kept just above it (Node requires
+  // headersTimeout > keepAliveTimeout to avoid a different reset bug).
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
 
   server.listen(port, BIND_HOST, () => {
     console.log(`> Blubber ready on http://${hostname}:${port} (ws: ${WS_PATH})`);

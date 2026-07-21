@@ -141,16 +141,33 @@ test.describe('IntroCinematic hardening', () => {
       request,
     }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
-      await resetFirstRun(request);
-      await page.goto('/');
 
+      // The cinematic auto-completes on its own REAL-TIME GSAP clock — it
+      // does not wait for the test. The old fixed 2.2s sleep here regularly
+      // outlived the whole intro on a loaded machine (goto alone can eat most
+      // of the intro's lifetime), leaving boundingBox() staring at an overlay
+      // that had already unmounted. Instead: capture both boxes the moment
+      // the overlay + wordmark exist (the wordmark node is mounted from the
+      // start — the 1.9s timeline crossfade only animates its opacity, which
+      // boundingBox ignores), and if the intro still managed to finish first,
+      // reset and replay it — the geometry under test is identical every play.
+      let overlayBox: { x: number; y: number; width: number; height: number } | null = null;
+      let wordmarkBox: { x: number; y: number; width: number; height: number } | null = null;
       const introOverlay = page.locator('.intro-cinematic');
-      await expect(introOverlay).toBeVisible();
-      // Let the wordmark crossfade in (scheduled at 1.9s in the GSAP timeline).
-      await page.waitForTimeout(2200);
 
-      const overlayBox = await introOverlay.boundingBox();
-      const wordmarkBox = await page.locator('.intro-cinematic__wordmark').boundingBox();
+      for (let attempt = 0; attempt < 3 && (!overlayBox || !wordmarkBox); attempt += 1) {
+        await resetFirstRun(request);
+        await page.goto('/');
+        try {
+          await introOverlay.waitFor({ state: 'visible', timeout: 30_000 });
+          await page.locator('.intro-cinematic__wordmark').waitFor({ state: 'attached', timeout: 10_000 });
+          overlayBox = await introOverlay.boundingBox();
+          wordmarkBox = await page.locator('.intro-cinematic__wordmark').boundingBox();
+        } catch {
+          // Intro completed before capture on this pass — loop replays it.
+        }
+      }
+
       expect(overlayBox).not.toBeNull();
       expect(wordmarkBox).not.toBeNull();
 

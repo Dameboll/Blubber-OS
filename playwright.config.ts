@@ -16,8 +16,11 @@
  * SERIAL BY DESIGN: workers is pinned to 1 and fullyParallel is off. This
  * app's "state" is one shared SQLite file behind one shared dev server --
  * two tests mutating onboarding/intro/demo state at the same time would race
- * each other. Spec files are numbered (01-06) so they also run in a stable,
- * predictable order (master reset last).
+ * each other. Spec files are numbered (00-07) so they also run in a stable,
+ * predictable order: 00-warmup FIRST (pre-compiles every dev-mode route so
+ * the app's SSE streams + poll burst can't starve Chromium's 6-connection
+ * pool while routes cold-compile -- see e2e/00-warmup.spec.ts's header for
+ * the full mechanism), master reset LAST.
  */
 
 import { defineConfig, devices } from 'playwright/test';
@@ -25,10 +28,20 @@ import { defineConfig, devices } from 'playwright/test';
 const PORT = 3100;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
+// BUDGETS ARE SIZED FOR A CONTENDED MACHINE, NOT AN IDLE ONE. This suite
+// runs on a real dev box that legitimately also carries a dev server and a
+// long-running soak harness (its headless browser alone can pin a core, and
+// the box has been observed at 100% CPU during runs). Under that load a
+// dev-mode route compile that takes 1-3s idle can take 30s+, and every
+// assertion that waits on a round trip inherits that. The old idle-machine
+// budgets (10s expect / 15s action / 30s nav) were the single biggest source
+// of "pre-existing failures" that had nothing wrong under them — the same
+// specs pass with room to spare once budgets fit the environment. These
+// numbers change WHEN a run fails, never WHAT is asserted.
 export default defineConfig({
   testDir: './e2e',
-  timeout: 60_000,
-  expect: { timeout: 10_000 },
+  timeout: 180_000,
+  expect: { timeout: 30_000 },
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -39,8 +52,8 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'off',
-    actionTimeout: 15_000,
-    navigationTimeout: 30_000,
+    actionTimeout: 45_000,
+    navigationTimeout: 90_000,
   },
 
   projects: [

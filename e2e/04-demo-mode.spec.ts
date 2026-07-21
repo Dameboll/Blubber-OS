@@ -39,8 +39,16 @@ test.describe('Demo mode', () => {
     // Activity Feed (Agents tab) shows the bundled demo personas (Scout /
     // Patch / Scribe / Herald from public/demo/demo-dataset.json) -- never a
     // real agent/skill name off this machine.
+    //
+    // 90s budget, deliberately: clicking Agents fires a burst of fetches
+    // (roster, spawned, live, top-agents, recent) into a browser connection
+    // pool the app's SSE stream + pollers already occupy; on this contended
+    // dev box that queue has been traced draining in tens of seconds. The
+    // screen holds its skeleton until roster+spawned resolve, so the feed
+    // legitimately cannot appear until the queue clears. Content asserted is
+    // unchanged — only the drain allowance is bigger.
     await page.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: 'Agents' }).click();
-    await expect(page.getByText(/Agent (Scout|Patch|Scribe|Herald)/).first()).toBeVisible();
+    await expect(page.getByText(/Agent (Scout|Patch|Scribe|Herald)/).first()).toBeVisible({ timeout: 90_000 });
   });
 
   test('?demo=0 turns Demo Mode back off', async ({ page }) => {

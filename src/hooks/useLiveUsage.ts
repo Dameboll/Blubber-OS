@@ -15,6 +15,29 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+// ONE shared EventSource for the whole app, refcounted across hook mounts.
+// Before this, every mounted useLiveUsage() (SessionProvider + LiveUsageMeter
+// etc.) opened its OWN /api/live stream — two-plus permanently-open connections against
+// the browser's hard 6-per-origin HTTP/1.1 limit, permanently starving the
+// pool the app's dozen pollers also share. One stream carries the exact same
+// events to every listener; N streams was pure waste.
+let sharedSource: EventSource | null = null;
+let sharedRefCount = 0;
+
+function acquireLiveSource(): EventSource {
+  if (!sharedSource) sharedSource = new EventSource('/api/live');
+  sharedRefCount += 1;
+  return sharedSource;
+}
+
+function releaseLiveSource(): void {
+  sharedRefCount = Math.max(0, sharedRefCount - 1);
+  if (sharedRefCount === 0 && sharedSource) {
+    sharedSource.close();
+    sharedSource = null;
+  }
+}
+
 export interface LiveUsageState {
   totalToday: number;
   tokensInDelta: number;
@@ -50,7 +73,7 @@ export function useLiveUsage(): LiveUsageState {
   useEffect(() => {
     if (typeof window === 'undefined' || typeof EventSource === 'undefined') return;
 
-    const source = new EventSource('/api/live');
+    const source = acquireLiveSource();
 
     const handleOpen = () => setState((prev) => ({ ...prev, connected: true }));
     const handleErrorEvt = () => setState((prev) => ({ ...prev, connected: false }));
@@ -80,6 +103,12 @@ export function useLiveUsage(): LiveUsageState {
     source.addEventListener('error', handleErrorEvt);
     source.addEventListener('usage', handleUsage as EventListener);
 
+    // A late subscriber to the SHARED stream missed the original 'open'
+    // event — reflect the live connection state it joined into.
+    if (source.readyState === EventSource.OPEN) {
+      setState((prev) => ({ ...prev, connected: true }));
+    }
+
     const decayTimer = setInterval(() => {
       if (activityRef.current <= 0.001) return;
       activityRef.current *= DECAY_FACTOR;
@@ -91,7 +120,9 @@ export function useLiveUsage(): LiveUsageState {
       source.removeEventListener('open', handleOpen);
       source.removeEventListener('error', handleErrorEvt);
       source.removeEventListener('usage', handleUsage as EventListener);
-      source.close();
+      // Refcounted: the underlying stream only actually closes when the LAST
+      // subscribed hook unmounts (see acquireLiveSource/releaseLiveSource).
+      releaseLiveSource();
     };
   }, []);
 

@@ -8,8 +8,10 @@ data/usage.db-shm
 .env.local
 npm-debug.log*
 .next-build/
+.next-soak/
 .playwright-mcp/
 *.log
+logs/
 data/pet.db
 data/pet.db-journal
 data/pet.db-wal

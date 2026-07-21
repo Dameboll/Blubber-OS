@@ -54,10 +54,24 @@ function applyHtmlClass(enabled: boolean): void {
  *  marker. Use this in one-off checks (a gate that only runs once, or a
  *  `useLayoutEffect` that already reruns per relevant event) where mounting
  *  the full `useReduceEffects()` hook would be overkill. Always reflects the
- *  current DOM state, regardless of which component last changed it. */
+ *  current DOM state, regardless of which component last changed it.
+ *
+ *  FIX (hardening pass, verified via e2e/07-intro-hardening.spec.ts): the
+ *  `<html>` class is only ever APPLIED by `useReduceEffects()`'s own effect,
+ *  which is only mounted inside the Settings screen
+ *  (OnboardingSettingsSection.tsx). A one-off reader that runs before the
+ *  user has ever opened Settings in this session -- which is exactly what
+ *  IntroCinematic's and OnboardingOverlay's gate checks do, on the very
+ *  first paint of a fresh boot -- would read `false` even when a PREVIOUS
+ *  session's toggle is sitting in localStorage as `true`, because nothing
+ *  has had a chance to sync it onto the DOM yet. Falling back to the
+ *  persisted value directly closes that gap: the class stays the fast path
+ *  for the common case (already synced this session), and storage is the
+ *  authoritative source of truth underneath it either way. */
 export function isReduceEffectsActive(): boolean {
   if (typeof document === 'undefined') return false;
-  return document.documentElement.classList.contains(HTML_CLASS);
+  if (document.documentElement.classList.contains(HTML_CLASS)) return true;
+  return readStoredValue();
 }
 
 /** Subscribes to changes in the manual reduce-effects flag by watching the

@@ -25,6 +25,7 @@ require("ts-node").register({
 });
 
 const http = require("http");
+const crypto = require("node:crypto");
 const { parse } = require("url");
 const next = require("next");
 const { WebSocketServer } = require("ws");
@@ -50,8 +51,41 @@ const {
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
+// The actual socket bind address (see server.listen below). Explicit IPv4
+// loopback -- NOT the `hostname` string above, which is only used for Next's
+// internal config and the startup log line. Passing "localhost" to
+// server.listen() would go through DNS/hosts resolution and can land on
+// either 127.0.0.1 or ::1 (or, on a misconfigured host, something else)
+// depending on the OS. Binding the literal loopback address is what actually
+// guarantees this server is unreachable from any other device on the LAN.
+const BIND_HOST = "127.0.0.1";
 const port = parseInt(process.env.PORT || "3000", 10);
 const WS_PATH = "/ws";
+// Same-origin-only token endpoint. Served directly by this file (not a Next
+// route) so the token that's handed out and the token checked on WS upgrade
+// are guaranteed to be the exact same in-memory value.
+const WS_TOKEN_PATH = "/__ws-auth";
+
+// A single per-process secret, generated fresh at server start. Required as
+// a `?token=` query param on every PTY WebSocket upgrade. This exists
+// because a localhost bind alone doesn't stop an unrelated page open in the
+// same browser (e.g. a malicious tab) from trying to drive this PTY over
+// WebSocket -- browsers don't apply same-origin restrictions to opening a
+// WebSocket connection the way they do to reading a fetch() response. The
+// token endpoint below IS same-origin-protected (default CORS blocks a
+// foreign page's JS from reading the response body), so a foreign page can
+// never learn the token and therefore can never open an authorized PTY
+// socket. Deliberately not a full auth system -- one secret, one
+// timing-safe comparison.
+const wsAuthToken = crypto.randomBytes(32).toString("hex");
+
+function isValidWsToken(candidate) {
+  if (typeof candidate !== "string" || candidate.length === 0) return false;
+  const given = Buffer.from(candidate);
+  const expected = Buffer.from(wsAuthToken);
+  if (given.length !== expected.length) return false;
+  return crypto.timingSafeEqual(given, expected);
+}
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -59,14 +93,31 @@ const handle = app.getRequestHandler();
 app.prepare().then(() => {
   const server = http.createServer((req, res) => {
     const parsedUrl = parse(req.url, true);
+    if (parsedUrl.pathname === WS_TOKEN_PATH) {
+      // No CORS headers are set here on purpose: without
+      // Access-Control-Allow-Origin, the browser lets the request go out but
+      // blocks any foreign-origin page's JS from reading the response body,
+      // so only same-origin app code can ever actually obtain the token.
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      });
+      res.end(JSON.stringify({ token: wsAuthToken }));
+      return;
+    }
     handle(req, res, parsedUrl);
   });
 
   const wss = new WebSocketServer({ noServer: true });
 
   server.on("upgrade", (req, socket, head) => {
-    const { pathname } = parse(req.url);
+    const { pathname, query } = parse(req.url, true);
     if (pathname !== WS_PATH) {
+      socket.destroy();
+      return;
+    }
+    if (!isValidWsToken(query.token)) {
+      socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
       socket.destroy();
       return;
     }
@@ -152,7 +203,7 @@ app.prepare().then(() => {
     process.exit(1);
   });
 
-  server.listen(port, () => {
+  server.listen(port, BIND_HOST, () => {
     console.log(`> DameOS ready on http://${hostname}:${port} (ws: ${WS_PATH})`);
   });
 });

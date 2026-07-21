@@ -36,13 +36,35 @@ const OUTPUT_RING_MAX = 120;
 // every other path free for Next.js. Update if server.js wires a different path.
 const WS_PATH = "/ws";
 
+// Same-origin token endpoint server.js serves directly (see server.js for
+// why this is safe from a foreign page reading the token: no CORS headers
+// means only same-origin JS can read the response body). The PTY WebSocket
+// upgrade is rejected without a matching `?token=`.
+const WS_TOKEN_PATH = "/__ws-auth";
+
 const INITIAL_RECONNECT_DELAY_MS = 500;
 const MAX_RECONNECT_DELAY_MS = 8000;
 
-function buildWsUrl(): string {
+function buildWsUrl(token: string): string {
   if (typeof window === "undefined") return "";
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}${WS_PATH}`;
+  const query = token ? `?token=${encodeURIComponent(token)}` : "";
+  return `${protocol}//${window.location.host}${WS_PATH}${query}`;
+}
+
+/** Fetches the per-process WS auth token. Same-origin only -- see server.js. */
+async function fetchWsToken(): Promise<string> {
+  try {
+    const res = await fetch(WS_TOKEN_PATH, { cache: "no-store" });
+    if (!res.ok) return "";
+    const data = (await res.json()) as { token?: string };
+    return data.token ?? "";
+  } catch {
+    // Token endpoint unreachable -- connecting without one will simply get
+    // rejected by the server's upgrade handler, and the existing reconnect
+    // backoff below takes over.
+    return "";
+  }
 }
 
 class WsClient {
@@ -97,8 +119,19 @@ class WsClient {
     if (typeof window === "undefined") return;
     if (this.state === "connecting" || this.state === "open") return;
 
+    // Set synchronously so concurrent connect() callers short-circuit above
+    // while the token fetch (below) is in flight.
     this.state = "connecting";
-    const socket = new WebSocket(buildWsUrl());
+    void this.openSocket();
+  }
+
+  private async openSocket(): Promise<void> {
+    const token = await fetchWsToken();
+    // Another connect cycle may have already completed (or been superseded)
+    // while the token fetch was in flight -- don't clobber a live socket.
+    if (this.state !== "connecting") return;
+
+    const socket = new WebSocket(buildWsUrl(token));
     this.socket = socket;
 
     socket.addEventListener("open", this.handleOpen);

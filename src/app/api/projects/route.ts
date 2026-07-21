@@ -15,8 +15,8 @@
  * GET returns the bundled demo dataset's project names under a placeholder
  * HOBBY root instead of reading the real filesystem -- a demo visitor's
  * machine has no ACTIVE/HOBBY/general/research folders to list. POST (real
- * folder creation via scaffoldProject) is intentionally left untouched here —
- * see this lane's INTEGRATION REPORT for why that still needs a follow-up.
+ * folder creation via scaffoldProject) is also gated on the same cookie --
+ * a demo visitor must never be able to create a real folder on the host.
  */
 
 import fs from "node:fs/promises";
@@ -78,8 +78,19 @@ export async function GET(request: Request) {
  * Creates a REAL new project folder (Item 7) under one of the four fixed roots
  * and scaffolds the chosen template. All validation + the path fence live in
  * scaffoldProject — this handler just shuttles the request through.
+ *
+ * Demo Mode: a demo visitor must never be able to write to the host
+ * filesystem, so this is gated on the same `blubber_demo` cookie check GET
+ * uses, before scaffoldProject (or any fs access) ever runs.
  */
 export async function POST(request: Request) {
+  if (isDemoModeRequest(request)) {
+    return NextResponse.json(
+      { ok: false, error: "Project creation is disabled in Demo Mode" },
+      { status: 403 }
+    );
+  }
+
   let body: { root?: string; name?: string; template?: string };
   try {
     body = (await request.json()) as typeof body;

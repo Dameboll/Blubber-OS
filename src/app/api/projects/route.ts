@@ -1,15 +1,15 @@
 /**
  * GET /api/projects
  *
- * Lists immediate subdirectories of the four root folders Dame's terminal
+ * Lists immediate subdirectories of the four root folders the terminal
  * workflow already uses, for the TabBar folder switcher. Root paths are
- * derived from the home directory so they resolve correctly on this machine
+ * derived from the home directory so they resolve correctly on any machine
  * while matching the exact fixed list in PLAN.md:
  *
- *   C:\Users\jeffh\Development\ACTIVE\
- *   C:\Users\jeffh\Development\HOBBY\
- *   C:\Users\jeffh\Development\general\
- *   C:\Users\jeffh\Development\research\
+ *   <home>\Development\ACTIVE\
+ *   <home>\Development\HOBBY\
+ *   <home>\Development\general\
+ *   <home>\Development\research\
  */
 
 import fs from "node:fs/promises";

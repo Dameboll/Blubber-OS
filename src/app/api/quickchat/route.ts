@@ -31,6 +31,7 @@
 import { NextResponse } from "next/server";
 import { spawn } from "node:child_process";
 import os from "node:os";
+import path from "node:path";
 import * as quickchatStore from "../../../server/quickchat-store";
 
 export const runtime = "nodejs";
@@ -131,7 +132,7 @@ function runClaudeOneShot(message: string, resumeId: string | null): Promise<One
     delete childEnv.CLAUDECODE;
 
     const child = spawn(file, args, {
-      cwd: 'C:/Users/jeffh/Development/general',
+      cwd: path.join(os.homedir(), 'Development', 'general'),
       windowsHide: true,
       env: childEnv,
     });

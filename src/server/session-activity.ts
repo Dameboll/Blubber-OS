@@ -60,10 +60,11 @@ function resolveSlugDir(projectName: string): string | null {
 
   // Claude Code slugs a project dir by flattening its FULL absolute path
   // (every non-alphanumeric char -> '-'), not just the "Development/<root>/
-  // <name>" tail -- e.g. "C:\Users\jeffh\Development\HOBBY\dame-os" becomes
-  // "C--Users-jeffh-Development-HOBBY-dame-os" (verified on disk). Slugifying
-  // only the tail (as first written) silently produced a dir that never
-  // existed on Windows, so this must slugify the whole candidate path.
+  // <name>" tail -- e.g. "C:\Users\<you>\Development\HOBBY\some-project"
+  // becomes "C--Users-you-Development-HOBBY-some-project" (verified on
+  // disk). Slugifying only the tail (as first written) silently produced a
+  // dir that never existed on Windows, so this must slugify the whole
+  // candidate path.
   let resolved: string | null = null;
   for (const root of DEV_ROOT_LABELS) {
     const candidate = path.join(DEV_ROOT, root, projectName);

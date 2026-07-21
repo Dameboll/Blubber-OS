@@ -103,6 +103,7 @@ import { useLiveUsage, type LiveUsageState } from '../hooks/useLiveUsage';
 import { wsClient } from '../lib/ws-client';
 import { classifyOutput, stripAnsi } from '../lib/terminal-signals';
 import { narrate } from '../lib/flubber3d/narration';
+import { DEV_ROOT } from '../lib/dev-root';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -309,8 +310,8 @@ const INERT_SESSION: SessionState = {
 const KNOWN_DEV_ROOTS = ['ACTIVE', 'HOBBY', 'general', 'research'];
 
 /** Derives (projectRoot, projectName) from a real tab cwd, e.g.
- * "C:\Users\jeffh\Development\HOBBY\dame-os" -> { projectRoot: 'HOBBY',
- * projectName: 'dame-os' }. Both null when the cwd doesn't fall under a
+ * "C:\Users\<you>\Development\HOBBY\some-project" -> { projectRoot: 'HOBBY',
+ * projectName: 'some-project' }. Both null when the cwd doesn't fall under a
  * known Development root (e.g. the folder picker's generic fallback cwd) —
  * an honest unknown, not a guess. */
 function deriveProjectIdentity(cwd: string): { projectRoot: string | null; projectName: string | null } {
@@ -484,13 +485,13 @@ export function SessionProvider({ children, onRequestTerminalNav }: SessionProvi
   );
 
   const openTab = useCallback(() => {
-    spawnOrQueue('terminal', 'C:\\Users\\jeffh\\Development');
+    spawnOrQueue('terminal', DEV_ROOT);
     narrate('New terminal coming up.', { mood: 'focused' });
   }, [spawnOrQueue]);
 
   const openProjectInTab = useCallback(
     (root: string, name: string) => {
-      spawnOrQueue(name, `C:\\Users\\jeffh\\Development\\${root}\\${name}`);
+      spawnOrQueue(name, `${DEV_ROOT}\\${root}\\${name}`);
       narrate(`Opening ${name}.`, { mood: 'focused' });
     },
     [spawnOrQueue],

@@ -55,6 +55,7 @@ import TerminalPane from './TerminalPane';
 import { type AgentInfo } from './AgentCard';
 import { VoiceButton } from './VoiceButton';
 import { wsClient } from '../lib/ws-client';
+import { DEV_ROOT } from '../lib/dev-root';
 import './TabBar.css';
 
 // ---- /api/projects + /api/agents response shapes -------------------------
@@ -121,7 +122,7 @@ export interface TabBarProps {
 type LauncherMode = 'folder' | 'agent';
 
 // Used only if /api/projects returns nothing at all (empty state, not an error).
-const FALLBACK_CWD = 'C:\\Users\\jeffh\\Development';
+const FALLBACK_CWD = DEV_ROOT;
 
 function joinPath(root: string, name: string): string {
   const sep = root.includes('\\') ? '\\' : '/';

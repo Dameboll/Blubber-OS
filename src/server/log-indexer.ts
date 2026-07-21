@@ -74,7 +74,7 @@ function walkJsonlFiles(dir: string): string[] {
 // event is attributed to an actual project or honestly left null.
 // ---------------------------------------------------------------------------
 
-const DEV_ROOT = "C:\\Users\\jeffh\\Development";
+const DEV_ROOT = path.join(os.homedir(), "Development");
 const DEV_ROOT_LABELS = ["ACTIVE", "HOBBY", "general", "research"] as const;
 
 /** Slug-sanitize the way ~/.claude does: every non-alphanumeric becomes '-'. */

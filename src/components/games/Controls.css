@@ -1,0 +1,78 @@
+/* Shared on-screen pointer/touch controls -- see Controls.tsx header. */
+
+.game-controls-row {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.85rem;
+}
+
+.game-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 44px);
+  grid-template-rows: repeat(3, 44px);
+  gap: 0.35rem;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.game-dpad__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 24%);
+  color: var(--core-accent-bright);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 120ms ease-out, transform 120ms ease-out;
+}
+
+.game-dpad__btn:hover {
+  background: oklch(74% 0.2 151 / 12%);
+}
+
+.game-dpad__btn:active {
+  transform: scale(0.92);
+  background: oklch(74% 0.2 151 / 22%);
+}
+
+.game-dpad__center {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: oklch(74% 0.2 151 / 6%);
+}
+
+.game-big-tap {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 24%);
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 120ms ease-out, transform 120ms ease-out;
+}
+
+.game-big-tap:hover {
+  background: oklch(74% 0.2 151 / 12%);
+}
+
+.game-big-tap:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-dpad__btn,
+  .game-big-tap {
+    transition: none;
+  }
+}

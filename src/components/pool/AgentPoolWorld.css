@@ -1,0 +1,317 @@
+/**
+ * AgentPoolWorld.css — the glass slime-ROOM the dormant Flubbers live in.
+ *
+ * FULL-BLEED (Dame's #1 ask, pill-worlds pass): the pool matches the Agent
+ * Control Center hero's exact recipe now — `.pw`'s own dark fill is gone,
+ * `.pw__roomdrop` is the pool.webp server-hall photo running edge-to-edge
+ * (inset -4%, brightness 0.52 — identical grade to `.fh__backdrop`), and the
+ * thin green rim (`.pw__glass`) is the ONLY framing left, so the room reads
+ * as one continuous pill with zero black box. A thin floor line still
+ * grounds the residents. The handoff cue still lights the top rim brighter
+ * when a mini is dragged up to the hero. Only transform/opacity animate; a
+ * reduced-motion block stills the sheen + z-glyphs.
+ *
+ * BREAK-ONLY POINTER PLAY (LANE R): `.pw--interactive` (added on break) turns on
+ * grab cursors + `touch-action: none` so a resident can be dragged; `--held`
+ * shows the grabbing state; `--handoff` lights the top rim when a drag is high
+ * enough to hand the mini up to the hero.
+ */
+
+.pw {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  /* Floor height only — the idle Agents pool is grown to a bigger room by its
+     parent's larger min-height (AgentsScreen.css); the active-mode companion
+     stays a thin strip. */
+  min-height: 200px;
+  border-radius: var(--radius-panel);
+  overflow: hidden;
+  isolation: isolate;
+  /* Full-bleed: no fill of its own left — `.pw__roomdrop` IS the pill's
+     background now. The soft green rim stays so the space still reads as a
+     contained tank, not a bare cutout. */
+  background: transparent;
+  border: 1px solid oklch(60% 0.1 150 / 24%);
+}
+
+/* the pool's OWN full-bleed room plate — pool.webp (server-hall photo) run
+   edge-to-edge at the exact same grade as the hero's `.fh__backdrop` (inset
+   -4%, cover, brightness 0.52) so the two pills read as one visual family. */
+.pw__roomdrop {
+  position: absolute;
+  inset: -4%;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  overflow: hidden;
+  background-image: url('/bg/pool.webp');
+  background-size: cover;
+  background-position: 50% 42%;
+  filter: brightness(0.52) saturate(1.1);
+}
+.pw__roomdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--pill-room-scrim);
+}
+
+/* REVERTED: the terrarium frame is back — a whisper of top light plus the rim +
+   inset shadow that reads the pool as a contained tank. The handoff cue below
+   still lights the top rim brighter when a mini is dragged up to the hero. */
+.pw__glass {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  border-radius: inherit;
+  background:
+    radial-gradient(160% 80% at 50% -22%, oklch(100% 0 0 / 6%) 0%, transparent 42%);
+  box-shadow:
+    inset 0 1px 0 oklch(92% 0.12 145 / 14%),
+    inset 0 18px 42px oklch(74% 0.2 145 / 12%),
+    inset 0 0 0 1px oklch(70% 0.14 145 / 16%);
+}
+
+/* handoff cue: when a grabbed mini is dragged up high enough to give to the
+   hero, the top rim lights up so the drop target reads. */
+.pw--handoff .pw__glass {
+  box-shadow:
+    inset 0 2px 0 oklch(90% 0.2 142 / 55%),
+    inset 0 22px 46px oklch(74% 0.2 145 / 24%),
+    inset 0 0 0 1px oklch(87% 0.29 142 / 22%);
+}
+
+/* slow drifting caustic sheen (transform-only) */
+.pw__sheen {
+  position: absolute;
+  left: -30%;
+  top: -40%;
+  width: 80%;
+  height: 90%;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, oklch(87% 0.29 142 / 8%) 0%, transparent 70%);
+  filter: blur(6px);
+  animation: pw-sheen 14s ease-in-out infinite;
+}
+
+@keyframes pw-sheen {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(120%, 30%, 0) scale(1.3); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* a thin floor line where the residents stand — replaces the old bulky bottom
+   water body so the space reads as a room floor, not a tank of goo. */
+.pw__floorline {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 16%;
+  height: 1px;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, oklch(80% 0.22 145 / 22%) 20%, oklch(80% 0.22 145 / 22%) 80%, transparent);
+  box-shadow: 0 8px 26px oklch(60% 0.16 150 / 14%);
+}
+
+/* residents live on the floor layer */
+.pw__floor {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.pw-resident {
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* transform is written every frame by the rAF loop (translate + scale) */
+  will-change: transform;
+}
+
+/* break-only: minis are grabbable */
+.pw--interactive .pw-resident {
+  cursor: grab;
+  touch-action: none;
+}
+.pw-resident--held {
+  cursor: grabbing;
+  filter: drop-shadow(0 8px 18px oklch(74% 0.2 145 / 45%));
+}
+
+.pw-resident__shadow {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 70%;
+  height: 10px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, oklch(4% 0.02 155 / 55%) 0%, transparent 72%);
+  pointer-events: none;
+}
+
+/* drifting sleep glyphs — shown only while napping */
+.pw-resident__z {
+  position: absolute;
+  left: 62%;
+  top: 2px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: oklch(87% 0.29 142 / 85%);
+  text-shadow: 0 0 8px oklch(74% 0.2 151 / 60%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pw-resident--nap .pw-resident__z {
+  animation: pw-z 2.8s ease-out infinite;
+}
+.pw-resident--nap .pw-resident__z--a { font-size: 12px; animation-delay: 0s; }
+.pw-resident--nap .pw-resident__z--b { font-size: 15px; left: 72%; animation-delay: 1.4s; }
+
+@keyframes pw-z {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) rotate(-6deg); }
+  20% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate3d(10px, -26px, 0) rotate(10deg); }
+}
+
+/* missed-catch wobble — a quick squash/shake layered on top of the rAF-driven
+   translate/scale/rotate transform (the resident's own inline style keeps
+   writing position; this keyframe rides on top via animation, not transform,
+   so the two never fight). */
+.pw-resident--splat .pw-resident__shadow {
+  animation: pw-splat-shadow 0.6s ease-out;
+}
+@keyframes pw-splat-shadow {
+  0% { transform: translateX(-50%) scale(1); }
+  30% { transform: translateX(-50%) scale(1.5, 0.6); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* the thrown slime ball — a small glowing bead written each frame by the rAF
+   loop (transform only). Hidden (opacity 0) whenever no toss is in flight. */
+.pw__ball {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 35% 30%, oklch(96% 0.14 142 / 95%) 0%, oklch(80% 0.26 145 / 90%) 55%, oklch(55% 0.2 150 / 80%) 100%);
+  box-shadow: 0 0 8px oklch(80% 0.26 145 / 60%);
+  transition: opacity 120ms ease-out;
+}
+
+/* tractor beam that lifts a pulled resident out of the room top */
+.pw__beam {
+  position: absolute;
+  top: -30%;
+  width: 96px;
+  height: 150%;
+  z-index: 2;
+  pointer-events: none;
+  transform: translateX(-50%);
+  opacity: 0;
+  background: linear-gradient(180deg, oklch(87% 0.29 142 / 55%) 0%, oklch(74% 0.2 151 / 22%) 45%, transparent 85%);
+  -webkit-mask-image: linear-gradient(180deg, black 0%, black 60%, transparent 100%);
+  mask-image: linear-gradient(180deg, black 0%, black 60%, transparent 100%);
+  filter: blur(2px);
+}
+
+/* empty / drained pool */
+.pw--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pw__drained {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  color: var(--text-secondary);
+  z-index: 2;
+  padding: 24px;
+}
+.pw__drained-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 1px dashed oklch(87% 0.29 142 / 30%);
+  background: radial-gradient(circle at 50% 70%, oklch(28% 0.1 151 / 30%) 0%, transparent 70%);
+}
+.pw__drained-text {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  max-width: 220px;
+  line-height: 1.4;
+}
+
+/* "Dame cleared the toy pool on break" hint — distinct from the real drained
+   message so we never claim agents are deployed when they aren't. */
+.pw__cleared {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: 240px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+/* overflow "+N sleeping" tag */
+.pw__overflow {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  z-index: 3;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: oklch(87% 0.29 142 / 78%);
+  background: oklch(9% 0.02 155 / 70%);
+  border: 1px solid var(--border-glow);
+  border-radius: 999px;
+  padding: 3px 9px;
+  pointer-events: none;
+}
+
+/* break-only drag hint (bottom-left) */
+.pw__hint {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  z-index: 3;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: oklch(80% 0.06 150 / 62%);
+  background: oklch(9% 0.02 155 / 60%);
+  border: 1px solid oklch(58% 0.06 150 / 22%);
+  border-radius: 999px;
+  padding: 3px 9px;
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .pw__hint { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pw__sheen { animation: none; }
+  .pw-resident--nap .pw-resident__z { animation: none; opacity: 0.7; }
+  .pw-resident--splat .pw-resident__shadow { animation: none; }
+  .pw__ball { transition: none; }
+}

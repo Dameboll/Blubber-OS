@@ -1,0 +1,604 @@
+/*
+ * HoloPanel — holographic work-surface styling. Green frosted glass, thin bright
+ * rim, scanline texture, and per-kind animated content. Everything looping is
+ * gated behind prefers-reduced-motion at the bottom of the file.
+ *
+ * Local vars (fall back to the goo palette) so a panel can be recoloured by an
+ * activity's hue just by overriding --holo-hue on an ancestor.
+ */
+
+.holo-panel {
+  --holo-hue: 148;
+  --holo-line: oklch(86% 0.19 var(--holo-hue) / 0.85);
+  --holo-dim: oklch(82% 0.08 var(--holo-hue) / 0.55);
+
+  position: relative;
+  width: 12.5rem;
+  height: 8.4rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 11px;
+  border: 1px solid oklch(88% 0.18 var(--holo-hue) / 0.7);
+  /* oklch stops inline directly (not via an intermediate custom prop holding a
+     nested var) — a var()-in-a-var used by the `background` shorthand
+     invalidates the whole gradient and it computes to `none`. Opaque enough to
+     read as a lit holo-screen against the busy server-lab backdrop. */
+  background: linear-gradient(
+    158deg,
+    oklch(27% 0.09 var(--holo-hue) / 0.86),
+    oklch(13% 0.06 var(--holo-hue) / 0.82)
+  );
+  backdrop-filter: blur(8px) saturate(1.2);
+  -webkit-backdrop-filter: blur(8px) saturate(1.2);
+  box-shadow:
+    0 16px 40px oklch(4% 0.02 155 / 0.72),
+    inset 0 1px 0 oklch(95% 0.1 var(--holo-hue) / 0.28),
+    0 0 32px oklch(72% 0.2 var(--holo-hue) / 0.42);
+  color: var(--holo-line);
+  font-family: var(--font-mono, ui-monospace, 'JetBrains Mono', monospace);
+}
+
+/* Faint scanline texture across the whole surface — the "hologram" read. */
+.holo-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    oklch(90% 0.12 var(--holo-hue) / 0.05) 0px,
+    oklch(90% 0.12 var(--holo-hue) / 0.05) 1px,
+    transparent 2px,
+    transparent 4px
+  );
+  opacity: 0.6;
+  mix-blend-mode: screen;
+}
+
+.holo-panel--compact {
+  width: 100%;
+  height: 100%;
+  border-radius: 9px;
+}
+
+/* Diagonal sheen sweep. */
+.holo-panel__sheen {
+  position: absolute;
+  inset: -30% -60%;
+  background: linear-gradient(
+    115deg,
+    transparent 42%,
+    oklch(96% 0.12 var(--holo-hue) / 0.22) 50%,
+    transparent 58%
+  );
+  transform: translateX(-30%);
+  animation: holo-sheen 5.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes holo-sheen {
+  0%, 62% { transform: translateX(-40%); opacity: 0; }
+  74% { opacity: 1; }
+  100% { transform: translateX(40%); opacity: 0; }
+}
+
+/* header */
+.holo-panel__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid oklch(80% 0.16 var(--holo-hue) / 0.22);
+  background: oklch(30% 0.08 var(--holo-hue) / 0.35);
+  flex-shrink: 0;
+}
+
+.holo-panel__icon {
+  color: var(--holo-line);
+  flex-shrink: 0;
+}
+
+.holo-panel__title {
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--holo-line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.holo-panel--compact .holo-panel__title {
+  font-size: 0.52rem;
+}
+
+.holo-panel__dots {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.holo-panel__dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: oklch(80% 0.14 var(--holo-hue) / 0.55);
+}
+
+.holo-panel__body {
+  position: relative;
+  flex: 1;
+  padding: 0.5rem 0.6rem;
+  overflow: hidden;
+}
+
+.holo-panel--compact .holo-panel__body {
+  padding: 0.35rem 0.45rem;
+}
+
+/* shared blinking caret */
+.holo-caret {
+  display: inline-block;
+  width: 6px;
+  height: 0.72em;
+  background: var(--holo-line);
+  box-shadow: 0 0 6px oklch(88% 0.2 var(--holo-hue) / 0.7);
+  animation: holo-blink 1.05s steps(1) infinite;
+  vertical-align: -1px;
+}
+.holo-caret--inline {
+  margin-left: 2px;
+}
+@keyframes holo-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* ── code ─────────────────────────────────────────────────────────────── */
+.holo-code {
+  position: absolute;
+  inset: 0.5rem 0.6rem;
+  overflow: hidden;
+}
+.holo-code__scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 0.34rem;
+  animation: holo-code-scroll 9s linear infinite;
+}
+@keyframes holo-code-scroll {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
+}
+.holo-code__line {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  height: 0.5rem;
+}
+.holo-code__tok {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+}
+.holo-code__tok--kw {
+  width: 22%;
+  background: oklch(78% 0.19 300 / 0.8); /* purple keyword */
+}
+.holo-code__tok--fn {
+  width: 34%;
+  background: oklch(88% 0.2 var(--holo-hue) / 0.85); /* green fn */
+}
+.holo-code__tok--str {
+  flex: 1;
+  background: oklch(86% 0.15 80 / 0.7); /* warm string */
+}
+.holo-code__line.is-comment .holo-code__tok {
+  background: oklch(70% 0.04 var(--holo-hue) / 0.4);
+}
+
+/* ── terminal ─────────────────────────────────────────────────────────── */
+.holo-term {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.6rem;
+}
+.holo-term__line {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  opacity: 0;
+  animation: holo-fade-in 0.4s ease forwards;
+}
+.holo-term__line--live {
+  opacity: 1;
+  animation: none;
+}
+.holo-term__prompt {
+  color: oklch(88% 0.2 var(--holo-hue));
+}
+.holo-term__cmd {
+  height: 0.5rem;
+  flex: 1;
+  border-radius: 2px;
+  background: oklch(82% 0.08 var(--holo-hue) / 0.4);
+  max-width: 80%;
+}
+/* Real PTY output text (replaces the old stylized bar) — one actual terminal
+   line, clipped so a long line never breaks the panel. */
+.holo-term__text {
+  flex: 1;
+  min-width: 0;
+  color: oklch(88% 0.09 var(--holo-hue) / 0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.holo-term__cursor {
+  width: 7px;
+  height: 0.7rem;
+  background: var(--holo-line);
+  box-shadow: 0 0 6px oklch(88% 0.2 var(--holo-hue) / 0.7);
+  animation: holo-blink 1s steps(1) infinite;
+}
+@keyframes holo-fade-in {
+  to { opacity: 1; }
+}
+
+/* ── recent events (code + files work-screens: REAL /api/recent rows) ──── */
+.holo-evt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.34rem;
+  font-size: 0.5rem;
+  height: 100%;
+}
+.holo-evt__row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  opacity: 0;
+  animation: holo-fade-in 0.5s ease forwards;
+}
+.holo-evt__verb {
+  font-size: 0.46rem;
+  letter-spacing: 0.08em;
+  padding: 0.05rem 0.28rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.holo-evt__verb--agent {
+  color: oklch(88% 0.2 var(--holo-hue));
+  background: oklch(70% 0.2 var(--holo-hue) / 0.18);
+}
+.holo-evt__verb--skill {
+  color: oklch(86% 0.15 80);
+  background: oklch(70% 0.15 80 / 0.16);
+}
+.holo-evt__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.52rem;
+  color: var(--holo-line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.holo-evt__proj {
+  flex-shrink: 0;
+  max-width: 40%;
+  font-size: 0.46rem;
+  color: var(--holo-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Empty placeholder: a slow scan sweep, never fabricated text. */
+.holo-evt--empty {
+  position: relative;
+}
+.holo-evt__scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 32%;
+  background: linear-gradient(oklch(90% 0.18 var(--holo-hue) / 0.14), transparent);
+  animation: holo-scan 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ── search ───────────────────────────────────────────────────────────── */
+.holo-search {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  height: 100%;
+}
+.holo-search__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid oklch(80% 0.14 var(--holo-hue) / 0.35);
+  background: oklch(20% 0.05 var(--holo-hue) / 0.5);
+  color: var(--holo-dim);
+}
+.holo-search__q {
+  height: 0.4rem;
+  width: 52%;
+  border-radius: 2px;
+  background: oklch(84% 0.1 var(--holo-hue) / 0.5);
+}
+.holo-search__results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.36rem;
+}
+.holo-search__row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  opacity: 0;
+  animation: holo-fade-in 0.5s ease forwards;
+}
+.holo-search__dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 3px;
+  background: oklch(78% 0.16 var(--holo-hue) / 0.6);
+  flex-shrink: 0;
+}
+.holo-search__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+.holo-search__title {
+  height: 0.34rem;
+  border-radius: 2px;
+  background: oklch(86% 0.12 var(--holo-hue) / 0.65);
+}
+.holo-search__url {
+  height: 0.28rem;
+  border-radius: 2px;
+  background: oklch(70% 0.05 var(--holo-hue) / 0.4);
+}
+.holo-search__scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 34%;
+  top: 0;
+  background: linear-gradient(oklch(90% 0.18 var(--holo-hue) / 0.16), transparent);
+  animation: holo-scan 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes holo-scan {
+  0%, 100% { transform: translateY(-10%); opacity: 0; }
+  50% { transform: translateY(150%); opacity: 1; }
+}
+
+/* ── graph ────────────────────────────────────────────────────────────── */
+.holo-graph {
+  width: 100%;
+  height: 100%;
+}
+.holo-graph__edge {
+  stroke: oklch(84% 0.16 var(--holo-hue) / 0.5);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  animation: holo-edge 2.4s ease-in-out infinite;
+}
+@keyframes holo-edge {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.9; }
+}
+.holo-graph__node {
+  fill: oklch(28% 0.08 var(--holo-hue) / 0.9);
+  stroke: oklch(88% 0.2 var(--holo-hue));
+  stroke-width: 1.4;
+  animation: holo-node 2.4s ease-in-out infinite;
+}
+.holo-graph__node.is-root {
+  fill: oklch(72% 0.2 var(--holo-hue) / 0.85);
+}
+@keyframes holo-node {
+  0%, 100% { opacity: 0.55; filter: drop-shadow(0 0 0 transparent); }
+  50% { opacity: 1; filter: drop-shadow(0 0 4px oklch(85% 0.2 var(--holo-hue) / 0.7)); }
+}
+
+/* ── doc ──────────────────────────────────────────────────────────────── */
+.holo-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+}
+.holo-doc__title {
+  height: 0.46rem;
+  width: 46%;
+  border-radius: 2px;
+  background: oklch(88% 0.18 var(--holo-hue) / 0.8);
+  margin-bottom: 0.15rem;
+}
+.holo-doc__line {
+  height: 0.34rem;
+  width: 0;
+  border-radius: 2px;
+  background: oklch(80% 0.07 var(--holo-hue) / 0.5);
+  animation: holo-type 2.6s ease-in-out infinite;
+}
+@keyframes holo-type {
+  0% { width: 0; opacity: 0.3; }
+  30%, 70% { width: var(--w); opacity: 1; }
+  100% { width: var(--w); opacity: 0.55; }
+}
+
+/* ── test ─────────────────────────────────────────────────────────────── */
+.holo-test {
+  display: flex;
+  flex-direction: column;
+  gap: 0.36rem;
+  font-size: 0.55rem;
+}
+.holo-test__row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  opacity: 0;
+  animation: holo-fade-in 0.5s ease forwards;
+}
+.holo-test__mark {
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+}
+.holo-test__mark--pass {
+  background: oklch(75% 0.2 var(--holo-hue) / 0.85);
+  box-shadow: 0 0 6px oklch(80% 0.2 var(--holo-hue) / 0.6);
+}
+.holo-test__mark--fail {
+  background: oklch(62% 0.22 27 / 0.85);
+}
+.holo-test__mark--run {
+  background: transparent;
+  border: 1.5px solid oklch(85% 0.1 var(--holo-hue) / 0.5);
+  border-top-color: oklch(88% 0.2 var(--holo-hue));
+  animation: holo-spin 0.8s linear infinite;
+}
+.holo-test__label {
+  height: 0.36rem;
+  border-radius: 2px;
+  background: oklch(80% 0.07 var(--holo-hue) / 0.45);
+}
+.holo-test__count {
+  margin-top: 0.1rem;
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: oklch(84% 0.16 var(--holo-hue) / 0.8);
+}
+@keyframes holo-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── design ───────────────────────────────────────────────────────────── */
+.holo-design {
+  position: relative;
+  height: 100%;
+}
+.holo-design__frame {
+  position: absolute;
+  border: 1px solid oklch(84% 0.14 var(--holo-hue) / 0.55);
+  border-radius: 4px;
+  background: oklch(30% 0.07 var(--holo-hue) / 0.35);
+  animation: holo-float 4s ease-in-out infinite;
+}
+.holo-design__frame--a { left: 4%; top: 12%; width: 42%; height: 44%; }
+.holo-design__frame--b { right: 6%; top: 8%; width: 36%; height: 30%; animation-delay: 0.6s; }
+.holo-design__frame--c { left: 30%; bottom: 8%; width: 48%; height: 34%; animation-delay: 1.2s; }
+.holo-design__marquee {
+  position: absolute;
+  left: 4%;
+  top: 12%;
+  width: 42%;
+  height: 44%;
+  border: 1px dashed oklch(90% 0.18 var(--holo-hue));
+  border-radius: 4px;
+  animation: holo-marquee 3.4s ease-in-out infinite;
+}
+@keyframes holo-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes holo-marquee {
+  0%, 100% { left: 4%; top: 12%; width: 42%; height: 44%; opacity: 0.5; }
+  50% { left: 30%; top: 40%; width: 48%; height: 34%; opacity: 1; }
+}
+
+/* ── files ────────────────────────────────────────────────────────────── */
+.holo-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0.36rem;
+  font-size: 0.5rem;
+}
+.holo-files__row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  opacity: 0;
+  animation: holo-fade-in 0.5s ease forwards;
+}
+.holo-files__verb {
+  font-size: 0.48rem;
+  letter-spacing: 0.08em;
+  padding: 0.05rem 0.28rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.holo-files__verb--create {
+  color: oklch(88% 0.2 var(--holo-hue));
+  background: oklch(70% 0.2 var(--holo-hue) / 0.18);
+}
+.holo-files__verb--edit {
+  color: oklch(86% 0.15 80);
+  background: oklch(70% 0.15 80 / 0.16);
+}
+.holo-files__name {
+  height: 0.4rem;
+  border-radius: 2px;
+  background: oklch(80% 0.06 var(--holo-hue) / 0.45);
+}
+
+/* ── gears ────────────────────────────────────────────────────────────── */
+.holo-gears {
+  position: relative;
+  height: 100%;
+}
+.holo-gears__g {
+  position: absolute;
+  color: oklch(84% 0.16 var(--holo-hue) / 0.7);
+}
+.holo-gears__g--1 { left: 16%; top: 24%; width: 42px; height: 42px; animation: holo-spin 6s linear infinite; }
+.holo-gears__g--2 { left: 46%; top: 44%; width: 30px; height: 30px; animation: holo-spin 4s linear infinite reverse; }
+.holo-gears__g--3 { left: 62%; top: 14%; width: 24px; height: 24px; animation: holo-spin 5s linear infinite; }
+
+/* ── reduced motion — freeze everything that loops ────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .holo-panel__sheen,
+  .holo-code__scroll,
+  .holo-caret,
+  .holo-term__cursor,
+  .holo-search__scan,
+  .holo-graph__edge,
+  .holo-graph__node,
+  .holo-doc__line,
+  .holo-test__mark--run,
+  .holo-design__frame,
+  .holo-design__marquee,
+  .holo-evt__scan,
+  .holo-gears__g {
+    animation: none !important;
+  }
+  .holo-term__line,
+  .holo-search__row,
+  .holo-test__row,
+  .holo-files__row,
+  .holo-evt__row {
+    opacity: 1 !important;
+    animation: none !important;
+  }
+  .holo-doc__line {
+    width: var(--w) !important;
+    opacity: 1 !important;
+  }
+}

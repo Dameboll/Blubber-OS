@@ -1,0 +1,233 @@
+/* fit-sweep.css — LANE 3 (FIT SWEEP A), docs/plans/pill-worlds-mini-dash.md.
+   Layout-ONLY overrides that make Projects / Music / Settings each fit one
+   1440x900 window with no page scroll. Owned entirely by Lane 3 — Lane 1
+   owns ProjectsScreen.css / MusicPlayerScreen.css / SettingsScreen.css for
+   background-plate rules only, so every layout change (padding, gap, grid
+   caps, max-heights) lives here instead of fighting Lane 1's edits in those
+   files. Imported directly by the three screen components (not globals.css,
+   which Lane 1 owns the import line for).
+
+   SPECIFICITY: every rule below doubles its own class (e.g.
+   `.settings-panel.settings-panel`) so it wins over the base rule in
+   ProjectsScreen.css/MusicPlayerScreen.css/SettingsScreen.css or the shared
+   ui/Panel.css regardless of which CSS file the bundler happens to place
+   first — a plain single-class override would be a coin flip on import
+   order across separately-imported global stylesheets. New classes that
+   don't exist anywhere else (none needed here — every rule below overrides
+   something) wouldn't need the doubling, but the convention is kept uniform
+   for anyone extending this file later. */
+
+/* ------------------------------------------------------------------ */
+/* PROJECTS — cap to 8 most-recent (4x2), fold Project Stats into the   */
+/* hero strip (Templates now runs full width), root overflow:hidden at */
+/* >=1100px. See ProjectsScreen.tsx for the recency-sort + cap logic.   */
+/* ------------------------------------------------------------------ */
+
+/* Below 1100px the screen already collapses to a single stacked column
+   (ProjectsScreen.css's own breakpoint) — keep that path scrollable rather
+   than fighting it with a hard overflow:hidden that would clip content on
+   narrow/tall-content layouts this Lane never targeted. */
+@media (min-width: 1100px) {
+  .projects-screen.projects-screen {
+    overflow: hidden;
+  }
+}
+
+.projects-screen.projects-screen {
+  gap: 0.7rem;
+}
+
+.projects-screen .projects-screen__main.projects-screen__main {
+  gap: 0.6rem;
+}
+
+.projects-screen .projects-screen__hero.projects-screen__hero {
+  padding: 0.8rem 1.2rem;
+}
+
+/* Scoped Panel padding/gap tighten — Panel is the shared ui/ component, so
+   this is deliberately scoped under .projects-screen, never a bare .panel
+   override that would leak into every other screen. */
+.projects-screen .panel.panel {
+  padding: 0.7rem 0.95rem;
+  gap: 0.5rem;
+}
+
+/* The 4x2 grid at the default 8-item cap fits this max-height exactly (64px
+   thumb + tightened card padding, see .project-card below) — 0 scroll at
+   the default cap. "View all" / an active search can push the item count
+   past 8; the SAME box then scrolls internally instead of growing the page
+   (hard rule: internal panel scroll only, page itself never scrolls). */
+.projects-screen .projects-screen__grid.projects-screen__grid {
+  gap: 0.55rem;
+  max-height: 19.5rem;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.projects-screen .projects-screen__list.projects-screen__list {
+  gap: 0.4rem;
+  max-height: 19.5rem;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.projects-screen .project-card.project-card {
+  padding: 0.6rem 0.6rem 0.7rem;
+  gap: 0.35rem;
+  border-radius: 12px;
+}
+
+.projects-screen .project-card__portrait.project-card__portrait {
+  padding: 0.2rem 0 0.05rem;
+}
+
+.projects-screen .project-list-row.project-list-row {
+  padding: 0.45rem 0.7rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* MUSIC — shrink the hero visualizer so hero + queue + rail (Now       */
+/* Playing / Playback Controls / Visualizer Mode / Equalizer) fit       */
+/* alongside each other in .mps-scroll at 1440x900 with zero scroll.    */
+/* Track art/waveform size props are trimmed in MusicPlayerScreen.tsx   */
+/* to match (168->96 art, 28->20 waveform, 300->190 hero mascot).       */
+/* ------------------------------------------------------------------ */
+
+.mps-root .mps-scroll.mps-scroll {
+  gap: 0.65rem;
+  padding: clamp(0.75rem, 0.6rem + 0.5vw, 1.1rem) clamp(1rem, 0.85rem + 0.6vw, 1.5rem) 0.6rem;
+}
+
+.mps-root .mps-header.mps-header {
+  gap: clamp(0.75rem, 0.6rem + 0.6vw, 1.25rem);
+}
+
+.mps-root .mps-header__title.mps-header__title {
+  padding-bottom: 0.35rem;
+}
+
+.mps-root .mps-tab.mps-tab {
+  padding: 0.35rem 0.1rem;
+}
+
+/* 23rem (368px) at 1440px width was the single largest offender against the
+   900px budget — this clamp lands at 208px at 1440px width, freeing ~160px
+   for the rail column to fit without its own scroll. */
+.mps-root .mps-hero.mps-hero {
+  height: clamp(11rem, 7rem + 9vw, 13rem);
+}
+
+.mps-root .mps-layout.mps-layout {
+  gap: 0.75rem;
+}
+
+.mps-root .mps-main.mps-main {
+  gap: 0.6rem;
+}
+
+.mps-root .mps-main .mps-track-list.mps-track-list {
+  max-height: clamp(5rem, 14vh, 8rem);
+}
+
+.mps-root .mps-rail.mps-rail {
+  gap: 0.6rem;
+}
+
+/* Scoped Panel padding/gap tighten for every rail/queue panel — same
+   ui/Panel.css scoping caveat as the Projects section above. */
+.mps-root .mps-scroll .panel.panel {
+  padding: 0.65rem 0.85rem;
+  gap: 0.45rem;
+}
+
+.mps-root .mps-now-playing.mps-now-playing {
+  gap: 0.5rem;
+}
+
+.mps-root .mps-eq.mps-eq {
+  height: 4.5rem;
+  padding-top: 0.35rem;
+}
+
+.mps-root .mps-viz-sync.mps-viz-sync {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* SETTINGS — tighter paddings across every group panel + a max-height  */
+/* safety valve on each panel's row list ("prefer fit" — panels whose    */
+/* real content still doesn't fit after tightening scroll internally     */
+/* rather than pushing the root's own overflow-y:auto, which stays as    */
+/* the last-resort fallback it already was). Hero mascot 172->120 is in  */
+/* SettingsScreen.tsx (Flubber Preview panel).                           */
+/* ------------------------------------------------------------------ */
+
+.settings-screen.settings-screen {
+  gap: 0.6rem;
+  padding: clamp(0.8rem, 0.65rem + 0.6vw, 1.2rem);
+}
+
+.settings-screen .settings-tabs.settings-tabs {
+  padding-bottom: 0.05rem;
+}
+
+.settings-screen .settings-tabs__item.settings-tabs__item {
+  padding: 0.4rem 0.1rem;
+}
+
+.settings-screen .settings-grid.settings-grid {
+  gap: 0.6rem;
+}
+
+.settings-screen .settings-grid__main.settings-grid__main {
+  gap: 0.5rem;
+}
+
+.settings-screen .settings-grid__rail.settings-grid__rail {
+  gap: 0.5rem;
+}
+
+.settings-screen .settings-panel.settings-panel {
+  gap: 0.4rem;
+  padding: 0.6rem 0.85rem;
+}
+
+/* The real fallback: General/Personality/Usage/Voice all render more rows
+   than a truly zero-scroll 900px budget can fit at readable sizes. Capping
+   each panel's OWN row list (not the whole screen) keeps every grid row's
+   height bounded and predictable — panels whose content fits under the cap
+   (Data & Privacy, usually General) show no scrollbar at all; the denser
+   ones (Personality's 5 sliders, Voice & Audio's 3) scroll internally. */
+.settings-screen .settings-panel__rows.settings-panel__rows {
+  gap: 0.4rem;
+  max-height: 13rem;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
+.settings-screen .setting-row.setting-row {
+  gap: 0.15rem;
+}
+
+.settings-screen .slider-row.slider-row {
+  gap: 0.2rem;
+}
+
+.settings-screen .integration-grid.integration-grid {
+  gap: 0.5rem;
+}
+
+.settings-screen .integration-tile.integration-tile {
+  padding: 0.5rem 0.45rem;
+  gap: 0.25rem;
+}
+
+.settings-screen .flubber-preview.flubber-preview {
+  gap: 0.5rem;
+}
+
+.settings-screen .flubber-preview__stage.flubber-preview__stage {
+  padding: 1rem;
+}

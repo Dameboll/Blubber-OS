@@ -1,0 +1,405 @@
+/*
+ * FlubberHome — the room + dynamic workspace styling.
+ *
+ * The whole room is graded by two interpolated custom props: --fh-hue (which
+ * green/amber the room leans) and --fh-energy (0..1, how lit/busy it is). They
+ * are registered with @property so a change eases over ~0.8s — the room visibly
+ * "reskins" when the activity changes instead of snapping.
+ */
+
+@property --fh-hue {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 146;
+}
+@property --fh-energy {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0.4;
+}
+
+.fh {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 18rem;
+  overflow: hidden;
+  border-radius: inherit;
+  isolation: isolate;
+  background: oklch(9% 0.02 155);
+  transition: --fh-hue 0.8s ease, --fh-energy 0.8s ease;
+}
+
+/* ── backdrop plate ─────────────────────────────────────────────────────── */
+.fh__backdrop {
+  position: absolute;
+  inset: -4%;
+  z-index: 0;
+  background-size: cover;
+  background-position: center 58%;
+  filter: brightness(0.52) saturate(1.15) contrast(1.05);
+  transform: scale(1.04);
+  animation: fh-drift 26s ease-in-out infinite alternate;
+}
+.fh__backdrop--lab {
+  background-image: url('/bg/lab.png');
+}
+.fh__backdrop--serverlab {
+  background-image: url('/bg/serverlab.png');
+}
+.fh__backdrop--home {
+  background-image: url('/bg/home.webp');
+}
+.fh__backdrop--agents {
+  background-image: url('/bg/agents.webp');
+}
+.fh__backdrop--terminal {
+  background-image: url('/bg/terminal.webp');
+}
+.fh__backdrop--projects {
+  background-image: url('/bg/projects.webp');
+}
+.fh__backdrop--memory {
+  background-image: url('/bg/memory.webp');
+}
+.fh__backdrop--analytics {
+  background-image: url('/bg/analytics.webp');
+}
+.fh__backdrop--studio {
+  background-image: url('/bg/studio.webp');
+}
+.fh__backdrop--pet {
+  background-image: url('/bg/pet.webp');
+}
+.fh__backdrop--engine {
+  background-image: url('/bg/engine.webp');
+}
+@keyframes fh-drift {
+  from { transform: scale(1.04) translate3d(-0.6%, -0.4%, 0); }
+  to { transform: scale(1.08) translate3d(0.6%, 0.4%, 0); }
+}
+
+/* mood grade — a hue-tinted wash whose strength rides --fh-energy */
+.fh__grade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      120% 80% at 50% 88%,
+      hsl(var(--fh-hue) 95% 55% / calc(0.14 + var(--fh-energy) * 0.24)),
+      transparent 62%
+    ),
+    radial-gradient(140% 120% at 50% 0%, oklch(6% 0.02 155 / 0.72), transparent 55%);
+  mix-blend-mode: screen;
+}
+
+/* rising goo bubbles (2D canvas) */
+.fh__bubbles {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.9;
+}
+
+/* ceiling light shaft onto the dais */
+.fh__shaft {
+  position: absolute;
+  left: 50%;
+  top: -6%;
+  width: 42%;
+  height: 92%;
+  z-index: 2;
+  transform: translateX(-50%);
+  clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%);
+  background: linear-gradient(
+    to bottom,
+    hsl(var(--fh-hue) 92% 62% / calc(0.05 + var(--fh-energy) * 0.1)),
+    transparent 66%
+  );
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* ── stage: places hero + panels ────────────────────────────────────────── */
+.fh__stage {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
+/* floating workspace panels — flank the hero at mid-height (like the refs) and
+   sit above the dais glow so they read against the photographic backdrop. */
+.fh__panels {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  transform-origin: center 62%;
+}
+.fh__panel {
+  position: absolute;
+  pointer-events: auto;
+  filter: drop-shadow(0 14px 30px oklch(4% 0.02 155 / 0.7));
+}
+.fh__panel--0 {
+  top: 14%;
+  left: 4%;
+  /* Owner's workstation: straight (no slant), pinned top-left. */
+}
+.fh__panel--1 {
+  top: 21%;
+  right: 4%;
+  transform: rotate(3deg);
+}
+/* Hero panels sit over the dark-green server-lab backdrop — same tone family, so
+   a translucent or dark-green panel blends in. Give them a near-BLACK interior
+   (bright green content pops), a bright rim, and a strong outer glow so they read
+   as lit holo-monitors like the refs. Only .fh__panel-hosted panels — the glassy
+   compact workstation panels on dark cards keep their translucency. */
+.fh__panel .holo-panel {
+  background: linear-gradient(
+    158deg,
+    oklch(11% 0.03 var(--holo-hue) / 0.96),
+    oklch(6% 0.02 var(--holo-hue) / 0.95)
+  );
+  border-color: oklch(90% 0.2 var(--holo-hue) / 0.8);
+  box-shadow:
+    0 18px 44px oklch(2% 0 0 / 0.8),
+    inset 0 1px 0 oklch(95% 0.1 var(--holo-hue) / 0.3),
+    0 0 30px oklch(72% 0.2 var(--holo-hue) / 0.5);
+  /* remounted per activity → replays this enter (rotate stays on the wrapper) */
+  animation: fh-panel-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes fh-panel-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+
+/* the dais the hero stands on */
+.fh__dais {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  z-index: 1;
+  width: min(60%, 27rem);
+  height: 6rem;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.fh__dais-core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    50% 60% at 50% 50%,
+    hsl(var(--fh-hue) 95% 60% / calc(0.4 + var(--fh-energy) * 0.4)),
+    hsl(var(--fh-hue) 90% 45% / 0.12) 55%,
+    transparent 74%
+  );
+  filter: blur(2px);
+  animation: fh-breathe 5s ease-in-out infinite;
+}
+.fh__dais-ring {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 74%;
+  height: 46%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1.5px solid hsl(var(--fh-hue) 95% 68% / calc(0.35 + var(--fh-energy) * 0.4));
+  box-shadow:
+    0 0 22px hsl(var(--fh-hue) 95% 60% / calc(0.2 + var(--fh-energy) * 0.4)),
+    inset 0 0 16px hsl(var(--fh-hue) 95% 60% / 0.25);
+  animation: fh-breathe 5s ease-in-out infinite;
+}
+@keyframes fh-breathe {
+  0%, 100% { opacity: 0.8; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.03); }
+}
+.fh__dais-ring {
+  /* ring uses a translate that already centers; override the breathe transform */
+  animation-name: fh-breathe-ring;
+}
+@keyframes fh-breathe-ring {
+  0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+}
+
+/* hero mascot */
+.fh__hero {
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  z-index: 3;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 10px 26px hsl(var(--fh-hue) 90% 30% / 0.5));
+}
+.fh__hero-canvas {
+  display: block;
+}
+
+/* temporary pool→hero playmate (LANE 5, docs/plans/pill-worlds-mini-dash.md).
+   top:0/left:0 so FlubberHome.tsx's choreography effect owns the FULL absolute
+   position every frame (anchor + wander offset, one manual transform string) —
+   no CSS left/top/margin composing with it, same pattern the pool residents'
+   own transforms use. */
+.fh__playmate {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  pointer-events: none;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 8px 18px hsl(var(--fh-hue) 90% 30% / 0.4));
+}
+
+/* interactive free-roam (dashboard hero): unpin from the dais and centre via
+   margins (NOT a transform) so usePetToss owns the inline transform without
+   fighting a translate. JS sets the exact -half offsets inline from the live
+   hero size. touch-action:none lets a drag/fling win over the page scroller. */
+.fh__hero--roam {
+  top: 50%;
+  bottom: auto;
+  left: 50%;
+  transform: none;
+  cursor: grab;
+  touch-action: none;
+  will-change: transform;
+}
+.fh__hero--roam:active {
+  cursor: grabbing;
+}
+
+/* speech bubble near the head */
+.fh__speech {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  z-index: 4;
+  max-width: min(62%, 15rem);
+  transform: translateX(-60%);
+  padding: 0.6rem 0.85rem;
+  background: oklch(16% 0.02 155 / 0.92);
+  border: 1px solid hsl(var(--fh-hue) 90% 60% / 0.4);
+  border-radius: 14px;
+  color: var(--text-primary, oklch(96% 0.02 150));
+  font-family: var(--font-ui, system-ui, sans-serif);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  box-shadow: 0 12px 30px oklch(0% 0 0 / 0.5);
+  backdrop-filter: blur(4px);
+}
+.fh__speech::after {
+  content: '';
+  position: absolute;
+  right: 20%;
+  bottom: -7px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border-right: inherit;
+  border-bottom: inherit;
+  transform: rotate(45deg);
+}
+
+/* activity status line */
+.fh__status {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.32rem 0.7rem;
+  border-radius: 999px;
+  background: oklch(14% 0.02 155 / 0.7);
+  border: 1px solid hsl(var(--fh-hue) 80% 55% / 0.3);
+  backdrop-filter: blur(6px);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: hsl(var(--fh-hue) 80% 82%);
+}
+.fh__status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: hsl(var(--fh-hue) 95% 62%);
+  box-shadow: 0 0 8px hsl(var(--fh-hue) 95% 60%);
+  animation: fh-pulse-dot 1.8s ease-in-out infinite;
+}
+@keyframes fh-pulse-dot {
+  0%, 100% { opacity: 0.55; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* edge vignette for room depth — sits BELOW the stage (z2) so it grades the
+   backdrop for focus without dimming the workspace panels / hero / HUD. */
+.fh__vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px 24px oklch(4% 0.01 155 / 0.85);
+  background: radial-gradient(130% 100% at 50% 40%, transparent 58%, oklch(4% 0.01 155 / 0.5));
+}
+
+/* ── compact (dashboard hero) ───────────────────────────────────────────── */
+.fh--compact .fh__panel--1 {
+  display: none;
+}
+.fh--compact .fh__status {
+  font-size: 0.6rem;
+}
+
+/* ── narrow screens: shrink + drop the second panel ─────────────────────── */
+@media (max-width: 900px) {
+  .fh__panel {
+    transform: scale(0.82);
+  }
+  .fh__panel--0 {
+    transform: scale(0.82);
+    top: 12%;
+    left: 1%;
+  }
+  .fh__panel--1 {
+    transform: scale(0.82) rotate(2deg);
+    right: 1%;
+  }
+}
+@media (max-width: 640px) {
+  .fh__panel--1 {
+    display: none;
+  }
+  .fh__panel--0 {
+    top: 4%;
+    left: 50%;
+    transform: translateX(-50%) scale(0.78);
+  }
+  .fh__speech {
+    display: none;
+  }
+}
+
+/* ── reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .fh__backdrop,
+  .fh__dais-core,
+  .fh__dais-ring,
+  .fh__status-dot,
+  .fh__panel .holo-panel {
+    animation: none !important;
+  }
+  .fh {
+    transition: none;
+  }
+}

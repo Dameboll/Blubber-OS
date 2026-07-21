@@ -1,0 +1,206 @@
+/* PetStats — the real record board (Stats tab). Pedestal (dais ring + core
+   glow, the same visual language as FlubberHome's dais) on the left, a clean
+   real-stat row list on the right. Colors stay in the app's green token
+   palette — no hex, nothing outside the pet screen's existing hue family. */
+
+.pet-stats {
+  display: grid;
+  grid-template-columns: minmax(150px, 30%) 1fr;
+  gap: 1.1rem;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ---- left: pedestal ---- */
+.pet-stats__pedestal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 1.1rem 0.75rem 0.9rem;
+  border-radius: 18px;
+  background: linear-gradient(180deg, oklch(24% 0.035 152 / 55%) 0%, oklch(12% 0.02 152 / 70%) 100%);
+  border: 1px solid oklch(70% 0.19 155 / 16%);
+  box-shadow:
+    inset 0 1px 0 oklch(62% 0.09 152 / 20%),
+    inset 0 -8px 20px oklch(0% 0 0 / 40%);
+  overflow: hidden;
+  /* z-index:0 needed so this actually establishes a stacking context —
+     otherwise the ::before/::after negative-z plate escapes to an ancestor
+     context and paints invisibly instead of behind this panel's own bg. */
+  z-index: 0;
+}
+/* pedestal shares the Stats pill's world → vault.webp (record/trophy hall),
+   framed on a tighter crop than the panel plate so the dais reads as the
+   focal object. Hot-lit source ⇒ heavy scrim to hold the pedestal label. */
+.pet-stats__pedestal::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  z-index: -2;
+  background-image: url('/bg/vault.webp');
+  background-size: cover;
+  background-position: center 38%;
+  filter: brightness(0.42) saturate(0.95);
+  pointer-events: none;
+}
+.pet-stats__pedestal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--pill-room-scrim-heavy);
+}
+
+.pet-stats__hero {
+  position: relative;
+  z-index: 2;
+  margin-bottom: -0.6rem;
+  filter: drop-shadow(0 8px 18px oklch(0% 0 0 / 45%));
+}
+
+/* the dais the pedestal Flubber stands on — same ring+core language as
+   FlubberHome's .fh__dais, retuned to a static local glow (this panel has
+   no per-activity --fh-hue/--fh-energy wiring, it's always "at rest"). */
+.pet-stats__dais {
+  position: relative;
+  z-index: 1;
+  width: min(78%, 9.5rem);
+  height: 3.4rem;
+  flex-shrink: 0;
+}
+
+.pet-stats__dais-core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    50% 60% at 50% 50%,
+    oklch(78% 0.24 142 / 55%),
+    oklch(60% 0.18 150 / 14%) 55%,
+    transparent 76%
+  );
+  filter: blur(2px);
+  animation: pet-stats-breathe 5s ease-in-out infinite;
+}
+
+.pet-stats__dais-ring {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 76%;
+  height: 48%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1.5px solid oklch(84% 0.26 142 / 55%);
+  box-shadow:
+    0 0 18px oklch(78% 0.24 142 / 35%),
+    inset 0 0 14px oklch(78% 0.24 142 / 22%);
+  animation: pet-stats-breathe-ring 5s ease-in-out infinite;
+}
+
+@keyframes pet-stats-breathe {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+
+@keyframes pet-stats-breathe-ring {
+  0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+}
+
+.pet-stats__pedestal-label {
+  margin-top: 0.55rem;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--core-accent-bright);
+  text-shadow: 0 0 10px oklch(87% 0.29 142 / 30%);
+}
+
+/* ---- right: real stat list ---- */
+.pet-stats__list {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pet-stats__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 11px;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 12%);
+}
+
+.pet-stats__row-label {
+  font-family: var(--font-ui);
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.pet-stats__row-values {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.pet-stats__row-value {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pet-stats__row-sub {
+  font-family: var(--font-ui);
+  font-size: 0.64rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.pet-stats__note {
+  margin: 0.3rem 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 620px) {
+  .pet-stats {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .pet-stats__pedestal {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0.85rem;
+    padding: 0.75rem;
+  }
+
+  .pet-stats__dais {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-stats__dais-core,
+  .pet-stats__dais-ring {
+    animation: none;
+  }
+}

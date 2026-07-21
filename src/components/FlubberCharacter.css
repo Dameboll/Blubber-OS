@@ -1,0 +1,19 @@
+.flubber-character {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.flubber-character__mesh {
+  width: 100%;
+  height: 100%;
+}
+
+.flubber-character__mesh-loading {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle, oklch(74% 0.2 151 / 45%) 0%, transparent 72%);
+}

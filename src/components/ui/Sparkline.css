@@ -1,0 +1,10 @@
+.sparkline {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sparkline__line {
+  filter: drop-shadow(0 0 4px oklch(87% 0.29 142 / 40%));
+}

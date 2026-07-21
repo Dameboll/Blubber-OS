@@ -1,0 +1,851 @@
+/* Analytics screen — rebuilt (Lane D, dashboard overhaul).
+   Hierarchy is built through CONTRAST, not six identical glowing boxes:
+   - The shell paints ONE room backdrop (analytics.webp) behind the whole
+     frame (AppShell.css). Panels no longer repeat it.
+   - Data-dense panels (daily hero, hour band, burners, recent) carry their
+     own DISTINCT cinematic plate at low brightness.
+   - Secondary panels (live pulse, suggestions, projects) are clean glass so
+     the eye lands on the heavy panels first.
+   The region scrolls internally if the two-plus rows ever exceed the viewport,
+   so the shell topbar/footer stay pinned (LAW 2). */
+.analytics-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: clamp(1rem, 0.8rem + 0.6vw, 1.5rem);
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.analytics-screen__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.analytics-screen__header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 10px;
+  color: var(--core-accent-bright);
+  background: oklch(60% 0.14 150 / 14%);
+  border: 1px solid var(--border-glow);
+  flex-shrink: 0;
+}
+
+.analytics-screen__header-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.analytics-screen__header h1 {
+  font-size: 1.4rem;
+  margin: 0;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.analytics-screen__header p {
+  margin: 0.15rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+/* Status → a real live-dot, not a stat-sized word. */
+.analytics-livedot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  padding: 0.28rem 0.6rem 0.28rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-glow);
+  background: oklch(18% 0.03 151 / 60%);
+}
+
+.analytics-livedot__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+}
+
+.analytics-livedot--ready {
+  color: var(--core-accent-bright);
+}
+
+.analytics-livedot--ready .analytics-livedot__dot {
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 6px var(--core-accent-bright);
+  animation: analytics-live-pulse 2s ease-in-out infinite;
+}
+
+.analytics-livedot--error {
+  color: var(--accent-danger);
+}
+.analytics-livedot--error .analytics-livedot__dot {
+  background: var(--accent-danger);
+}
+
+@keyframes analytics-live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.75); }
+}
+
+.analytics-screen__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.85rem;
+}
+
+/* Every number on this screen is tabular so columns and count-ups don't jitter. */
+.analytics-screen .stat-chip__value,
+.analytics-screen [class*='__value'],
+.analytics-screen [class*='__count'],
+.analytics-screen [class*='__share'],
+.analytics-screen [class*='__tok'] {
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-screen__error {
+  margin: 0;
+  color: var(--accent-danger);
+  font-size: 0.85rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid oklch(60% 0.22 28 / 30%);
+  background: oklch(30% 0.08 28 / 20%);
+}
+
+/* -------------------------------------------------------------------------
+   Grid — explicit hierarchy via named areas.
+   ------------------------------------------------------------------------- */
+.analytics-screen__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    'daily   daily   pulse'
+    'heat    heat    heat'
+    'burners suggest projects'
+    'recent  recent  recent';
+  gap: 0.9rem;
+  min-height: 0;
+}
+
+.analytics-panel--daily { grid-area: daily; }
+.analytics-panel--pulse { grid-area: pulse; }
+.analytics-panel--heat { grid-area: heat; }
+.analytics-panel--burners { grid-area: burners; }
+.analytics-panel--suggest { grid-area: suggest; }
+.analytics-panel--projects { grid-area: projects; }
+.analytics-panel--recent { grid-area: recent; }
+
+@media (max-width: 1200px) {
+  .analytics-screen__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'daily    pulse'
+      'heat     heat'
+      'burners  suggest'
+      'projects projects'
+      'recent   recent';
+  }
+}
+
+@media (max-width: 760px) {
+  .analytics-screen__grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'daily'
+      'pulse'
+      'heat'
+      'burners'
+      'suggest'
+      'projects'
+      'recent';
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Panel base + plate/glass treatments.
+   ------------------------------------------------------------------------- */
+.analytics-panel {
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  /* position:relative alone doesn't create a stacking context — the
+     negative-z ::before plate would escape to an ancestor and paint
+     invisibly without this. */
+  z-index: 0;
+}
+
+/* Plated panels — each a DISTINCT image (Lane F manifest), low brightness.
+   The panel's own opaque background paints below the negative-z ::before,
+   so the photo shows through with a scrim on top. */
+.analytics-panel--daily::before,
+.analytics-panel--heat::before,
+.analytics-panel--burners::before,
+.analytics-panel--recent::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  z-index: -2;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.3) saturate(1.05);
+  pointer-events: none;
+}
+
+.analytics-panel--daily::after,
+.analytics-panel--heat::after,
+.analytics-panel--burners::after,
+.analytics-panel--recent::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--pill-room-scrim, linear-gradient(180deg, oklch(8% 0.02 155 / 62%), oklch(7% 0.02 155 / 86%)));
+  pointer-events: none;
+}
+
+/* Hero reads a touch brighter — it's the star of the page. */
+.analytics-panel--daily::before { background-image: url('/bg/pool.webp'); filter: brightness(0.42) saturate(1.08); }
+.analytics-panel--heat::before { background-image: url('/bg/studio2.webp'); }
+.analytics-panel--burners::before { background-image: url('/bg/pet.webp'); }
+.analytics-panel--recent::before { background-image: url('/bg/terminal.webp'); }
+
+/* Glass panels — translucent so the shell backdrop reads through, calmer than
+   the plated panels. Compound selector so it reliably beats Panel's base
+   `.panel { background: var(--bg-surface) }` regardless of CSS import order. */
+.analytics-panel.analytics-panel--pulse,
+.analytics-panel.analytics-panel--suggest,
+.analytics-panel.analytics-panel--projects {
+  background: oklch(18% 0.03 151 / 55%);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
+}
+
+/* -------------------------------------------------------------------------
+   Empty + skeleton states.
+   ------------------------------------------------------------------------- */
+.analytics-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.35rem;
+  min-height: 6rem;
+  height: 100%;
+  padding: 1rem 0.75rem;
+}
+
+.analytics-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+  color: var(--core-accent-bright);
+  background: oklch(60% 0.14 150 / 12%);
+  border: 1px solid var(--border-glow);
+  margin-bottom: 0.2rem;
+}
+
+.analytics-empty__title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.analytics-empty__hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  max-width: 30ch;
+}
+
+.analytics-empty__action {
+  margin-top: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  color: var(--core-accent-bright);
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-glow);
+  background: oklch(60% 0.14 150 / 12%);
+}
+
+.analytics-empty__action::before {
+  content: '→ ';
+}
+
+.analytics-skel {
+  display: flex;
+  gap: 0.35rem;
+  align-items: flex-end;
+  height: 9rem;
+}
+
+.analytics-skel span,
+.analytics-skel--pulse,
+.analytics-skel--band {
+  background: linear-gradient(
+    100deg,
+    oklch(30% 0.03 150 / 25%) 30%,
+    oklch(45% 0.05 150 / 40%) 50%,
+    oklch(30% 0.03 150 / 25%) 70%
+  );
+  background-size: 220% 100%;
+  border-radius: 4px;
+  animation: analytics-shimmer 1.4s ease-in-out infinite;
+}
+
+.analytics-skel--bars span {
+  flex: 1;
+  min-width: 0;
+}
+
+.analytics-skel--pulse {
+  height: 9rem;
+  width: 100%;
+}
+
+.analytics-skel--band {
+  height: 3.5rem;
+  width: 100%;
+}
+
+.analytics-skel--rows {
+  flex-direction: column;
+  align-items: stretch;
+  height: auto;
+  gap: 0.55rem;
+}
+
+.analytics-skel--rows span {
+  height: 1.9rem;
+  width: 100%;
+}
+
+@keyframes analytics-shimmer {
+  0% { background-position: 120% 0; }
+  100% { background-position: -20% 0; }
+}
+
+/* -------------------------------------------------------------------------
+   Daily token usage — hero bar chart with y-axis rules + hover value labels.
+   ------------------------------------------------------------------------- */
+.analytics-daily-wrap {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem;
+  align-items: stretch;
+}
+
+.analytics-daily__axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: clamp(9rem, 8rem + 6vw, 13rem);
+  padding: 0.35rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.analytics-daily {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.28rem;
+  height: clamp(9rem, 8rem + 6vw, 13rem);
+  padding-top: 0.35rem;
+  /* three horizontal y-axis rules at 0% / 50% / 100% */
+  background:
+    linear-gradient(var(--rule), var(--rule)) 0 0 / 100% 1px no-repeat,
+    linear-gradient(var(--rule), var(--rule)) 0 50% / 100% 1px no-repeat,
+    linear-gradient(var(--rule), var(--rule)) 0 100% / 100% 1px no-repeat;
+  --rule: oklch(70% 0.06 150 / 16%);
+}
+
+.analytics-daily__col {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 0.35rem;
+}
+
+.analytics-daily__bar {
+  width: 100%;
+  max-width: 1.4rem;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, var(--core-accent-bright), var(--core-accent));
+  min-height: 3px;
+  transform-origin: bottom;
+  animation: analytics-grow 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: filter 150ms ease-out;
+}
+
+.analytics-daily__col:hover .analytics-daily__bar {
+  filter: brightness(1.3);
+}
+
+/* Value label — hidden until hover so 30 bars stay clean but every value is
+   one hover away (plus the always-on title tooltip). */
+.analytics-daily__val {
+  position: absolute;
+  top: -0.15rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-primary);
+  background: oklch(10% 0.02 155 / 88%);
+  border: 1px solid var(--border-glow);
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease-out;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.analytics-daily__col:hover .analytics-daily__val {
+  opacity: 1;
+}
+
+.analytics-daily__label {
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  min-height: 0.75rem;
+}
+
+@keyframes analytics-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+/* -------------------------------------------------------------------------
+   Live pulse column.
+   ------------------------------------------------------------------------- */
+.analytics-pulse {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  height: 100%;
+  justify-content: center;
+}
+
+.analytics-pulse__hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.analytics-pulse__value {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 1.4rem + 2vw, 2.7rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+  text-shadow: 0 0 18px oklch(87% 0.29 142 / 30%);
+}
+
+.analytics-pulse__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--core-accent-bright);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: var(--font-mono);
+}
+
+.analytics-pulse__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.analytics-pulse__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  background: oklch(25% 0.02 150 / 35%);
+  border: 1px solid oklch(40% 0.03 150 / 28%);
+}
+
+.analytics-pulse__stat-value {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.analytics-pulse__stat-value small {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-left: 0.1rem;
+}
+
+.analytics-pulse__stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.66rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.analytics-pulse__peak {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  padding-top: 0.2rem;
+  border-top: 1px solid oklch(40% 0.03 150 / 22%);
+}
+
+.analytics-pulse__peak strong {
+  color: var(--core-accent-bright);
+  font-family: var(--font-mono);
+}
+
+.analytics-pulse__peak svg {
+  color: var(--core-accent-bright);
+  flex-shrink: 0;
+}
+
+/* -------------------------------------------------------------------------
+   Hour-of-day heat band — full width, real color ramp, aligned labels.
+   ------------------------------------------------------------------------- */
+.analytics-heat-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.analytics-heat {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 2px;
+  height: clamp(2.75rem, 2rem + 3vw, 4rem);
+}
+
+.analytics-heat__cell {
+  min-width: 0;
+  border-radius: 3px;
+  border: 1px solid oklch(30% 0.02 150 / 20%);
+}
+
+.analytics-heat__cell.is-active {
+  border-color: oklch(60% 0.08 150 / 35%);
+}
+
+.analytics-heat__labels {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  font-size: 0.62rem;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.analytics-heat__legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.62rem;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  margin-top: 0.1rem;
+}
+
+.analytics-heat__ramp {
+  flex: 1;
+  max-width: 12rem;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, oklch(24% 0.03 156), oklch(52% 0.16 150), oklch(80% 0.29 142));
+}
+
+/* -------------------------------------------------------------------------
+   Top burners.
+   ------------------------------------------------------------------------- */
+.analytics-agents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.analytics-agents__row {
+  display: grid;
+  grid-template-columns: 1.3rem minmax(5rem, 1fr) 2.2fr auto;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.85rem;
+}
+
+.analytics-agents__rank {
+  color: var(--core-accent-bright);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.analytics-agents__name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.analytics-agents__name-text {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-agents__bar {
+  height: 9px;
+  border-radius: 5px;
+  background: oklch(30% 0.03 150 / 45%);
+  overflow: hidden;
+}
+
+.analytics-agents__fill {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--core-accent), var(--core-accent-bright));
+  box-shadow: 0 0 8px oklch(74% 0.2 151 / 40%);
+}
+
+.analytics-agents__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+
+.analytics-agents__share {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.analytics-agents__tok {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--text-secondary);
+}
+
+/* Skill/agent tag badge next to each burner name. */
+.analytics-badge {
+  font-size: 0.58rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.analytics-badge--skill {
+  color: var(--core-accent-bright);
+  background: oklch(60% 0.14 150 / 18%);
+}
+
+.analytics-badge--agent {
+  color: oklch(70% 0.16 250);
+  background: oklch(70% 0.16 250 / 16%);
+}
+
+/* -------------------------------------------------------------------------
+   Suggestions.
+   ------------------------------------------------------------------------- */
+.analytics-suggestions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.analytics-suggestion {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border-left: 2px solid var(--text-secondary);
+  background: oklch(25% 0.02 150 / 35%);
+}
+
+.analytics-suggestion__icon {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.analytics-suggestion__text {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.analytics-suggestion__basis {
+  margin: 0.2rem 0 0;
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.analytics-suggestion--info { border-left-color: oklch(70% 0.16 250); }
+.analytics-suggestion--info .analytics-suggestion__icon { color: oklch(70% 0.16 250); }
+
+.analytics-suggestion--tip { border-left-color: var(--core-accent-bright); }
+.analytics-suggestion--tip .analytics-suggestion__icon { color: var(--core-accent-bright); }
+
+.analytics-suggestion--warn { border-left-color: oklch(89% 0.24 139); }
+.analytics-suggestion--warn .analytics-suggestion__icon { color: oklch(89% 0.24 139); }
+
+/* -------------------------------------------------------------------------
+   Projects.
+   ------------------------------------------------------------------------- */
+.analytics-projects {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  max-height: 15rem;
+  overflow-y: auto;
+}
+
+.analytics-project-card {
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  background: oklch(25% 0.02 150 / 35%);
+  border: 1px solid oklch(40% 0.03 150 / 30%);
+}
+
+.analytics-project-card__top {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.analytics-project-card__icon {
+  color: var(--core-accent-bright);
+  display: flex;
+}
+
+.analytics-project-card__name {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.88rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-project-card__root {
+  font-size: 0.62rem;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.analytics-project-card__summary {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analytics-project-card__summary--empty {
+  font-style: italic;
+  opacity: 0.75;
+}
+
+.analytics-project-card__meta {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.analytics-project-card__badge {
+  font-size: 0.62rem;
+  font-family: var(--font-mono);
+  color: var(--core-accent-bright);
+  background: oklch(60% 0.14 150 / 16%);
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+}
+
+.analytics-project-card__updated {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+/* -------------------------------------------------------------------------
+   Recent activity — full width, multi-column fill.
+   ------------------------------------------------------------------------- */
+.analytics-activity {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.1rem 1.2rem;
+}
+
+/* -------------------------------------------------------------------------
+   Reduced motion.
+   ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .analytics-daily__bar { animation: none; }
+  .analytics-livedot--ready .analytics-livedot__dot { animation: none; }
+  .analytics-skel span,
+  .analytics-skel--pulse,
+  .analytics-skel--band { animation: none; }
+}

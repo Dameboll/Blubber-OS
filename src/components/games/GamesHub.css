@@ -1,0 +1,145 @@
+/* GamesHub -- mini-game arcade grid + the mounted-game wrapper. Palette and
+   radii match the rest of the Virtual Pet screen (pet-item / pet-action-btn
+   in VirtualPetScreen.css) so the arcade reads as part of the same room,
+   not a bolted-on widget. */
+
+/* The hub panel fills the Play tab's bounded box and its card grid tiles the
+   whole area (3×2, stretching rows) so all six cabinets fit ONE window with no
+   scroll and no dead gap. */
+.games-hub__panel {
+  flex: 1;
+  min-height: 0;
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+}
+
+.games-hub__panel .panel__body {
+  flex: 1;
+  min-height: 0;
+}
+
+.games-hub__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 0.75rem;
+  height: 100%;
+}
+
+.games-hub__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.9rem 0.75rem 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 20%);
+  border-radius: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 150ms ease-out, transform 150ms ease-out, background-color 150ms ease-out;
+  /* Room-plate host (Phase 5) — same negative-z pseudo-element recipe as
+     MiniProjects.css / ProjectsScreen.css's .project-card (see
+     src/styles/pill-room.css header, option B): explicit stacking context so
+     the ::before plate + ::after scrim below paint behind this card's own
+     in-flow content instead of escaping to an ancestor context. */
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+}
+
+/* Every cabinet shares the one game-room plate (public/bg/games.webp) — no
+   per-card variation needed, it is one arcade the games all live in. Heavy
+   scrim: the source photo carries bright green neon signage/monitors that
+   would otherwise fight the card name/tagline/best-score text on top. */
+.games-hub__card::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  z-index: -2;
+  background-image: url('/bg/games.webp');
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.55) saturate(1.05);
+  pointer-events: none;
+}
+
+.games-hub__card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--pill-room-scrim-heavy);
+}
+
+.games-hub__card:hover {
+  border-color: var(--core-accent-bright);
+  transform: translateY(-2px);
+}
+
+.games-hub__card:focus-visible {
+  outline: 2px solid var(--core-accent-bright);
+  outline-offset: 3px;
+}
+
+.games-hub__card:active {
+  transform: translateY(0);
+}
+
+.games-hub__card-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+}
+
+.games-hub__card-name {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+
+.games-hub__card-tagline {
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+.games-hub__card-best {
+  margin-top: 0.15rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--core-accent-bright);
+}
+
+/* A mounted game: fill the bounded box, cap the width so a square board never
+   grows taller than the Play tab, and centre it. On a short viewport this one
+   region scrolls internally — the screen itself never does. */
+.games-hub--playing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.games-hub--playing > * {
+  width: 100%;
+  max-width: 360px;
+}
+
+@media (max-width: 760px) {
+  .games-hub__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .games-hub__card {
+    transition: none;
+  }
+}

@@ -1,0 +1,132 @@
+.mini-flubber {
+  all: unset;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--mf-size, 2.25rem);
+  height: var(--mf-size, 2.25rem);
+  flex-shrink: 0;
+  cursor: pointer;
+  /* Idle bounce is always-on for a settled blob; entering/exiting override this below
+     (later rules win at equal specificity, so order here matters). */
+  animation: flubber-idle-bounce var(--flubber-duration, 2600ms) ease-in-out var(--flubber-delay, 0ms) infinite;
+}
+
+/* The blob is now a live MICRO 3D Flubber slot (Phase 2 of
+   flubber-3d-everywhere) — the wrapper keeps the round glow/hover ring while
+   the canvas inside renders the real model with a transparent background. */
+.mini-flubber__blob {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 10px oklch(70% 0.19 155 / 35%);
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.mini-flubber:hover .mini-flubber__blob,
+.mini-flubber:focus-visible .mini-flubber__blob {
+  transform: scale(1.16);
+  box-shadow:
+    0 4px 16px oklch(70% 0.19 155 / 55%),
+    inset 0 -5px 7px oklch(20% 0.04 160 / 45%);
+}
+
+.mini-flubber:focus-visible {
+  outline: 2px solid var(--core-accent-bright);
+  outline-offset: 3px;
+  border-radius: 50%;
+}
+
+.mini-flubber--active .mini-flubber__blob {
+  box-shadow:
+    0 0 0 2px var(--core-accent-bright),
+    0 4px 18px oklch(85% 0.22 150 / 55%);
+}
+
+.mini-flubber--error .mini-flubber__blob {
+  /* Error sessions read through the model's worried expression; the ring
+     glow shifts red so the state is still visible at a glance. */
+  box-shadow: 0 2px 10px oklch(55% 0.19 28 / 45%);
+}
+
+.mini-flubber__tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translate(-50%, 4px);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(65% 0 0 / 18%);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease-out, transform 120ms ease-out;
+  z-index: 5;
+}
+
+.mini-flubber:hover .mini-flubber__tooltip,
+.mini-flubber:focus-visible .mini-flubber__tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Spawn — a blob visibly splits off and drips down into the dish. Overrides the base
+   idle-bounce animation for the duration of the entrance (same `animation` property,
+   defined after `.mini-flubber` above so it wins at equal specificity). */
+.mini-flubber--entering {
+  animation: flubber-spawn 420ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes flubber-spawn {
+  0% {
+    transform: translateY(-22px) scale(0.2);
+    opacity: 0;
+  }
+  55% {
+    transform: translateY(3px) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Reabsorb — pulled back and squashed to nothing instead of just vanishing. Combined with
+   the goo filter on the parent dish, the shrink reads as melting back into whatever is
+   still nearby rather than a hard pop-off. */
+.mini-flubber--exiting {
+  animation: flubber-reabsorb 360ms cubic-bezier(0.55, 0, 0.85, 0.35) forwards;
+  pointer-events: none;
+}
+
+@keyframes flubber-reabsorb {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: translateY(-6px) scale(1.15, 0.75);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-18px) scale(0.05);
+    opacity: 0;
+  }
+}
+
+@keyframes flubber-idle-bounce {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(var(--flubber-drift-x, 0px), -5px);
+  }
+}

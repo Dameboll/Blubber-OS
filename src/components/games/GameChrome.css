@@ -1,0 +1,165 @@
+/* GameChrome -- shared chrome around every mini-game canvas. Palette matches
+   the dark green goo tokens defined in src/app/globals.css (:root); no new
+   colors introduced here, everything is var()-driven so a future palette
+   tweak in globals.css propagates automatically. */
+
+.game-chrome {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.game-chrome__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.game-chrome__title {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--core-accent-bright);
+  text-shadow: 0 0 10px oklch(87% 0.29 142 / 30%);
+}
+
+.game-chrome__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 20%);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 150ms ease-out, color 150ms ease-out, background-color 150ms ease-out;
+}
+
+.game-chrome__icon-btn:hover:not(:disabled) {
+  border-color: var(--core-accent-bright);
+  color: var(--core-accent-bright);
+  background: oklch(74% 0.2 151 / 10%);
+}
+
+.game-chrome__icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.game-chrome__scores {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.game-chrome__scores strong {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin-left: 0.35rem;
+}
+
+.game-chrome__stage {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid oklch(70% 0.19 155 / 20%);
+  box-shadow: inset 0 0 30px oklch(0% 0 0 / 40%);
+  touch-action: none;
+}
+
+.game-chrome__stage canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.game-chrome__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: oklch(9% 0.01 155 / 78%);
+  backdrop-filter: blur(2px);
+  text-align: center;
+  padding: 1rem;
+}
+
+.game-chrome__overlay-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--core-accent-bright);
+  text-shadow: 0 0 14px oklch(87% 0.29 142 / 40%);
+}
+
+.game-chrome__overlay-score {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.game-chrome__overlay-xp {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent-warning);
+}
+
+.game-chrome__overlay-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.game-chrome__overlay-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 10px;
+  background: var(--core-accent-bright);
+  border: none;
+  color: #0a0a0a;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: transform 150ms ease-out, opacity 150ms ease-out;
+}
+
+.game-chrome__overlay-btn:hover {
+  transform: translateY(-1px);
+}
+
+.game-chrome__overlay-btn--ghost {
+  background: transparent;
+  border: 1px solid oklch(70% 0.19 155 / 30%);
+  color: var(--text-primary);
+}
+
+.game-chrome__hint {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-chrome__icon-btn,
+  .game-chrome__overlay-btn {
+    transition: none;
+  }
+}

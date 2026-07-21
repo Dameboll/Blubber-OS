@@ -1,0 +1,285 @@
+.weekly-recap {
+  --recap-border: oklch(28% 0.01 165);
+  width: 100%;
+  padding: clamp(2rem, 1.5rem + 2vw, 3.5rem) clamp(1.5rem, 1rem + 2vw, 3rem);
+  color: var(--text-primary);
+}
+
+.weekly-recap__header h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.2rem + 1vw, 2.25rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.weekly-recap__sub {
+  font-family: var(--font-ui);
+  color: var(--text-secondary);
+  margin: 0.35rem 0 1.75rem;
+  font-size: 0.9rem;
+}
+
+.weekly-recap__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(1.25rem, 1rem + 1vw, 2rem);
+}
+
+.weekly-recap__stats {
+  display: flex;
+  gap: clamp(1.5rem, 1rem + 2vw, 3rem);
+  flex-wrap: wrap;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat__value {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 1.4rem + 1.5vw, 2.75rem);
+  color: var(--core-accent-bright);
+  line-height: 1;
+}
+
+.stat__label {
+  font-family: var(--font-ui);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.weekly-recap__chart {
+  background: var(--bg-surface);
+  border: 1px solid var(--recap-border);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+}
+
+.trend-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.trend-chart__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--text-secondary);
+}
+
+.trend-chart__peak-bg {
+  fill: var(--bg-surface);
+  opacity: 0.82;
+}
+
+/* Draw-on: the trend line strokes itself left-to-right when the chart mounts
+   (it only renders once data loads), instead of just appearing. */
+.trend-chart__line {
+  stroke-dasharray: 2000;
+  stroke-dashoffset: 2000;
+  animation: trend-draw 1.5s ease-out 0.2s forwards;
+}
+
+@keyframes trend-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.trend-chart__area {
+  opacity: 0;
+  animation: trend-area-in 1s ease-out 1.1s forwards;
+}
+
+@keyframes trend-area-in {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Data dots pop in staggered after the line reaches them, then keep a subtle
+   living pulse. Hover enlarges (native <title> shows the day's token value). */
+.trend-chart__dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: trend-dot-in 0.4s ease-out var(--dot-delay, 1s) forwards,
+    trend-dot-pulse 3s ease-in-out calc(var(--dot-delay, 1s) + 0.4s) infinite;
+  transition: r 120ms ease-out;
+  cursor: pointer;
+}
+
+.trend-chart__dot:hover {
+  r: 6;
+}
+
+@keyframes trend-dot-in {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes trend-dot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trend-chart__line {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+  .trend-chart__area,
+  .trend-chart__dot {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+.weekly-recap__lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: clamp(1rem, 0.75rem + 1vw, 1.75rem);
+}
+
+.rank-list {
+  background: var(--bg-surface);
+  border: 1px solid var(--recap-border);
+  border-radius: 6px;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.rank-list h3 {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin: 0 0 0.75rem;
+}
+
+.rank-list ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rank-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--recap-border);
+  padding: 0.35rem 0.5rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-radius: 4px;
+  transition: background-color 150ms ease-out;
+  cursor: default;
+}
+
+.rank-list li:hover {
+  background: oklch(70% 0.19 155 / 10%);
+}
+
+.rank-list li:hover .rank-list__count {
+  color: var(--core-accent-bright);
+}
+
+.rank-list li:last-child {
+  border-bottom: none;
+}
+
+.rank-list__name {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rank-list__count {
+  font-family: var(--font-mono);
+  color: var(--core-accent);
+  flex-shrink: 0;
+}
+
+.weekly-recap__empty {
+  background: var(--bg-surface);
+  border: 1px dashed var(--recap-border);
+  border-radius: 6px;
+  padding: 2rem;
+  text-align: center;
+  font-family: var(--font-ui);
+}
+
+.weekly-recap__empty p {
+  margin: 0 0 0.4rem;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.weekly-recap__hint {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.weekly-recap__skeleton {
+  display: grid;
+  gap: 1rem;
+}
+
+.skeleton-block {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 0%,
+    var(--bg-elevated) 50%,
+    var(--bg-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: weekly-recap-shimmer 1.6s ease-in-out infinite;
+}
+
+.skeleton-block--chart {
+  height: 180px;
+}
+
+.skeleton-block--list {
+  height: 140px;
+}
+
+@keyframes weekly-recap-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+  }
+}

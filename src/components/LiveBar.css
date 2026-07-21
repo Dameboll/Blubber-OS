@@ -1,0 +1,97 @@
+.live-bar {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: var(--bg-surface);
+  border: 1px solid oklch(70% 0.19 155 / 25%);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  overflow: hidden;
+}
+
+/* One-shot green bloom that sweeps the pill each time a new delta lands.
+   Remounted via React `key` so it replays fresh every time. */
+.live-bar__bloom {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 120% at 50% 50%, oklch(85% 0.22 150 / 45%) 0%, transparent 70%);
+  animation: live-bar-bloom 550ms ease-out forwards;
+}
+
+@keyframes live-bar-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.15);
+  }
+}
+
+.live-bar__dot {
+  align-self: center;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 6px var(--core-accent-bright);
+  /* "Connected" reads as a heartbeat, not a static LED. */
+  animation: live-bar-heartbeat 2.4s ease-in-out infinite;
+}
+
+@keyframes live-bar-heartbeat {
+  0%,
+  100% {
+    box-shadow: 0 0 5px var(--core-accent-bright);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 12px var(--core-accent-bright), 0 0 20px oklch(85% 0.22 150 / 50%);
+    transform: scale(1.25);
+  }
+}
+
+.live-bar__dot--offline {
+  background: var(--text-secondary);
+  box-shadow: none;
+  animation: none;
+}
+
+.live-bar__value {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.live-bar__label {
+  position: relative;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.live-bar__delta {
+  position: relative;
+  font-size: 0.75rem;
+  color: var(--core-accent-bright);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-bar__dot {
+    animation: none;
+  }
+  .live-bar__bloom {
+    display: none;
+  }
+}

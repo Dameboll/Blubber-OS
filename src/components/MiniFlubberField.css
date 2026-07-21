@@ -1,0 +1,42 @@
+.mini-flubber-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 3.4rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 999px;
+  background: oklch(11% 0.015 165 / 55%);
+  border: 1px solid oklch(70% 0.19 155 / 14%);
+  transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+
+/* Collapses visually when no tabs are open yet — box stays in flow (fixed min-height/padding,
+   never animated) but fades to fully transparent and inert. The field only "reads" as present
+   once a real session spawns a blob into it. */
+.mini-flubber-field--empty {
+  opacity: 0;
+  transform: scale(0.94);
+  background: transparent;
+  border-color: transparent;
+  pointer-events: none;
+}
+
+.mini-flubber-field__dish {
+  /* The "petri dish" — a small, bounded cluster zone, not scattered across the screen.
+     Shrinks blob size a little as more tabs pile in so a busy session list still reads
+     as one contained cluster instead of overflowing. */
+  --mf-size: clamp(1.3rem, calc(2.35rem - var(--mf-count, 1) * 0.06rem), 2.35rem);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 14rem;
+  max-height: 5.2rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.15rem;
+  /* This is the whole "gooey merge" trick: blur the shared alpha channel, then punch the
+     contrast back up. Adjacent blobs visually fuse where they get close instead of just
+     overlapping as flat circles — no per-instance shader required. */
+  filter: url(#mini-flubber-goo);
+}

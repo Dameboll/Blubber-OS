@@ -1,0 +1,488 @@
+.dame-shell {
+  --dame-sidebar-width: 232px;
+  display: grid;
+  grid-template-columns: var(--dame-sidebar-width) 1fr;
+  /* Fixed to the viewport (not min-height) so the footer status bar stays
+     pinned at the bottom like every reference screenshot -- only the main
+     content column scrolls internally (see .dame-shell__content below).
+     Previously this was min-height:100vh, which let the whole shell grow
+     past the viewport on any tall screen (Dashboard especially) and pushed
+     the footer off-screen until the ENTIRE page was scrolled. */
+  height: 100vh;
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Sidebar                                                                 */
+/* ---------------------------------------------------------------------- */
+
+.dame-shell__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100%;
+  padding: 1.25rem 1rem 1rem;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-glow);
+  overflow-y: auto;
+}
+
+.dame-shell__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.25rem 0.4rem 0.75rem;
+}
+
+.dame-shell__brand-logo {
+  display: block;
+  width: 100%;
+  max-width: 178px;
+  height: auto;
+  /* Official baked wordmark (FLUBBER + Claude OS subtitle in one image) —
+     subtle green glow so it reads as part of the UI, not pasted on top. */
+  filter: drop-shadow(0 0 12px oklch(75% 0.2 140 / 0.35));
+  transition: filter 0.2s ease-out;
+}
+
+.dame-shell__brand-logo:hover {
+  filter: drop-shadow(0 0 12px oklch(75% 0.2 140 / 0.35)) brightness(1.08);
+}
+
+.dame-shell__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dame-shell__nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.dame-shell__nav-item:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.dame-shell__nav-item--active {
+  background: oklch(72% 0.2 151 / 40%);
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 1px oklch(87% 0.29 142 / 30%), 0 0 14px oklch(74% 0.2 151 / 20%);
+}
+
+.dame-shell__nav-item--active:hover {
+  background: oklch(74% 0.2 151 / 20%);
+}
+
+.dame-shell__recent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 0;
+}
+
+.dame-shell__recent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.4rem;
+}
+
+.dame-shell__recent-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border-glow);
+  background: transparent;
+  color: var(--core-accent-bright);
+  cursor: pointer;
+  transition: background-color 150ms ease-out, transform 150ms ease-out;
+}
+
+.dame-shell__recent-add:hover {
+  background: var(--bg-elevated);
+  transform: scale(1.08);
+}
+
+.dame-shell__recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.dame-shell__recent-status {
+  padding: 0.4rem 0.4rem;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.dame-shell__recent-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.4rem 0.4rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.dame-shell__recent-item:hover {
+  background: var(--bg-elevated);
+}
+
+.dame-shell__recent-avatar {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: oklch(74% 0.2 151 / 20%);
+  color: var(--core-accent-bright);
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.dame-shell__recent-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dame-shell__view-all {
+  align-self: flex-start;
+  padding: 0.25rem 0.4rem;
+  border: none;
+  background: transparent;
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dame-shell__view-all:hover {
+  text-decoration: underline;
+}
+
+.dame-shell__tip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding: 0.85rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-panel);
+}
+
+/* The tip card is a flex row with a growing copy block; the raw Flubber3D
+   canvas (unlike AgentAvatar, which is flex-shrink:0 by default) would get
+   squished without this. */
+.dame-shell__tip-flubber {
+  flex-shrink: 0;
+}
+
+.dame-shell__tip-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.dame-shell__tip-label {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--core-accent-bright);
+}
+
+.dame-shell__tip-copy p {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Main column: topbar / content / footer                                  */
+/* ---------------------------------------------------------------------- */
+
+.dame-shell__main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Per-screen cinematic "room" wallpaper — a dim, fixed backdrop behind the whole
+   content frame on the data screens that don't own a hero backdrop. topbar /
+   content / footer sit above it (z-index:1); those screens are transparent, so
+   the room shows through the gaps between their cards. */
+.dame-shell__topbar,
+.dame-shell__content,
+.dame-shell__footer {
+  position: relative;
+  z-index: 1;
+}
+.dame-shell__room {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.34) saturate(1.12);
+}
+.dame-shell__room::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, oklch(6% 0.02 155 / 0.5), oklch(5% 0.02 155 / 0.82));
+}
+.dame-shell__room--projects { background-image: url('/bg/projects.webp'); }
+.dame-shell__room--memory { background-image: url('/bg/memory.webp'); }
+.dame-shell__room--analytics { background-image: url('/bg/analytics.webp'); }
+.dame-shell__room--engine { background-image: url('/bg/engine.webp'); }
+
+.dame-shell__topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0.5rem 1.5rem;
+  flex-shrink: 0;
+}
+
+.dame-shell__user-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.75rem 0.35rem 0.35rem;
+  border: 1px solid var(--border-glow);
+  border-radius: 999px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.dame-shell__user-chip:hover {
+  border-color: oklch(87% 0.29 142 / 45%);
+  box-shadow: var(--glow-shadow);
+}
+
+.dame-shell__user-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.dame-shell__user-name {
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.dame-shell__user-mode {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  color: var(--core-accent-bright);
+}
+
+.dame-shell__content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  /* Every screen's own root class is already height:100% expecting a bounded
+     parent (see e.g. DashboardScreen.css, TerminalScreen.css) -- this is the
+     bounded parent. Screens that manage their own internal scroll regions
+     (Music Player's transport bar, Terminal's panels) fit exactly and never
+     trigger this; screens whose content runs taller than the viewport
+     (Dashboard) now scroll right here instead of dragging the footer/topbar
+     off-screen with them. */
+  overflow-y: auto;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Persistent terminal host (LANE P — see PersistentTerminalHost.tsx)       */
+/* ---------------------------------------------------------------------- */
+
+/* The real terminal is mounted ONCE here and kept alive across nav switches so
+   its PTYs, xterm panes, and TabBar's tab list never get torn down. It fills
+   the content area absolutely and is toggled with VISIBILITY (never
+   display:none) so xterm keeps its measured box the whole time and needs no
+   refit when you nav back. .dame-shell__content is position:relative (see the
+   room block above), so inset:0 resolves to this content area. TerminalScreen's
+   own root is height:100%, which resolves against this bounded host. */
+.persistent-terminal-host {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+}
+
+.persistent-terminal-host > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.persistent-terminal-host--hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Anchor-portal mode (PILL WORLDS + MINI DASH, Lane 2): position/size come
+   from PersistentTerminalHost's inline style (the measured dashboard tile
+   rect), which always wins over the `inset:0` rule above at equal or higher
+   specificity via the style attribute. This just clips + frames it to read as
+   part of the dashboard tile it's sitting on top of, matching
+   .dashboard-tabmini's card language instead of the full-screen terminal's
+   own chrome. */
+.persistent-terminal-host--anchored {
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--border-glow);
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+  overflow: hidden;
+}
+
+.dame-shell__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid var(--border-glow);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.dame-shell__footer-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+}
+
+.dame-shell__status-smile {
+  color: var(--core-accent-bright);
+}
+
+.dame-shell__footer-quote {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--text-secondary);
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dame-shell__footer-status {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--text-secondary);
+}
+
+.dame-shell__status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: oklch(74% 0.2 151 / 14%);
+  color: var(--core-accent-bright);
+}
+
+.dame-shell__status-pill--warn {
+  background: oklch(89% 0.24 139 / 16%);
+  color: var(--accent-warning);
+}
+
+.dame-shell__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Responsive: collapse the sidebar to icons-only before anything scrolls  */
+/* horizontally. PLAN.md scopes this app PC-only with no mobile            */
+/* requirement, so this is a minimum-robustness breakpoint, not a full     */
+/* mobile-first pass.                                                      */
+/* ---------------------------------------------------------------------- */
+
+@media (max-width: 960px) {
+  .dame-shell {
+    --dame-sidebar-width: 72px;
+  }
+
+  .dame-shell__nav-item span,
+  .dame-shell__recent,
+  .dame-shell__tip-copy,
+  .dame-shell__user-copy {
+    display: none;
+  }
+
+  .dame-shell__nav-item {
+    justify-content: center;
+    padding: 0.6rem;
+  }
+
+  .dame-shell__tip {
+    justify-content: center;
+    padding: 0.6rem;
+  }
+
+  .dame-shell__footer-quote {
+    display: none;
+  }
+}

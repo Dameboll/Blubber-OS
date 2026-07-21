@@ -1,0 +1,864 @@
+/* DashboardScreen — hero mascot on the left, System Status + Quick Actions on
+   the right, a view tab strip over a terminal preview + the consolidated Live
+   Usage pill (weekly recap included), and a two-panel bottom row (Activity
+   Feed / Top Agents). Tokens only, no hardcoded hex — matches the frozen
+   design system in globals.css. See DashboardScreen.tsx's header for what's
+   real. */
+
+.dashboard-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: clamp(0.7rem, 0.55rem + 0.4vw, 1.05rem);
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+
+  /* Local alias for a hairline green reused across this screen's chrome
+     (quick-action borders, range-toggle border, tabmini dividers). */
+  --dashboard-hairline: 70% 0.19 155;
+  /* Shared pill-room scrim (mirrors src/styles/pill-room.css :root) inlined
+     here as a self-contained fallback so the panel plates below never depend
+     on another screen's stylesheet being bundled first. */
+  --dashboard-plate-scrim: linear-gradient(
+    180deg,
+    oklch(10% 0.02 150 / 62%),
+    oklch(10% 0.02 150 / 34%) 45%,
+    oklch(8% 0.02 150 / 72%)
+  );
+}
+
+/* Panel's own `title` renders neutral/white text (see ui/Panel.css). Recolor
+   the title within this screen only — a muted secondary green. */
+.dashboard-panel {
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+}
+
+.dashboard-panel .panel__title {
+  color: var(--core-accent);
+  white-space: nowrap;
+}
+
+/* Hierarchy pass: System Status / Top Agents / the relocated Activity Feed
+   are secondary chrome next to the hero (FlubberHome) and the terminal, which
+   keep full visual weight. Dimmer + a touch smaller, reusing the existing
+   secondary-text token and the same small uppercase-label scale already used
+   elsewhere on this screen (e.g. .dashboard-quick-actions__label). Scoped to
+   just these three panels, not the whole .dashboard-panel title rule above. */
+.dashboard-panel--status .panel__title,
+.dashboard-panel--topagents .panel__title,
+.dashboard-panel--activity .panel__title {
+  color: var(--text-secondary);
+  font-size: 0.625rem;
+}
+
+/* Panel's `accent` prop applies full-strength border + --glow-shadow; dial it
+   back to a subtle hairline so panels read as flat dark cards. Doubled class
+   selector outranks Panel.css's single-class .panel--accent. */
+.dashboard-panel.panel--accent {
+  border-color: var(--border-glow);
+  box-shadow: 0 0 20px oklch(74% 0.2 151 / 5%);
+}
+
+.dashboard-empty-note {
+  margin: 0;
+  padding: 0.15rem 0;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ */
+/* Panel plates — a photographic room behind the data panels (pill-room
+   pseudo-element recipe, option B). ::before = the plate at z-index:-2,
+   ::after = the scrim at z-index:-1, both painting behind the panel's own
+   in-flow content but above its opaque background. Kept dark so charts and
+   stat numbers stay AAA-legible. */
+/* ------------------------------------------------------------------ */
+
+.dashboard-panel--status,
+.dashboard-panel--topagents {
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.dashboard-panel--status::before,
+.dashboard-panel--topagents::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  z-index: -2;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.32) saturate(1.05);
+  pointer-events: none;
+}
+
+.dashboard-panel--status::before {
+  background-image: url('/bg/studio.webp');
+}
+
+.dashboard-panel--topagents::before {
+  background-image: url('/bg/agents.webp');
+}
+
+.dashboard-panel--status::after,
+.dashboard-panel--topagents::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--dashboard-plate-scrim);
+}
+
+/* ------------------------------------------------------------------ */
+/* Top row: hero mascot (left) + System Status / Quick Actions (right)  */
+/* ------------------------------------------------------------------ */
+
+.dashboard-screen__top {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(15rem, 1fr);
+  gap: 0.85rem;
+  align-items: stretch;
+}
+
+.dashboard-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: clamp(9.5rem, 8rem + 4vw, 11rem);
+  padding: 0.7rem;
+  overflow: hidden;
+}
+
+/* Dashboard hero is Flubber's living room (FlubberHome) filling the band — it
+   brings its own dais glow, goo bubbles, and speech. */
+.dashboard-hero .fh {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  border-radius: 12px;
+}
+
+/* ------------------------------------------------------------------ */
+/* System Status / Quick Actions column                                 */
+/* ------------------------------------------------------------------ */
+
+.dashboard-screen__side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* No green accent underline beneath dashboard panel titles. */
+.dashboard-panel .panel__accent-bar {
+  display: none;
+}
+
+/* Small green sparkle glyph before the ACTIVITY FEED title. */
+.dashboard-panel--activity .panel__title {
+  position: relative;
+  padding-left: 1rem;
+}
+
+.dashboard-panel--activity .panel__title::before {
+  content: '';
+  position: absolute;
+  top: 0.15rem;
+  left: 0;
+  width: 11px;
+  height: 11px;
+  background-color: var(--core-accent-bright);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M12 0l2.4 9.6L24 12l-9.6 2.4L12 24l-2.4-9.6L0 12l9.6-2.4z'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000'%3E%3Cpath d='M12 0l2.4 9.6L24 12l-9.6 2.4L12 24l-2.4-9.6L0 12l9.6-2.4z'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+
+.dashboard-screen__side .dashboard-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Status panel body stacks status line + stat grid + Quick Actions, letting
+   the actions block fill the space left under the chips (no dead stretch). */
+.dashboard-panel--status .panel__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.75rem;
+}
+
+.dashboard-panel-chevron {
+  color: var(--text-secondary);
+}
+
+.dashboard-status-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 8px oklch(87% 0.29 142 / 60%);
+  animation: dashboard-status-breathe 2.4s ease-in-out infinite;
+}
+
+.dashboard-status-dot--warn {
+  background: var(--accent-danger);
+  box-shadow: 0 0 8px oklch(60% 0.22 28 / 55%);
+  animation: none;
+}
+
+@keyframes dashboard-status-breathe {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+.dashboard-status-line {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: -0.4rem 0 0;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.dashboard-status-line--warn {
+  color: var(--accent-danger);
+}
+
+.dashboard-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+/* Quick Actions — real, working actions filling the column below the status
+   chips (new terminal tab, jump to a section mini). Two columns fit the narrow
+   side column and fill the vertical space left under the stat grid. */
+.dashboard-quick-actions {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.dashboard-quick-actions__label {
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.quick-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.6rem 0.35rem;
+  background: oklch(20% 0.02 155 / 40%);
+  border: 1px solid oklch(70% 0.19 155 / 16%);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out, transform 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.quick-action-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.05rem;
+  height: 2.05rem;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 18%);
+  color: var(--core-accent-bright);
+}
+
+.quick-action-btn:hover {
+  background: oklch(74% 0.2 151 / 16%);
+  border-color: oklch(87% 0.29 142 / 45%);
+  box-shadow: var(--glow-shadow);
+  transform: translateY(-1px);
+}
+
+.quick-action-btn:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.quick-action-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+/* ------------------------------------------------------------------ */
+/* View tab strip                                                      */
+/* ------------------------------------------------------------------ */
+
+.dashboard-tabstrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.2rem 0.1rem;
+  background: transparent;
+  border: none;
+  border-radius: 14px;
+}
+
+.dashboard-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.dashboard-tab:hover {
+  color: var(--text-primary);
+}
+
+.dashboard-tab:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.dashboard-tab--active {
+  background: oklch(74% 0.2 151 / 18%);
+  color: var(--core-accent-bright);
+  box-shadow: 0 0 14px oklch(74% 0.2 151 / 20%);
+}
+
+.dashboard-tabstrip__end {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  padding-right: 0.15rem;
+}
+
+.dashboard-tabstrip__new {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.6rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.dashboard-tabstrip__menu {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.dashboard-tabstrip__new:hover,
+.dashboard-tabstrip__menu:hover {
+  color: var(--text-primary);
+  background: oklch(74% 0.2 151 / 10%);
+}
+
+.dashboard-tabstrip__new:focus-visible,
+.dashboard-tabstrip__menu:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Mid row: terminal preview / section mini (left) + the consolidated   */
+/* Live Usage pill, weekly recap included (right)                       */
+/* ------------------------------------------------------------------ */
+
+.dashboard-screen__midrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  /* Explicit row track is required: an implicit `auto` row sizes to its
+     tallest child's natural content height, so a child using `height:100%`
+     has nothing definite to resolve against and overflows past this row.
+     The Live Usage pill (.lum, height:100%) depends on this. */
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: stretch;
+  flex: 1;
+  min-height: clamp(16rem, 12rem + 14vw, 24rem);
+}
+
+/* Terminal tab tile — an empty, correctly-sized anchor. PersistentTerminalHost
+   measures this element's rect and portals the live TerminalScreen on top. */
+.dashboard-terminal-anchor {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-panel);
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+  overflow: hidden;
+}
+
+.dashboard-terminal-anchor__boot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+}
+
+/* Only the honest fallback empty-state remains of the old terminal preview —
+   the mocked log/titlebar/footer markup is gone from the JSX. */
+.terminal-preview {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-panel);
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+  overflow: hidden;
+}
+
+.terminal-preview--empty {
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.terminal-preview--empty p {
+  margin: 0;
+  max-width: 22rem;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tab-preview minis (Agents / Projects / Chat / Memory / Analytics) —   */
+/* a live glance at each section's REAL data in the same left band as    */
+/* the terminal preview so switching tabs never changes the screen's     */
+/* height (LAW 2). Same card language as .terminal-preview.              */
+/* ------------------------------------------------------------------ */
+
+.dashboard-tabmini {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-panel);
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+  overflow: hidden;
+}
+
+.dashboard-tabmini__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid oklch(var(--dashboard-hairline) / 16%);
+}
+
+.dashboard-tabmini__head-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--core-accent-bright);
+}
+
+.dashboard-tabmini__head-label {
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.dashboard-tabmini__head-count {
+  margin-left: auto;
+  color: var(--core-accent-bright);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-tabmini__body {
+  flex: 1;
+  min-height: 7rem;
+  padding: 0.35rem 0.5rem;
+  overflow-y: auto;
+}
+
+.dashboard-tabmini__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.dashboard-tabmini__row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.3rem 0.45rem;
+  border-radius: 9px;
+  text-align: left;
+}
+
+.dashboard-tabmini__avatar {
+  flex-shrink: 0;
+}
+
+.dashboard-tabmini__row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.02rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.dashboard-tabmini__row-name {
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-tabmini__row-sub {
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-tabmini__row-time {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-tabmini__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 6rem;
+  margin: 0;
+  padding: 0 1.25rem;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.dashboard-tabmini__foot {
+  padding: 0.4rem 1rem;
+  background: transparent;
+  border: none;
+  border-top: 1px solid oklch(var(--dashboard-hairline) / 16%);
+  color: var(--core-accent);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: color 150ms ease-out;
+}
+
+.dashboard-tabmini__foot:hover {
+  color: var(--core-accent-bright);
+}
+
+.dashboard-tabmini__foot:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: -2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Activity Feed — now a compact strip in the bottom row (moved out of the  */
+/* midrow to make room for the merged Live Usage pill). Its list caps to a  */
+/* short height and scrolls INTERNALLY for the rest of the up-to-20 rows —  */
+/* it reads as a glance, not a full-height feed. Custom thin scrollbar.     */
+/* ------------------------------------------------------------------ */
+
+.dashboard-panel--activity {
+  min-height: 0;
+}
+
+.dashboard-panel--activity .panel__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.dashboard-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-height: 0;
+  max-height: clamp(6rem, 8rem + 2vw, 12rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: oklch(70% 0.19 155 / 32%) transparent;
+}
+
+.dashboard-activity-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.dashboard-activity-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-activity-list::-webkit-scrollbar-thumb {
+  background: oklch(70% 0.19 155 / 30%);
+  border-radius: 3px;
+}
+
+.dashboard-activity-list::-webkit-scrollbar-thumb:hover {
+  background: oklch(74% 0.2 151 / 45%);
+}
+
+/* Tighten activity rows so more fit before scroll kicks in (scoped to this
+   screen — the shared ActivityItem is untouched). */
+.dashboard-activity-list .activity-item {
+  padding-top: 0.14rem;
+  padding-bottom: 0.14rem;
+}
+
+.dashboard-activity-more {
+  align-self: flex-start;
+  flex-shrink: 0;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--core-accent);
+  font-family: var(--font-ui);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 150ms ease-out;
+}
+
+.dashboard-activity-more:hover {
+  color: var(--core-accent-bright);
+}
+
+.dashboard-activity-more:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Activity Feed / Top Agents panel styling — reused by dash/
+   ActivityFeedPanel.tsx + dash/TopAgentsPanel.tsx, now mounted in the
+   Agents tab rail (AgentsScreen.tsx) rather than a bottom row here.      */
+/* ------------------------------------------------------------------ */
+
+.range-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.15rem;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(var(--dashboard-hairline) / 16%);
+  border-radius: 999px;
+}
+
+.range-toggle__btn {
+  padding: 0.3rem 0.6rem;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.range-toggle__btn:hover:not(:disabled):not(.range-toggle__btn--active) {
+  color: var(--text-primary);
+}
+
+.range-toggle__btn:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.range-toggle__btn--active {
+  background: oklch(74% 0.2 151 / 22%);
+  color: var(--core-accent-bright);
+}
+
+.range-toggle__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Top Agents panel — up to 5 rows, distributed to fill the panel height ---- */
+
+.dashboard-panel--topagents .panel__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.dashboard-agent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  justify-content: space-evenly;
+}
+
+.dashboard-agent-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dashboard-agent-rank {
+  flex-shrink: 0;
+  width: 1.1rem;
+  text-align: right;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-agent-flubber {
+  flex-shrink: 0;
+}
+
+.dashboard-agent-name {
+  flex-shrink: 0;
+  width: 6.5rem;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-agent-bar {
+  flex: 1;
+  min-width: 1.5rem;
+  height: 4px;
+  border-radius: 2px;
+  background: oklch(30% 0.03 150 / 45%);
+  overflow: hidden;
+}
+
+.dashboard-agent-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--core-accent), var(--core-accent-bright));
+}
+
+.dashboard-agent-count {
+  flex-shrink: 0;
+  min-width: 3.5rem;
+  text-align: right;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* Responsive — PC-first by scope (see AppShell.css); a minimum-robustness */
+/* breakpoint set matching existing precedent.                           */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 1180px) {
+  .dashboard-screen__top {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-screen__midrow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .dashboard-tabstrip {
+    overflow-x: auto;
+  }
+}

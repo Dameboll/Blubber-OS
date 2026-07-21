@@ -1,0 +1,945 @@
+/* SettingsScreen — tab strip (General/Appearance/Flubber/Agents/AI & Model/
+   Notifications/Shortcuts/Advanced) over a 2-col main content area + an
+   independently-sized right rail (see `.settings-grid` below). Only
+   "General" ships real content this pass (see SettingsScreen.tsx header) —
+   every other tab renders ComingSoonPanel. Tokens only, matches the frozen
+   design system in globals.css (same convention as AgentsScreen.css /
+   VirtualPetScreen.css), plus one local screen-scoped accent
+   (`--settings-icon-warm`) for the warm gold/amber row icons the reference
+   art uses that globals.css's green-only palette doesn't cover. */
+
+.settings-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: clamp(1.1rem, 0.85rem + 1vw, 1.75rem);
+  height: 100%;
+  min-height: 0;
+  /* LAW 2 (LANE L): self-contain so the tab strip + panel grid never push the
+     shell — if a dense tab runs long, this region scrolls with the topbar/
+     footer pinned. Only the General tab ships real content this pass, so at
+     1440x900 it fits without scrolling. */
+  overflow-y: auto;
+  /* Local, screen-scoped accent — reference art uses a warm gold/amber for
+     setting-row icons, not the shared green palette in globals.css. Scoped
+     here rather than added to globals.css since that file is shared/frozen. */
+  --settings-icon-warm: oklch(88% 0.16 92);
+}
+
+/* ------------------------------------------------------------------ */
+/* Header                                                              */
+/* ------------------------------------------------------------------ */
+
+.settings-screen__header {
+  display: flex;
+  align-items: center;
+}
+
+.settings-screen__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.settings-screen__heading-icon {
+  color: var(--core-accent-bright);
+  filter: drop-shadow(0 0 10px oklch(87% 0.29 142 / 30%));
+}
+
+.settings-screen__title {
+  margin: 0;
+  /* Reference ("flubber 7.png") renders this as a plain, readable sans-serif
+     heading — not the blocky all-caps Syncopate wordmark font other screens
+     reserve for stylized display moments. --font-display here made "Settings"
+     render as an illegible "SeTTingS" glyph mess. */
+  font-family: var(--font-ui);
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  color: var(--text-primary);
+}
+
+.settings-screen__subtitle {
+  margin: 0.25rem 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* Tab strip                                                           */
+/* ------------------------------------------------------------------ */
+
+.settings-tabs {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.9rem, 0.7rem + 0.6vw, 1.5rem);
+  flex-wrap: wrap;
+  border-bottom: 1px solid oklch(65% 0 0 / 14%);
+  padding-bottom: 0.1rem;
+}
+
+.settings-tabs__item {
+  position: relative;
+  padding: 0.5rem 0.1rem;
+  background: transparent;
+  border: none;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 150ms ease-out;
+}
+
+.settings-tabs__item:hover {
+  color: var(--text-primary);
+}
+
+.settings-tabs__item--active {
+  color: var(--core-accent-bright);
+}
+
+.settings-tabs__item--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 6px var(--core-accent-bright);
+}
+
+/* ------------------------------------------------------------------ */
+/* Panel grid                                                          */
+/* ------------------------------------------------------------------ */
+
+/* Top-level layout: main content column + right rail as two INDEPENDENT
+   flex/grid containers (not a single shared grid). A shared grid would force
+   every row track to match its tallest cell across all columns — since
+   Flubber Preview (rail) reads much taller than General Preferences (main),
+   that coupling would leave dead space under the shorter main-column panels.
+   The rail also runs proportionally wider than a single main sub-column
+   (1fr rail vs ~0.85fr-equivalent main column), matching the reference
+   screenshot's proportions. */
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.85fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.settings-grid__main {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.settings-grid__rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* Tighten the shared Panel padding/gap for this screen only — the reference
+   packs General/Personality/Usage/Interface + System Integration + the whole
+   right rail into a single viewport, denser than the default card padding. */
+.settings-panel {
+  gap: 0.7rem;
+  padding: 0.9rem 1.05rem;
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+}
+
+.settings-panel .panel__body {
+  min-width: 0;
+}
+
+.settings-panel .panel__title {
+  color: var(--core-accent-bright);
+  text-shadow: 0 0 10px oklch(87% 0.29 142 / 22%);
+}
+
+.settings-panel--wide {
+  grid-column: 1 / -1;
+}
+
+.settings-panel__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+/* System Integration is the only panel that spans both main-grid columns
+   on its own row — General/Personality/Usage/Interface fall into the 2-col
+   grid in natural DOM order, no explicit placement needed. */
+.settings-panel--integration {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1080px) {
+  .settings-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .settings-grid__main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Setting row (icon + label/description + control)                   */
+/* ------------------------------------------------------------------ */
+
+/* Reference layout (flubber 7.png): each row is a two-line stack — the
+   icon+label and the control sit on one top row, and the description spans
+   the FULL panel width on its own line beneath (indented to align under the
+   label). Constraining the description to a narrow left column instead forced
+   3-line wraps that ballooned every panel's height; the full-width line keeps
+   descriptions to a single line and matches the reference's compact rhythm. */
+.setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.setting-row--disabled {
+  opacity: 0.55;
+}
+
+.setting-row--danger .setting-row__label {
+  color: var(--accent-danger);
+}
+
+.setting-row--danger .setting-row__icon {
+  color: var(--accent-danger);
+}
+
+.setting-row__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.setting-row__id {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.setting-row__icon {
+  flex-shrink: 0;
+  /* Reference screenshot samples every row icon (Startup Behavior, Voice
+     Pitch, Theme, Local Data Only, etc.) as a warm gold/amber, not the app's
+     signature green — globals.css only defines a green-family accent set, so
+     this is a local, screen-scoped color rather than a shared token. */
+  color: var(--settings-icon-warm);
+}
+
+.setting-row__label {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.setting-row__description {
+  margin: 0;
+  /* Indent to align the description under the label text (past the icon). */
+  padding-left: calc(15px + 0.55rem);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.setting-row__control {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* Toggle switch                                                       */
+/* ------------------------------------------------------------------ */
+
+.toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid oklch(65% 0 0 / 30%);
+  background: oklch(20% 0.01 159);
+  cursor: pointer;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.toggle-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  transition: transform 150ms ease-out, background-color 150ms ease-out;
+}
+
+.toggle-switch--on {
+  /* Reference samples a solid, mostly-opaque saturated green track (not a
+     low-opacity tint) — bump alpha way up so it reads as a filled pill. */
+  background: oklch(74% 0.2 151 / 92%);
+  border-color: oklch(87% 0.29 142 / 65%);
+}
+
+.toggle-switch--on .toggle-switch__thumb {
+  transform: translateX(18px);
+  /* Reference samples the ON-knob as a plain off-white, not green. */
+  background: var(--text-primary);
+  box-shadow: 0 0 6px oklch(95% 0 0 / 45%);
+}
+
+.toggle-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------ */
+/* Select field                                                        */
+/* ------------------------------------------------------------------ */
+
+.select-field {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.select-field select {
+  appearance: none;
+  min-height: 32px;
+  padding: 0.3rem 1.9rem 0.3rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid oklch(65% 0 0 / 25%);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  cursor: pointer;
+  max-width: 11rem;
+}
+
+.select-field select:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 1px;
+}
+
+.select-field__chevron {
+  position: absolute;
+  right: 0.55rem;
+  pointer-events: none;
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* Slider row                                                          */
+/* ------------------------------------------------------------------ */
+
+.slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.slider-row__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Description sits on its own full-width line between the header and the
+   track (matches the reference's label -> caption -> slider stack). Nudge it
+   just under the track for a touch more breathing room. */
+.slider-row .setting-row__description {
+  margin-bottom: 0.1rem;
+}
+
+.slider-row__value {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  /* Reference samples the numeric readout as neutral gray/white — only the
+     slider fill/thumb itself should carry the accent color. */
+  color: var(--text-primary);
+}
+
+.slider-row__track-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.slider-row__input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  background: linear-gradient(
+    to right,
+    var(--core-accent-bright) 0%,
+    var(--core-accent-bright) var(--slider-fill, 0%),
+    oklch(65% 0 0 / 22%) var(--slider-fill, 0%),
+    oklch(65% 0 0 / 22%) 100%
+  );
+}
+
+.slider-row__input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 8px oklch(87% 0.29 142 / 60%);
+  cursor: pointer;
+  margin-top: -5px;
+}
+
+.slider-row__input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 8px oklch(87% 0.29 142 / 60%);
+  cursor: pointer;
+}
+
+.slider-row__input::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+/* ------------------------------------------------------------------ */
+/* Integration tiles                                                   */
+/* ------------------------------------------------------------------ */
+
+/* Explicit 5-column layout (not auto-fill) — the 5 tiles (System Tray Icon/
+   Global Hotkey/Clipboard Listening/File Watcher/Dev Mode) need a guaranteed
+   single row at desktop widths; auto-fill can resolve to 4 tracks and wrap
+   the 5th tile onto its own row. */
+.integration-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+@media (max-width: 900px) {
+  .integration-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .integration-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.integration-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 0.5rem;
+  border-radius: 12px;
+  border: 1px solid oklch(65% 0 0 / 16%);
+  background: var(--bg-elevated);
+}
+
+.integration-tile--disabled {
+  opacity: 0.55;
+}
+
+/* Matches the class SettingsScreen.tsx actually renders (previously named
+   `.integration-tile__row`, which never matched the TSX's
+   `.integration-tile__control-row` — that mismatch left the control row
+   completely unstyled). `margin-top: auto` pins it to the bottom of the
+   cell, matching the reference's icon+label -> description -> control
+   stacked order. */
+.integration-tile__control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.integration-tile__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-family: var(--font-ui);
+  font-size: 0.69rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  /* Reference keeps each tile label on a single line (System Tray Icon,
+     Clipboard Listening, etc.) — let it truncate rather than wrap to two
+     lines, which would make the tiles taller than the reference's row. */
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.integration-tile__label svg {
+  color: var(--core-accent-bright);
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+.integration-tile__label-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.integration-tile__description {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.69rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.integration-tile__meta {
+  /* Reference samples this as a neutral dark keycap (near-black background,
+     plain gray border, light gray/white text) — no green tint. */
+  align-self: flex-start;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  background: oklch(12% 0 0 / 70%);
+  border: 1px solid oklch(65% 0 0 / 30%);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+/* Global Hotkey is the one tile with no toggle (see IntegrationTile's
+   `showToggle` prop) — its capture chip is the only control, so it runs the
+   full width of the tile like a proper key-combo field instead of the
+   tight, self-sized keycap used everywhere else. */
+.integration-tile__control-row--meta-only {
+  width: 100%;
+}
+
+.integration-tile__control-row--meta-only .integration-tile__meta {
+  align-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 0.4rem 0.5rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Live pill                                                           */
+/* ------------------------------------------------------------------ */
+
+.settings-live-pill {
+  /* Reference is a plain dot + "Live" label with no pill background/border —
+     see the class-collision note on the LivePill component above. */
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.settings-live-pill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 6px var(--core-accent-bright);
+  animation: settings-live-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes settings-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Brain sync pill — real save-state for the Flubber Personality panel */
+/* ------------------------------------------------------------------ */
+
+.settings-sync-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.settings-sync-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+}
+
+.settings-sync-pill--synced {
+  color: var(--core-accent-bright);
+}
+.settings-sync-pill--synced .settings-sync-pill__dot {
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 6px var(--core-accent-bright);
+}
+
+.settings-sync-pill--saving .settings-sync-pill__dot {
+  animation: settings-live-pulse 1s ease-in-out infinite;
+}
+
+.settings-sync-pill--error {
+  color: oklch(70% 0.2 30);
+}
+.settings-sync-pill--error .settings-sync-pill__dot {
+  background: oklch(70% 0.2 30);
+}
+
+/* ------------------------------------------------------------------ */
+/* Coming soon panel                                                   */
+/* ------------------------------------------------------------------ */
+
+.settings-coming-soon {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.settings-coming-soon p {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* Theme swatches + accent color input                                 */
+/* ------------------------------------------------------------------ */
+
+.swatch-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.swatch-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 150ms ease-out, border-color 150ms ease-out;
+}
+
+.swatch-dot:hover {
+  transform: scale(1.1);
+}
+
+.swatch-dot--active {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 10px oklch(87% 0.29 142 / 45%);
+}
+
+.accent-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid oklch(65% 0 0 / 25%);
+  background: var(--bg-elevated);
+}
+
+.accent-input__swatch {
+  width: 16px;
+  height: 16px;
+  /* Reference shows a rounded square, not a circle. */
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.accent-input__text {
+  width: 6.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.accent-input__text:focus-visible {
+  outline: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Flubber preview                                                     */
+/* ------------------------------------------------------------------ */
+
+.flubber-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.flubber-preview__stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 1.5rem;
+  border-radius: 16px;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in oklch, var(--preview-glow, var(--core-accent-bright)) var(--preview-glow-pct, 25%), transparent) 0%,
+    transparent 72%
+  );
+}
+
+/* Floating bubble accents around the mascot — same recipe as
+   VirtualPetScreen's `.pet-crt__bubble` idle motif, reused here (own class/
+   keyframe names since these are global stylesheets, not CSS modules) to
+   match "flubber 7.png"'s bubbles drifting around the preview character. */
+.flubber-preview__bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, oklch(90% 0.24 140 / 70%), oklch(74% 0.2 151 / 25%) 70%, transparent 100%);
+  box-shadow: 0 0 10px oklch(87% 0.29 142 / 35%);
+  animation: settings-preview-bubble-float 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.flubber-preview__bubble--1 {
+  width: 14px;
+  height: 14px;
+  top: 12%;
+  left: 20%;
+  animation-delay: 0s;
+}
+
+.flubber-preview__bubble--2 {
+  width: 10px;
+  height: 10px;
+  top: 22%;
+  right: 18%;
+  animation-delay: 1.4s;
+}
+
+.flubber-preview__bubble--3 {
+  width: 8px;
+  height: 8px;
+  bottom: 20%;
+  right: 26%;
+  animation-delay: 2.6s;
+}
+
+@keyframes settings-preview-bubble-float {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translateY(-14px);
+    opacity: 1;
+  }
+}
+
+/* Vertical audio-equalizer / waveform bars flanking the character (reference
+   screenshot §6). TSX already renders `.flubber-preview__eq[--left/--right]`
+   + `.flubber-preview__eq-bar` markup — these were previously undefined in
+   CSS, so the bars rendered with no size/position/visual treatment at all. */
+.flubber-preview__eq {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 64px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.flubber-preview__eq--left {
+  left: 6%;
+}
+
+.flubber-preview__eq--right {
+  right: 6%;
+}
+
+.flubber-preview__eq-bar {
+  width: 4px;
+  height: calc(64px * var(--eq-scale, 0.5));
+  border-radius: 2px;
+  background: linear-gradient(to top, var(--core-accent), var(--core-accent-bright));
+  box-shadow: 0 0 6px oklch(87% 0.29 142 / 50%);
+  transform-origin: bottom;
+  animation: settings-eq-bounce 1.2s ease-in-out infinite;
+}
+
+@keyframes settings-eq-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.6);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Glowing circular energy ring / pedestal the character sits on (reference
+   screenshot §6) — previously only referenced by TSX (`.flubber-preview__ring`),
+   never defined in CSS, so nothing rendered. */
+.flubber-preview__ring {
+  position: absolute;
+  bottom: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 62%;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    oklch(87% 0.29 142 / 45%) 0%,
+    oklch(74% 0.2 151 / 22%) 55%,
+    transparent 80%
+  );
+  box-shadow: 0 0 24px oklch(87% 0.29 142 / 40%);
+  filter: blur(1px);
+}
+
+.flubber-preview__caption {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.flubber-preview__caption svg {
+  color: var(--core-accent-bright);
+}
+
+/* ------------------------------------------------------------------ */
+/* Buttons                                                             */
+/* ------------------------------------------------------------------ */
+
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 32px;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid oklch(65% 0 0 / 30%);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out, transform 150ms ease-out;
+}
+
+.settings-btn:hover {
+  border-color: oklch(87% 0.29 142 / 45%);
+  color: var(--core-accent-bright);
+  transform: translateY(-1px);
+}
+
+.settings-btn:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.settings-btn--danger {
+  border-color: oklch(60% 0.22 28 / 45%);
+  color: var(--accent-danger);
+}
+
+.settings-btn--danger:hover {
+  background: oklch(60% 0.22 28 / 14%);
+  border-color: oklch(60% 0.22 28 / 70%);
+  color: var(--accent-danger);
+}
+
+/* ── pill-room plate (pill-worlds pass, PANEL PLATES ONLY — layout for this
+   screen belongs to Lane 3's fit-sweep.css) ────────────────────────────
+   Every setting-group panel carries the reactor-core room photo behind its
+   content via a negative-z pseudo-element pair (recipe:
+   src/styles/pill-room.css), kept LIGHT (higher brightness, lighter scrim)
+   since these are dense form-row panels, not showcase pills. `--preview`
+   (Flubber Preview) is excluded — it already renders its own dais/ring/EQ
+   visual and a second competing photo behind it would be noise. */
+.settings-panel:not(.settings-panel--preview) {
+  position: relative;
+  overflow: hidden;
+  /* z-index:0 needed so this actually establishes a stacking context —
+     otherwise the ::before/::after negative-z plate escapes to an ancestor
+     context and paints invisibly instead of behind this panel's own bg. */
+  z-index: 0;
+}
+.settings-panel:not(.settings-panel--preview)::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  z-index: -2;
+  background-image: url('/bg/reactor.webp');
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.62) saturate(0.85);
+  pointer-events: none;
+}
+.settings-panel:not(.settings-panel--preview)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    oklch(12% 0.02 150 / 68%),
+    oklch(12% 0.02 150 / 52%) 45%,
+    oklch(10% 0.02 150 / 74%)
+  );
+}

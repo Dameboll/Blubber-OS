@@ -1,0 +1,294 @@
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  /* Transparent on purpose -- an opaque fill here would completely hide
+     BackgroundField's fixed particle canvas (z-index:-1) behind it. body's
+     own gradient wash is the opaque base; this shell just needs to let it
+     (and the particles) show through everywhere it doesn't have its own
+     opaque surface (cards, panels, etc. already set their own background). */
+  background: transparent;
+}
+
+.command-deck {
+  position: relative;
+  height: min(52vh, 34rem);
+  min-height: 20rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-bottom: 1px solid oklch(70% 0.19 155 / 15%);
+}
+
+/*
+ * The old .command-deck::before CSS haze/rays layer was DELETED here: now that
+ * the orb canvas is transparent (Core3D alpha:true), the full-screen flubber
+ * BackgroundField shows through behind the orb across the whole deck and
+ * already provides richer atmosphere edge-to-edge. The ::before just muddied
+ * it over the orb. The command-deck is now a transparent window onto the
+ * background — nothing paints an opaque or hazy layer in the top region.
+ */
+
+.command-deck__orb {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  cursor: grab;
+}
+
+.command-deck__orb:active {
+  cursor: grabbing;
+}
+
+/* Boot-cinematic flash -- Core3D calls onBootEvent('flash') at the exact
+   moment its own shader-side flash peaks; this DOM layer echoes it across
+   the whole hero (not just the orb) for extra punch. Opacity-only, driven
+   entirely by GSAP in page.tsx -- starts and rests at 0, never intercepts
+   clicks. */
+.command-deck__boot-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: radial-gradient(
+    circle at 50% 55%,
+    oklch(96% 0.1 145 / 100%) 0%,
+    oklch(85% 0.2 150 / 85%) 45%,
+    transparent 78%
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Boot-cinematic wordmark -- "DameOS" coasting in centered over/near the orb
+   during the reveal phase, matching the OG Xbox boot's "XBOX" wordmark
+   arriving after the zoom-out. Starts invisible (GSAP fromTo drives it in);
+   fades back out once the persistent small header title takes over. */
+.command-deck__boot-wordmark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 1.6rem + 5vw, 5.5rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  text-shadow: 0 0 40px oklch(70% 0.19 155 / 70%), 0 0 90px oklch(85% 0.22 150 / 45%);
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .command-deck__boot-wordmark,
+  .command-deck__boot-flash {
+    display: none;
+  }
+}
+
+/* Mini-flubber cluster ("petri dish") -- lives near the orb, top-right corner
+   of the command deck, clear of the title (top-left) and LiveBar/MusicPlayer
+   (bottom). MiniFlubberField itself collapses to fully transparent/inert when
+   there are no open sessions (see MiniFlubberField.css), so this just needs
+   to place it -- no visibility logic lives here. */
+.command-deck__flubbers {
+  position: absolute;
+  top: clamp(1rem, 0.75rem + 1vw, 1.75rem);
+  right: clamp(1rem, 0.75rem + 1vw, 1.75rem);
+  z-index: 2;
+  max-width: min(60vw, 16rem);
+}
+
+/* Hero mascot -- overlaid on top of the ambient Core3D orb, bottom-right,
+   clear of the title (top-left), mini-flubber cluster (top-right), and
+   LiveBar (bottom, inside .command-deck__overlay's footer). See
+   DashboardScreen.tsx's own header comment for why this was added. */
+.command-deck__mascot {
+  position: absolute;
+  right: clamp(1.25rem, 1rem + 1vw, 2.5rem);
+  bottom: clamp(1.25rem, 1rem + 1vw, 2.5rem);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  max-width: min(60vw, 17rem);
+  pointer-events: none;
+}
+
+.command-deck__mascot-bubble {
+  pointer-events: auto;
+  padding: 0.65rem 0.9rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-glow);
+  border-radius: 14px;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  text-align: right;
+  box-shadow: 0 10px 28px oklch(0% 0 0 / 40%);
+}
+
+@media (max-width: 720px) {
+  .command-deck__mascot {
+    max-width: 70%;
+  }
+}
+
+.command-deck__overlay {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  padding: clamp(1.25rem, 1rem + 1vw, 2.5rem);
+  pointer-events: none;
+}
+
+.command-deck__overlay > * {
+  pointer-events: auto;
+}
+
+.command-deck__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.1rem + 2vw, 2.75rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  /* Slow green glow breathe so the wordmark stays alive after the boot
+     cinematic instead of going inert. */
+  animation: title-breathe 7s ease-in-out infinite;
+}
+
+@keyframes title-breathe {
+  0%,
+  100% {
+    text-shadow: 0 0 24px oklch(7% 0 0 / 80%), 0 0 18px oklch(70% 0.19 155 / 20%);
+  }
+  50% {
+    text-shadow: 0 0 24px oklch(7% 0 0 / 80%), 0 0 34px oklch(70% 0.19 155 / 55%),
+      0 0 60px oklch(85% 0.22 150 / 30%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .command-deck__title {
+    animation: none;
+    text-shadow: 0 0 24px oklch(7% 0 0 / 80%);
+  }
+}
+
+.command-deck__sub {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-ui);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.command-deck__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 0.75rem;
+}
+
+.workspace {
+  flex: 1;
+  min-height: 28rem;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1rem, 0.75rem + 1vw, 1.75rem);
+  background: var(--bg-primary);
+}
+
+.workspace__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .command-deck {
+    border-bottom-color: oklch(70% 0.19 155 / 30%);
+  }
+}
+
+/*
+ * NOTE: everything above this line (.app-shell, .command-deck*, .workspace*)
+ * was the old single-scroll-page layout. It's unused now that page.tsx
+ * renders through AppShell.tsx's SCREENS map (see that file's header
+ * comment) but is left intact, not deleted, since the real dashboard/
+ * terminal content still needs a home once it's wired into a screen slot.
+ */
+
+/* Dynamic-import boot placeholder (Terminal): fills the content area instantly
+   so a heavy chunk never streams in over a black void. */
+.screen-boot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 60vh;
+  color: var(--core-accent-bright, #8dff4a);
+}
+.screen-boot__ring {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 3px solid oklch(70% 0.19 155 / 20%);
+  border-top-color: var(--core-accent-bright, #8dff4a);
+  animation: screen-boot-spin 0.9s linear infinite;
+}
+.screen-boot__label {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  color: oklch(80% 0.08 150 / 85%);
+}
+@keyframes screen-boot-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen-boot__ring { animation: none; }
+}
+
+.screen-placeholder {
+  padding: clamp(1.25rem, 1rem + 1vw, 2rem);
+  height: 100%;
+}
+
+.screen-placeholder__body {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.screen-placeholder__body p {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.screen-placeholder__body code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--core-accent-bright);
+}
+
+@media (max-width: 560px) {
+  .screen-placeholder__body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

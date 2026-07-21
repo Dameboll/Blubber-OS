@@ -1,0 +1,24 @@
+/**
+ * HandoffOverlay.css — the fixed full-viewport layer a pool→hero handoff
+ * clone travels through. See HandoffOverlay.tsx for the full choreography.
+ * z-index is set well above every pill/panel/modal z-index currently in the
+ * app (the highest elsewhere is CarePayoffs at 60) so the traveling clone
+ * always reads on top, regardless of which stacking context it was mounted
+ * under in the DOM.
+ */
+
+.ho {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+}
+
+.ho__clone {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: center center;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 10px 22px oklch(10% 0.03 150 / 0.5));
+}

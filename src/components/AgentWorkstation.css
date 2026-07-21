@@ -1,0 +1,204 @@
+/*
+ * AgentWorkstation — the framed "bay" for one mini agent. Inherits --fh-hue /
+ * --fh-energy from the component so each station is tinted by its activity.
+ */
+
+.aws {
+  --fh-hue: 148;
+  --fh-energy: 0.7;
+  --aws-arm: hsl(var(--fh-hue) 90% 62% / 0.75);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 8.5rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid hsl(var(--fh-hue) 60% 45% / 0.28);
+  background:
+    radial-gradient(120% 90% at 50% 12%, hsl(var(--fh-hue) 70% 22% / 0.55), transparent 60%),
+    linear-gradient(180deg, oklch(16% 0.04 155 / 0.7), oklch(10% 0.03 155 / 0.85));
+  box-shadow: inset 0 1px 0 hsl(var(--fh-hue) 80% 60% / 0.12), 0 8px 22px oklch(5% 0.02 155 / 0.5);
+  animation: aws-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes aws-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* corner brackets — each an L drawn from two 1.5px background bars (no border
+   props, so the two arms read as a HUD corner, not a card accent stripe). */
+.aws__bracket {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  z-index: 3;
+  pointer-events: none;
+  background-repeat: no-repeat;
+}
+.aws__bracket--tl {
+  top: 5px;
+  left: 5px;
+  background-image: linear-gradient(var(--aws-arm), var(--aws-arm)), linear-gradient(var(--aws-arm), var(--aws-arm));
+  background-size: 100% 1.5px, 1.5px 100%;
+  background-position: left top, left top;
+}
+.aws__bracket--tr {
+  top: 5px;
+  right: 5px;
+  background-image: linear-gradient(var(--aws-arm), var(--aws-arm)), linear-gradient(var(--aws-arm), var(--aws-arm));
+  background-size: 100% 1.5px, 1.5px 100%;
+  background-position: right top, right top;
+}
+.aws__bracket--bl {
+  bottom: 5px;
+  left: 5px;
+  background-image: linear-gradient(var(--aws-arm), var(--aws-arm)), linear-gradient(var(--aws-arm), var(--aws-arm));
+  background-size: 100% 1.5px, 1.5px 100%;
+  background-position: left bottom, left bottom;
+}
+.aws__bracket--br {
+  bottom: 5px;
+  right: 5px;
+  background-image: linear-gradient(var(--aws-arm), var(--aws-arm)), linear-gradient(var(--aws-arm), var(--aws-arm));
+  background-size: 100% 1.5px, 1.5px 100%;
+  background-position: right bottom, right bottom;
+}
+
+/* the activity monitor (compact holo panel) */
+.aws__monitor {
+  position: absolute;
+  top: 0.55rem;
+  left: 0.55rem;
+  right: 0.55rem;
+  height: 58%;
+  z-index: 1;
+}
+.aws__monitor .holo-panel {
+  width: 100%;
+  height: 100%;
+}
+
+/* honest "working" shimmer — a slow neutral sweep across the monitor while the
+   agent is active. Signals liveness only; carries no fabricated progress value. */
+.aws__working {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    hsl(var(--fh-hue) 95% 70% / 0.14) 50%,
+    transparent 70%
+  );
+  background-size: 220% 100%;
+  animation: aws-work-sweep 2.6s ease-in-out infinite;
+}
+@keyframes aws-work-sweep {
+  0% { background-position: 130% 0; }
+  100% { background-position: -30% 0; }
+}
+
+/* desk: flubber on a dais, overlapping the monitor's lower edge */
+.aws__desk {
+  position: absolute;
+  left: 50%;
+  bottom: 0.3rem;
+  z-index: 2;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+/* Idle bay (data-working="false"): no monitor renders, so lift the resting mini
+   toward the bay's center instead of stranding it at the bottom of an empty
+   frame. Ambient light + resting mini reads as "off the clock", not "working". */
+.aws[data-working='false'] .aws__desk {
+  bottom: 42%;
+  transform: translate(-50%, 50%);
+}
+
+.aws__dais {
+  position: absolute;
+  left: 50%;
+  bottom: 0.1rem;
+  width: 4.6rem;
+  height: 1.5rem;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    50% 60% at 50% 50%,
+    hsl(var(--fh-hue) 95% 60% / calc(0.5 + var(--fh-energy) * 0.35)),
+    transparent 72%
+  );
+  filter: blur(1px);
+}
+.aws__flubber {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 6px 12px hsl(var(--fh-hue) 90% 28% / 0.55));
+}
+
+/* status LED */
+.aws__led {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 3;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: oklch(60% 0.02 155 / 0.7);
+}
+.aws__led.is-working {
+  background: hsl(var(--fh-hue) 95% 62%);
+  box-shadow: 0 0 8px hsl(var(--fh-hue) 95% 60%);
+  animation: aws-led 1.6s ease-in-out infinite;
+}
+@keyframes aws-led {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* per-role cinematic nook plate — sits above the bay's base gradient but below
+   the monitor (z1), desk (z2), and brackets (z3), so it reads as the room the
+   mini agent is working in. Dimmed + veiled so the HoloPanel monitor still pops. */
+.aws__room {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.5) saturate(1.1);
+  opacity: 0.85;
+}
+.aws__room::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, oklch(9% 0.03 155 / 0.35), oklch(6% 0.02 155 / 0.72));
+}
+/* Upgraded to the pill-worlds photoreal/painterly inspo set (role-*2.webp) —
+   higher-fidelity nooks than the original role-*.webp placeholders. */
+.aws__room--coder { background-image: url('/bg/role-coder2.webp'); }
+.aws__room--qa { background-image: url('/bg/role-qa2.webp'); }
+.aws__room--security { background-image: url('/bg/role-security2.webp'); }
+.aws__room--data { background-image: url('/bg/role-data2.webp'); }
+.aws__room--devops { background-image: url('/bg/role-devops2.webp'); }
+.aws__room--designer { background-image: url('/bg/role-designer2.webp'); }
+.aws__room--writer { background-image: url('/bg/role-writer2.webp'); }
+.aws__room--editor { background-image: url('/bg/role-editor2.webp'); }
+.aws__room--architect { background-image: url('/bg/role-architect2.webp'); }
+.aws__room--researcher { background-image: url('/bg/role-researcher2.webp'); }
+.aws__room--innovator { background-image: url('/bg/role-innovator2.webp'); }
+.aws__room--marketer { background-image: url('/bg/role-marketer2.webp'); }
+
+@media (prefers-reduced-motion: reduce) {
+  .aws,
+  .aws__led.is-working,
+  .aws__working {
+    animation: none !important;
+  }
+}

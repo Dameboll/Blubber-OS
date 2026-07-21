@@ -1,0 +1,59 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: var(--bg-elevated, oklch(15% 0.01 165));
+  color: var(--text-secondary, oklch(65% 0 0));
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  border: 1px solid oklch(70% 0.19 155 / 0.2);
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.label {
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listening {
+  color: var(--core-accent-bright, oklch(85% 0.22 150));
+  border-color: var(--core-accent, oklch(70% 0.19 155));
+  background: oklch(70% 0.19 155 / 0.12);
+}
+
+.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.unsupported {
+  opacity: 0.5;
+}
+
+.pulseIcon {
+  animation: voice-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulseIcon {
+    animation: none;
+  }
+}

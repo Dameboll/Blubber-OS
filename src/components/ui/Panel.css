@@ -1,0 +1,71 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.1rem 1.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-panel);
+  /* Glass depth: a 1px inset highlight along the top inner edge (existing
+     --text-primary light tone at low opacity, reading as light catching the
+     glass edge) plus a layered two-stop shadow — a tight, near-surface
+     contact shadow and a softer, larger, lower-opacity shadow further out —
+     instead of one flat shadow, so panels read as physically elevated.
+     Existing oklch tokens only, no new colors. */
+  box-shadow:
+    inset 0 1px 0 0 oklch(95% 0 0 / 7%),
+    0 1px 3px oklch(0% 0 0 / 30%),
+    0 14px 36px oklch(0% 0 0 / 20%);
+  transition: box-shadow 200ms ease-out, border-color 200ms ease-out;
+}
+
+.panel--accent {
+  border-color: oklch(87% 0.29 142 / 40%);
+  /* Same edge-highlight + layered depth as the base .panel, with the
+     existing accent glow layered on top (box-shadow lists don't merge
+     across rules, so the full stack is restated here). */
+  box-shadow:
+    inset 0 1px 0 0 oklch(95% 0 0 / 7%),
+    0 1px 3px oklch(0% 0 0 / 30%),
+    0 14px 36px oklch(0% 0 0 / 20%),
+    var(--glow-shadow);
+}
+
+.panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.panel__title {
+  margin: 0;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.panel__accent-bar {
+  display: block;
+  width: 28px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 6px var(--core-accent-bright);
+}
+
+.panel__action {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.panel__body {
+  min-width: 0;
+}

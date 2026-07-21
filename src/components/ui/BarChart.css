@@ -1,0 +1,21 @@
+.bar-chart {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.bar-chart__bar {
+  fill: oklch(70% 0.19 155 / 35%);
+  transition: fill 200ms ease-out, filter 200ms ease-out;
+}
+
+.bar-chart__bar--highlight {
+  fill: var(--core-accent-bright);
+  filter: drop-shadow(0 0 6px oklch(87% 0.29 142 / 55%));
+}
+
+.bar-chart__label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  fill: var(--text-secondary);
+}

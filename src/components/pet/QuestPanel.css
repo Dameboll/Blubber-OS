@@ -1,0 +1,276 @@
+/* QuestPanel — the quest strip (Care rail) + full board (Quests tab). Colors
+   stay in the app's green goo family (var tokens + oklch greens tuned to match
+   the rest of the pet screen); no hex, nothing out of palette. */
+
+/* ---- shared quest row ---- */
+.quest-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 18%);
+}
+
+.quest-row--compact {
+  gap: 0.3rem;
+  padding: 0.5rem 0.6rem;
+}
+
+.quest-row--claimable {
+  border-color: var(--core-accent-bright);
+  box-shadow: 0 0 14px oklch(87% 0.29 142 / 22%);
+}
+
+.quest-row--claimed {
+  opacity: 0.6;
+}
+
+.quest-row--locked {
+  opacity: 0.55;
+}
+
+.quest-row__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.quest-row__title {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.quest-row--compact .quest-row__title {
+  font-size: 0.75rem;
+}
+
+.quest-row__xp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--core-accent-bright);
+}
+
+.quest-row__xp svg {
+  flex-shrink: 0;
+}
+
+.quest-row__desc {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.quest-row__track {
+  position: relative;
+  height: 5px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: oklch(30% 0.04 152 / 70%);
+}
+
+.quest-row__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--core-accent) 0%, var(--core-accent-bright) 100%);
+  box-shadow: 0 0 8px oklch(87% 0.29 142 / 35%);
+  transition: transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.quest-row__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.quest-row__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.quest-row__count svg {
+  flex-shrink: 0;
+}
+
+.quest-row__claim {
+  min-height: 44px;
+  padding: 0.28rem 0.9rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--core-accent-bright);
+  color: oklch(16% 0.03 155);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out, opacity 150ms ease-out;
+}
+
+.quest-row__claim:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 14px oklch(87% 0.29 142 / 45%);
+}
+
+.quest-row__claim:active {
+  transform: translateY(0);
+}
+
+.quest-row__claim:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.quest-row__done {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--core-accent-bright);
+}
+
+/* ---- strip (Care rail) ---- */
+.quest-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.quest-strip__more,
+.quest-strip__empty {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.quest-strip__empty {
+  margin: 0;
+}
+
+/* ---- board (Quests tab) — one compact current-tier card per chain ---- */
+.quest-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  align-content: start;
+}
+
+.quest-chain-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.65rem;
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 14%);
+}
+
+.quest-chain-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.quest-chain-card__label {
+  font-family: var(--font-display);
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--core-accent-bright);
+}
+
+.quest-chain-card__tier {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* tier progress dots — one roman-numeral dot per tier; claimed tiers "roll
+   up" into a filled dot instead of keeping their own row. */
+.quest-chain-card__dots {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.quest-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-size: 0.54rem;
+  font-weight: 700;
+  background: oklch(30% 0.04 152 / 55%);
+  color: var(--text-secondary);
+  border: 1px solid oklch(70% 0.19 155 / 16%);
+}
+
+.quest-dot--claimed {
+  background: var(--core-accent-bright);
+  color: oklch(16% 0.03 155);
+  border-color: transparent;
+  box-shadow: 0 0 8px oklch(87% 0.29 142 / 40%);
+}
+
+.quest-dot--active {
+  color: var(--core-accent-bright);
+  border-color: var(--core-accent-bright);
+  box-shadow: 0 0 10px oklch(87% 0.29 142 / 35%);
+}
+
+.quest-dot--locked {
+  opacity: 0.45;
+}
+
+/* the compact QuestRow nested in a chain card blends into the card instead
+   of boxing itself again — avoids a card-inside-a-card look. */
+.quest-chain-card .quest-row--compact {
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+@media (max-width: 1100px) {
+  .quest-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .quest-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quest-row__fill {
+    transition: none;
+  }
+
+  .quest-row__claim {
+    transition: none;
+  }
+}

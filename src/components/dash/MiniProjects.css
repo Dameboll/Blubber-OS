@@ -1,0 +1,195 @@
+/* MiniProjects — Dashboard "Projects" tab. Real 8-recent (4x2) grid of
+   ProjectThumb cards, same tile card language as .dashboard-tabmini.
+
+   Thumb is size=72 (bumped from 48 — Dame: "they look really tiny"). Sizing
+   math below is tuned against the tightest real case for the 4-column
+   layout: DashboardScreen.css's .dashboard-screen__midrow sits at
+   `min-height: clamp(16rem, 12rem + 14vw, 24rem)`, and the 4-col grid only
+   applies above the 1180px breakpoint (below that .mini-projects__grid drops
+   to 3 columns, see media query below) — so the real floor for the 4x2 case
+   is the clamp evaluated at ~1180px width (~357px), not the clamp's raw
+   16rem floor. At that floor: head (~33px) + body padding (16px) + grid gap
+   (2 rows) leaves ~132px per row, comfortably above the ~125px a card needs
+   (72px thumb + gaps + two text lines + card padding). Re-derive this if
+   thumb size, head padding, or the midrow clamp ever change. */
+
+.mini-projects {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-panel);
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+  overflow: hidden;
+}
+
+.mini-projects__head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid oklch(70% 0.19 155 / 16%);
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.mini-projects__count {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-projects__body {
+  flex: 1;
+  min-height: 0;
+  padding: 0.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.mini-projects__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.mini-projects__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 0.45rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.mini-projects__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.35rem;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 14%);
+  border-radius: 10px;
+  cursor: pointer;
+  overflow: hidden;
+  /* Establishes the stacking context the plate/scrim/content layers below
+     rely on — z-index MUST be explicit on every layer here, not left to
+     default stacking. See src/styles/pill-room.css header note + project
+     memory "dashboard-overhaul-2026-07-19": plates were invisible on 7
+     pills previously because this z-index was omitted. */
+  z-index: 0;
+  transition: border-color 150ms ease-out;
+}
+
+.mini-projects__card:hover {
+  border-color: oklch(87% 0.29 142 / 45%);
+}
+
+.mini-projects__card:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+/* Room plate — deterministic per-project background image, reused from the
+   shared public/bg/role-*.webp plate library. */
+.mini-projects__card-plate {
+  position: absolute;
+  inset: -4%;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.5) saturate(0.95);
+  pointer-events: none;
+}
+
+/* Scrim keeps card text readable over the plate — sits above the plate,
+   below the real content. */
+.mini-projects__card-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    oklch(10% 0.02 150 / 60%),
+    oklch(10% 0.02 150 / 35%) 45%,
+    oklch(8% 0.02 150 / 70%)
+  );
+}
+
+.mini-projects__card-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  width: 100%;
+  transition: transform 150ms ease-out;
+}
+
+.mini-projects__card:hover .mini-projects__card-content {
+  transform: translateY(-1px);
+}
+
+/* Most-recently-touched project — a thin steady green edge, no pulsing. */
+.mini-projects__card--hot::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  z-index: 3;
+  background: oklch(80% 0.22 150 / 90%);
+  pointer-events: none;
+}
+
+.mini-projects__card-name {
+  width: 100%;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-projects__card-root {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mini-projects__card {
+    transition: none;
+  }
+  .mini-projects__card-content {
+    transition: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .mini-projects__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

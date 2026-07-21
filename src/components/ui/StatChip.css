@@ -1,0 +1,181 @@
+.stat-chip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 18%);
+  border-radius: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* --- Living vitals glow (System Status CPU/MEM/PROC only) --- */
+
+.stat-chip--vital {
+  border-color: oklch(70% 0.14 150 / 22%);
+  box-shadow: 0 0 0 1px oklch(70% 0.14 150 / 8%) inset, 0 0 14px oklch(70% 0.14 150 / 14%);
+  animation: stat-chip-breathe-healthy 4s ease-in-out infinite;
+}
+
+.stat-chip--vital.stat-chip--warning {
+  border-color: oklch(78% 0.16 75 / 26%);
+  box-shadow: 0 0 0 1px oklch(78% 0.16 75 / 10%) inset, 0 0 14px oklch(78% 0.16 75 / 18%);
+  animation-name: stat-chip-breathe-warning;
+}
+
+.stat-chip--vital .stat-chip__value {
+  color: oklch(78% 0.15 150);
+  transition: color 0.4s ease;
+}
+
+.stat-chip--vital.stat-chip--warning .stat-chip__value {
+  color: oklch(80% 0.15 75);
+}
+
+@keyframes stat-chip-breathe-healthy {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px oklch(70% 0.14 150 / 8%) inset, 0 0 10px oklch(70% 0.14 150 / 10%);
+  }
+  50% {
+    box-shadow: 0 0 0 1px oklch(70% 0.14 150 / 12%) inset, 0 0 18px oklch(70% 0.14 150 / 20%);
+  }
+}
+
+@keyframes stat-chip-breathe-warning {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px oklch(78% 0.16 75 / 10%) inset, 0 0 10px oklch(78% 0.16 75 / 14%);
+  }
+  50% {
+    box-shadow: 0 0 0 1px oklch(78% 0.16 75 / 14%) inset, 0 0 20px oklch(78% 0.16 75 / 26%);
+  }
+}
+
+/* Drifting specks — faint sparks, transform/opacity only */
+
+.stat-chip__specks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.stat-chip__speck {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: oklch(78% 0.16 150 / 70%);
+  opacity: 0;
+  animation: stat-chip-speck-drift 6s ease-in-out infinite;
+}
+
+.stat-chip--warning .stat-chip__speck {
+  background: oklch(82% 0.16 75 / 70%);
+}
+
+.stat-chip__speck--1 {
+  top: 22%;
+  left: 18%;
+  animation-delay: 0s;
+}
+
+.stat-chip__speck--2 {
+  top: 62%;
+  left: 55%;
+  animation-delay: 2s;
+}
+
+.stat-chip__speck--3 {
+  top: 40%;
+  left: 82%;
+  animation-delay: 4s;
+}
+
+@keyframes stat-chip-speck-drift {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.8);
+  }
+  15% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.4;
+    transform: translate(3px, -6px) scale(1.1);
+  }
+  85% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-2px, -12px) scale(0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-chip--vital,
+  .stat-chip--vital.stat-chip--warning {
+    animation: none;
+    box-shadow: 0 0 0 1px oklch(70% 0.14 150 / 10%) inset, 0 0 12px oklch(70% 0.14 150 / 16%);
+  }
+
+  .stat-chip--vital.stat-chip--warning {
+    box-shadow: 0 0 0 1px oklch(78% 0.16 75 / 12%) inset, 0 0 12px oklch(78% 0.16 75 / 20%);
+  }
+
+  .stat-chip__speck {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.stat-chip__label {
+  font-family: var(--font-ui);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.stat-chip__row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.stat-chip__value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.stat-chip__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.stat-chip__trend--up {
+  color: var(--core-accent-bright);
+}
+
+.stat-chip__trend--down {
+  color: var(--accent-danger);
+}
+
+.stat-chip__trend--neutral {
+  color: var(--text-secondary);
+}
+
+.stat-chip__trend-value {
+  font-variant-numeric: tabular-nums;
+}

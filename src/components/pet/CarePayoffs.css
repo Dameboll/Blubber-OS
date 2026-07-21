@@ -1,0 +1,76 @@
+/* CarePayoffs — transient care-reward particles. All nodes are created and
+   animated imperatively (transform/opacity only) by CarePayoffs.tsx; this file
+   only paints them. Colors stay inside the app's green goo / warm-goo families
+   (same oklch hues used across the pet screen). */
+
+.care-payoffs {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.care-payoffs > span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform, opacity;
+}
+
+/* Feed pellet — a bright goo bead lobbed to the mouth. */
+.care-payoffs__blob {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, oklch(96% 0.1 140) 0%, oklch(80% 0.24 145) 45%, oklch(62% 0.19 150) 100%);
+  box-shadow: 0 0 14px oklch(80% 0.24 145 / 55%);
+}
+
+/* Splat when the pellet lands. */
+.care-payoffs__splat {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle, oklch(90% 0.24 140 / 70%) 0%, transparent 68%);
+}
+
+/* Shower droplet — a slime tear falling down the tube. */
+.care-payoffs__drop {
+  width: 8px;
+  height: 13px;
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  background: linear-gradient(oklch(88% 0.18 150 / 92%), oklch(70% 0.2 152 / 82%));
+  box-shadow: 0 0 8px oklch(80% 0.24 145 / 45%);
+}
+
+/* Clean sparkle after the rinse. */
+.care-payoffs__sparkle {
+  width: 12px;
+  height: 12px;
+  background:
+    linear-gradient(oklch(98% 0.05 140), oklch(98% 0.05 140)) center / 100% 2px no-repeat,
+    linear-gradient(oklch(98% 0.05 140), oklch(98% 0.05 140)) center / 2px 100% no-repeat;
+  filter: drop-shadow(0 0 5px oklch(90% 0.2 142 / 80%));
+}
+
+/* Goo-heart from petting. */
+.care-payoffs__heart {
+  width: 20px;
+  height: 18px;
+  background: radial-gradient(circle at 35% 28%, oklch(94% 0.13 92) 0%, oklch(86% 0.2 96) 45%, oklch(74% 0.18 92) 100%);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 29'%3E%3Cpath d='M16 29S2 20 2 10a7 7 0 0 1 14-3 7 7 0 0 1 14 3c0 10-14 19-14 19z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 29'%3E%3Cpath d='M16 29S2 20 2 10a7 7 0 0 1 14-3 7 7 0 0 1 14 3c0 10-14 19-14 19z'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  filter: drop-shadow(0 0 6px oklch(88% 0.18 96 / 60%));
+}
+
+/* Rising goo bubble from poking the vat. */
+.care-payoffs__bubble {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, oklch(92% 0.22 140 / 80%), oklch(74% 0.2 151 / 30%) 70%, transparent 100%);
+  box-shadow: 0 0 10px oklch(87% 0.29 142 / 35%);
+}

@@ -1,0 +1,282 @@
+/* PetHabitatScene — the inner pixel-tube room. Ported from the original
+   VirtualPetScreen CRT-screen block and extended with pointer parallax
+   (--px/--py), a real-time day/night wash (--ambient), a clickable goo vat,
+   and the play-companion slot. All colors stay in the app's green goo family
+   (H 139-155) — no hex, no out-of-palette hues. */
+
+.pet-hab {
+  --px: 0;
+  --py: 0;
+  --ambient: 0.7;
+  position: relative;
+  width: 100%;
+  min-height: clamp(250px, 24vw, 360px);
+  border-radius: 18px / 24px; /* elliptical = subtle screen curvature */
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: oklch(9% 0.01 155);
+  box-shadow:
+    inset 0 0 0 2px oklch(6% 0.01 155),
+    inset 0 0 72px oklch(0% 0 0 / 70%),
+    inset 0 0 22px oklch(74% 0.2 151 / 15%);
+  touch-action: none;
+}
+
+.pet-hab--room {
+  min-height: clamp(340px, 42vw, 520px);
+  border-radius: 22px;
+}
+
+/* Photographic pixel-room backdrop behind the 3D Flubber. Scaled up a touch so
+   the parallax translate never reveals a bare edge. */
+.pet-hab__backdrop {
+  position: absolute;
+  inset: 0;
+  background-image: url('/bg/pet.webp');
+  background-size: cover;
+  background-position: center 44%;
+  filter: saturate(1.35) brightness(0.72) contrast(1.05);
+  transform: scale(1.1) translate(calc(var(--px) * 16px), calc(var(--py) * 11px));
+  transition: transform 240ms ease-out;
+}
+
+/* Day/night ambient wash driven by the real local clock (--ambient 0..1). Two
+   green-only layers cross-fade: a deep veil at night, a soft bloom at midday. */
+.pet-hab__ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity 1200ms ease-out;
+}
+
+.pet-hab__ambient--night {
+  background: radial-gradient(120% 110% at 50% 40%, oklch(14% 0.03 158 / 30%) 0%, oklch(8% 0.02 158 / 78%) 100%);
+  opacity: calc((1 - var(--ambient)) * 0.62);
+}
+
+.pet-hab__ambient--day {
+  background: radial-gradient(100% 90% at 50% 34%, oklch(86% 0.16 142 / 30%) 0%, transparent 62%);
+  opacity: calc(var(--ambient) * 0.28);
+}
+
+/* Green phosphor cast — light, structure-preserving wash. */
+.pet-hab__tint {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    125% 108% at 50% 48%,
+    oklch(78% 0.22 148 / 20%) 0%,
+    oklch(58% 0.17 150 / 12%) 55%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+  transform: translate(calc(var(--px) * 7px), calc(var(--py) * 5px));
+  transition: transform 240ms ease-out;
+}
+
+/* Screen-curve vignette so the tube reads convex. */
+.pet-hab__curve {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(125% 108% at 50% 46%, transparent 40%, oklch(6% 0.02 155 / 90%) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Phosphor bloom hugging the character. */
+.pet-hab__glow {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  width: 320px;
+  height: 300px;
+  transform: translate(-50%, -50%) translate(calc(var(--px) * -5px), calc(var(--py) * -4px));
+  background: radial-gradient(circle, oklch(80% 0.24 145 / 30%) 0%, transparent 62%);
+  pointer-events: none;
+  z-index: 2;
+  transition: transform 240ms ease-out;
+}
+
+.pet-hab__scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    oklch(0% 0 0 / 28%) 0px,
+    oklch(0% 0 0 / 28%) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Ambient drifting goo bubbles (decor, always-on idle life). */
+.pet-hab__amb-bubble {
+  position: absolute;
+  z-index: 2;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, oklch(90% 0.24 140 / 70%), oklch(74% 0.2 151 / 25%) 70%, transparent 100%);
+  box-shadow: 0 0 10px oklch(87% 0.29 142 / 35%);
+  animation: pet-hab-bubble-float 5s ease-in-out infinite;
+}
+
+.pet-hab__amb-bubble--1 {
+  width: 14px;
+  height: 14px;
+  top: 22%;
+  left: 22%;
+  animation-delay: 0s;
+}
+
+.pet-hab__amb-bubble--2 {
+  width: 10px;
+  height: 10px;
+  top: 30%;
+  right: 20%;
+  animation-delay: 1.4s;
+}
+
+.pet-hab__amb-bubble--3 {
+  width: 8px;
+  height: 8px;
+  top: 60%;
+  right: 30%;
+  animation-delay: 2.6s;
+}
+
+@keyframes pet-hab-bubble-float {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translateY(-14px);
+    opacity: 1;
+  }
+}
+
+/* Clickable goo vat prop — bottom-left of the tube. Poking it bubbles + makes
+   the hero glance (wired in VirtualPetScreen). */
+.pet-hab__vat {
+  position: absolute;
+  left: 6%;
+  bottom: 8%;
+  z-index: 5;
+  width: 46px;
+  height: 52px;
+  padding: 0;
+  border: none;
+  border-radius: 10px 10px 12px 12px;
+  background: linear-gradient(163deg, oklch(30% 0.05 152) 0%, oklch(17% 0.03 152) 100%);
+  box-shadow:
+    inset 0 2px 0 oklch(58% 0.09 152 / 35%),
+    inset 0 0 0 1px oklch(46% 0.06 152 / 55%),
+    0 6px 14px oklch(0% 0 0 / 55%);
+  cursor: pointer;
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+  overflow: hidden;
+}
+
+.pet-hab__vat:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 2px 0 oklch(58% 0.09 152 / 35%),
+    inset 0 0 0 1px oklch(70% 0.12 152 / 70%),
+    0 8px 18px oklch(0% 0 0 / 55%),
+    0 0 16px oklch(74% 0.2 151 / 30%);
+}
+
+.pet-hab__vat:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.pet-hab__vat-goo {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  height: 62%;
+  border-radius: 6px 6px 8px 8px;
+  background: linear-gradient(oklch(82% 0.22 143) 0%, oklch(62% 0.19 150) 100%);
+  box-shadow: inset 0 3px 8px oklch(94% 0.14 140 / 55%);
+}
+
+.pet-hab__vat-shine {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  width: 10px;
+  height: 6px;
+  border-radius: 50%;
+  background: oklch(96% 0.06 140 / 70%);
+  filter: blur(1px);
+}
+
+/* Live 3D hero — stays centred (blit mask depends on it); only a whisper of
+   counter-parallax so it pops off the moving background. */
+.pet-hab__character {
+  position: relative;
+  z-index: 3;
+  cursor: grab;
+  transform: translate(calc(var(--px) * -6px), calc(var(--py) * -4px));
+  transition: transform 240ms ease-out;
+  filter: drop-shadow(0 14px 30px oklch(0% 0 0 / 55%)) drop-shadow(0 0 24px oklch(80% 0.24 145 / 32%));
+}
+
+.pet-hab__character:active {
+  cursor: grabbing;
+}
+
+/* Free-roam hero: the toss hook drives the inline transform imperatively, so
+   the parallax counter-transform + its transition must get out of the way (a
+   transition here would smear every drag frame). will-change keeps the throw
+   compositor-friendly. */
+.pet-hab__character--roam {
+  transform: none;
+  transition: none;
+  will-change: transform;
+  touch-action: none;
+}
+
+/* Interactive wrestling play-minis — usePetPlaymates drives each one's inline
+   transform/opacity imperatively (translate from field centre + rotate + squash
+   scale), so like the free-roam hero they get NO CSS transform/transition of
+   their own to fight over. They are real toys: grab/drag/poke-able, hence
+   pointer-events + a grab cursor + touch-action:none for clean dragging. */
+.pet-hab__playmate {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  cursor: grab;
+  touch-action: none;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 8px 18px oklch(0% 0 0 / 50%)) drop-shadow(0 0 14px oklch(80% 0.24 145 / 26%));
+}
+
+.pet-hab__playmate:active {
+  cursor: grabbing;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-hab__backdrop,
+  .pet-hab__tint,
+  .pet-hab__glow,
+  .pet-hab__character {
+    transition: none;
+    transform: none;
+  }
+
+  .pet-hab__amb-bubble {
+    animation: none;
+  }
+}

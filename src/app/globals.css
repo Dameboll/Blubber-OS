@@ -1,0 +1,186 @@
+@import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Ground truth: literal color-palette swatch strip in "flubber sprite 1.png"
+     (#7CFF4D, #39FF14, #00CC66, #0B1A0F, #1A1F1C, #FFFFFF), cross-checked against
+     the "Accent Color #39FF14" field in the Settings screen ("flubber 7.png") and
+     pixel-sampled panel/background darkness in both mockups. */
+  --bg-primary: oklch(7% 0 0); /* page canvas — already matches sampled near-pure-black bg, unchanged */
+  --bg-surface: oklch(20% 0.03 151); /* #0B1A0F — rounded panel fill, lifted off pure black */
+  --bg-elevated: oklch(23% 0.01 159); /* #1A1F1C — hover/elevated panel state, one step lighter */
+  --core-accent: oklch(74% 0.2 151); /* #00CC66 — deeper green, the Xbox-orb base hue */
+  --core-accent-bright: oklch(87% 0.29 142); /* #39FF14 — literal "Accent Color" value in Settings UI */
+  --accent-warning: oklch(89% 0.24 139); /* #7CFF4D lime — no orange in the Flubber world, warning stays green-family */
+  --accent-danger: oklch(60% 0.22 28); /* no red swatch in the Flubber palette; kept as a true-error fallback */
+  --text-primary: oklch(95% 0 0);
+  --text-secondary: oklch(65% 0 0);
+  --font-display: 'Syncopate', sans-serif; /* headers, live numbers */
+  --font-ui: 'DM Sans', sans-serif; /* labels, chrome */
+  --font-mono: 'DM Mono', monospace; /* logs, terminal fallback text */
+
+  --radius-panel: 20px; /* rounded card corners on every panel in the mockups */
+  --border-glow: oklch(87% 0.29 142 / 28%); /* thin 1px semi-transparent neon border around panels */
+  --glow-shadow:
+    0 0 20px oklch(74% 0.2 151 / 35%),
+    0 0 48px oklch(87% 0.29 142 / 18%); /* soft green glow behind icons/badges/hero character */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  /* Base canvas: near-black + one very faint static green so the page never
+     reads as dead black even under prefers-reduced-motion. The *living* green
+     wash rides on two fixed pseudo-element layers below (breathing via
+     transform/opacity only — GPU-cheap, zero layout properties animated). The
+     old full-viewport shader/particle field (BackgroundField, LANE 7) stays
+     retired; this is its cheap replacement. */
+  background:
+    radial-gradient(ellipse 90% 55% at 50% 0%, oklch(74% 0.2 151 / 7%) 0%, transparent 62%),
+    var(--bg-primary);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* --- Living green: breathing radial wash -------------------------------------
+   Two fixed layers behind everything (z-index below the AmbientGlow canvas at
+   -1). Each holds soft green radials and slowly breathes — a scale+opacity
+   swell on offset cycles so the glow feels alive without ever touching a
+   layout property. inset:-12% oversizes the layers so the scale-up never
+   reveals a viewport edge. pointer-events:none — strictly decorative. */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: -12%;
+  z-index: -2;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+body::before {
+  background:
+    radial-gradient(circle 40vw at 14% 16%, oklch(74% 0.2 151 / 13%) 0%, transparent 66%),
+    radial-gradient(circle 44vw at 86% 72%, oklch(74% 0.2 151 / 11%) 0%, transparent 70%);
+  animation: green-breathe-a 11s ease-in-out infinite;
+}
+
+body::after {
+  background:
+    radial-gradient(circle 50vw at 62% 8%, oklch(87% 0.29 142 / 8%) 0%, transparent 60%),
+    radial-gradient(circle 38vw at 30% 88%, oklch(74% 0.2 151 / 9%) 0%, transparent 68%);
+  animation: green-breathe-b 14s ease-in-out infinite;
+  animation-delay: -4s;
+}
+
+@keyframes green-breathe-a {
+  0%,
+  100% {
+    transform: scale(1) translate3d(0, 0, 0);
+    opacity: 0.72;
+  }
+  50% {
+    transform: scale(1.07) translate3d(0, -1.2%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes green-breathe-b {
+  0%,
+  100% {
+    transform: scale(1.05) translate3d(0, 0, 0);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1) translate3d(0, 1.4%, 0);
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after {
+    animation: none;
+  }
+  body::before {
+    opacity: 0.85;
+    transform: none;
+  }
+  body::after {
+    opacity: 0.7;
+    transform: none;
+  }
+}
+
+/* BackgroundField removed (LANE 7). These rules kept for reference only if
+   the component ever re-mounts. The breathing wash above + the AmbientGlow
+   2D-canvas mote layer now provide the living green base; per-panel slime
+   bubbles (CSS-only) preserved. */
+/* .background-field {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.background-field canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+} */
+
+::selection {
+  background: var(--core-accent);
+  color: var(--bg-primary);
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(65% 0 0 / 40%);
+  border-radius: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 3px;
+}
+
+/* All-caps green section labels above every panel — "SYSTEM STATUS",
+   "QUICK ACTIONS", "TOP AGENTS", etc. in the mockups. */
+.section-label {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--core-accent-bright);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

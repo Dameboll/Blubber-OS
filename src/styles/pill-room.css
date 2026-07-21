@@ -1,0 +1,217 @@
+/**
+ * pill-room.css — Lane 1's shared "full-bleed room" recipe.
+ *
+ * Copied from the Agent Control Center hero (the reference the rest of the
+ * app is being matched to): a photographic plate fills the pill edge-to-edge,
+ * a scrim on top keeps text legible, and real content paints above both.
+ *   1. host: position:relative; overflow:hidden (clips to the pill's own
+ *      border-radius); the pill's own background/border stay as-is unless a
+ *      screen explicitly goes frameless (see AgentsScreen.css for the pool).
+ *   2. plate: inset -4%, cover, center, brightness ~0.45-0.55 — a touch
+ *      oversized so a future subtle drift/parallax never reveals an edge.
+ *   3. scrim: the shared --pill-room-scrim gradient (top-light / bottom-dark)
+ *      so body copy sitting on the image always has enough contrast.
+ *
+ * TWO WAYS THIS PATTERN GETS APPLIED:
+ *   A) Real DOM node (AgentPoolWorld's `.pw__roomdrop`) — styled directly in
+ *      that component's own .css file using this same recipe by hand, since
+ *      it already renders a dedicated plate element.
+ *   B) Pseudo-element plate on an EXISTING panel class, used everywhere this
+ *      lane doesn't own the .tsx that would be needed to add a real plate
+ *      node. `::before` (the photo, z-index:-2) and `::after` (the scrim,
+ *      z-index:-1) both sit at NEGATIVE z-index, which is the only way to
+ *      guarantee they paint *behind* the panel's real (non-positioned)
+ *      content without touching that content's markup or stacking context —
+ *      per CSS painting order, negative-z children always paint before an
+ *      element's own non-positioned in-flow children, but after the
+ *      element's own background/border. See `.pill-room-plate` mixin-style
+ *      selectors below and every screen's own .css for concrete uses.
+ */
+
+:root {
+  --pill-room-scrim: linear-gradient(
+    180deg,
+    oklch(10% 0.02 150 / 55%),
+    oklch(10% 0.02 150 / 25%) 45%,
+    oklch(8% 0.02 150 / 65%)
+  );
+  /* heavier variant for the brightest source plates (vault.webp's crystal
+     vault is lit hot) where the standard scrim isn't enough to hold text
+     contrast — mandatory per the image inventory notes. */
+  --pill-room-scrim-heavy: linear-gradient(
+    180deg,
+    oklch(9% 0.02 150 / 74%),
+    oklch(9% 0.02 150 / 48%) 45%,
+    oklch(7% 0.02 150 / 80%)
+  );
+}
+
+/* ---- reusable utility classes, for any component that renders its OWN
+   real plate/scrim DOM nodes (option A above) rather than needing the
+   pseudo-element trick. Not required — components can also hand-roll the
+   same three declarations, as AgentPoolWorld.css does. ---- */
+.pill-room {
+  position: relative;
+  overflow: hidden;
+  /* z-index:0 needed so this actually establishes a stacking context —
+     otherwise .pill-room__plate/__scrim (or a screen's own negative-z
+     pseudo pair) escape to an ancestor context and paint invisibly instead
+     of behind this pill's own content. */
+  z-index: 0;
+  /* Same glass-depth recipe as ui/Panel.css's .panel (top-edge inset
+     highlight + tight/soft two-stop shadow) so a real DOM pill-room host
+     (e.g. LiveUsageMeter's `.lum`, MiniAnalytics's `.mini-analytics`) reads
+     as elevated glass too. Existing oklch tokens only. A consumer class that
+     sets its own box-shadow at equal specificity later in cascade order
+     still wins — same precedent as .dashboard-panel overriding .panel
+     elsewhere in this app. */
+  box-shadow:
+    inset 0 1px 0 0 oklch(95% 0 0 / 7%),
+    0 1px 3px oklch(0% 0 0 / 30%),
+    0 14px 36px oklch(0% 0 0 / 20%);
+}
+.pill-room__plate {
+  position: absolute;
+  inset: -4%;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.5) saturate(0.95);
+  pointer-events: none;
+}
+.pill-room__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--pill-room-scrim);
+}
+
+/* ==================================================================== *
+ * PET SCREEN PLATES — one distinct cinematic plate per pill (Lane E)
+ * VirtualPetScreen.tsx/.css belong to another lane; Lane E must not touch
+ * the pet panel LAYOUT, so each panel's room plate attaches here instead,
+ * targeting the screen's existing panel classNames (read-only reference:
+ * VirtualPetScreen.tsx). `.pet-notice` (the toast-style banner) is
+ * deliberately excluded — a full room photo behind a one-line notice strip
+ * reads as noise, not a pill.
+ *
+ * Plate map (docs/plans/plate-manifest.json — gen was quota-blocked, so each
+ * logical plate resolves to a DISTINCT existing public/bg webp, no pill
+ * shares an image with a neighbor):
+ *   .pet-needs-panel        → pet-needs   = habitat.webp (feeding nook)
+ *   .pet-quest-strip-panel  → pet-questboard = syslog.webp (mission board)
+ *   .pet-quest-board-panel  → pet-questboard = syslog.webp (mission board)
+ *   .pet-level-panel        → pet-level   = engine.webp (growth chamber)
+ *   .pet-stats-panel        → pet-stats   = vault.webp (record/trophy hall)
+ * The stats + questboard plates carry the most on-plate text (numbers /
+ * quest copy) so they run darker plates + the heavier scrim for AAA
+ * legibility; vault.webp is hot-lit and mandates the heavy scrim per the
+ * image inventory note above.
+ * ==================================================================== */
+
+/* shared stacking context — z-index:0 so the ::before/::after negative-z
+   plate stays behind THIS panel's own bg instead of escaping to an ancestor
+   context and painting invisibly. */
+.pet-needs-panel,
+.pet-level-panel,
+.pet-quest-strip-panel,
+.pet-quest-board-panel,
+.pet-stats-panel {
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+}
+
+/* shared plate geometry — per-plate image + brightness set in the blocks
+   below so each pill gets its own world. */
+.pet-needs-panel::before,
+.pet-level-panel::before,
+.pet-quest-strip-panel::before,
+.pet-quest-board-panel::before,
+.pet-stats-panel::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  z-index: -2;
+  background-size: cover;
+  background-position: center;
+  pointer-events: none;
+}
+
+/* shared scrim node — gradient overridden per-plate below where text load
+   demands the heavier variant. */
+.pet-needs-panel::after,
+.pet-level-panel::after,
+.pet-quest-strip-panel::after,
+.pet-quest-board-panel::after,
+.pet-stats-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--pill-room-scrim);
+}
+
+/* ---- needs → habitat.webp (feeding nook) ---- */
+.pet-needs-panel::before {
+  background-image: url('/bg/habitat.webp');
+  filter: brightness(0.66) saturate(1.02);
+}
+
+/* ---- level → engine.webp (growth chamber) ---- */
+.pet-level-panel::before {
+  background-image: url('/bg/engine.webp');
+  filter: brightness(0.62) saturate(1.05);
+}
+
+/* ---- quest strip + quest board → syslog.webp (mission board wall).
+   Quest copy sits on this plate, so it runs a touch darker + heavier scrim. */
+.pet-quest-strip-panel::before,
+.pet-quest-board-panel::before {
+  background-image: url('/bg/syslog.webp');
+  filter: brightness(0.56) saturate(1);
+}
+.pet-quest-strip-panel::after,
+.pet-quest-board-panel::after {
+  background: var(--pill-room-scrim-heavy);
+}
+
+/* ---- stats → vault.webp (record / trophy hall). Hot-lit source + tabular
+   stat numbers on top ⇒ darkest plate + heavy scrim (AAA). ---- */
+.pet-stats-panel::before {
+  background-image: url('/bg/vault.webp');
+  filter: brightness(0.52) saturate(1);
+}
+.pet-stats-panel::after {
+  background: var(--pill-room-scrim-heavy);
+}
+
+/* ==================================================================== *
+ * PLAY / ARCADE TAB — pet-arcade = reactor.webp (neon arcade corner)
+ * The arcade host had no plate. `.pet-arcade` is the plate host (intro +
+ * hub sit above it as non-positioned in-flow children, so the negative-z
+ * pseudo pair paints behind them). Its stacking-context props
+ * (position/overflow/z-index) are set in VirtualPetScreen.css — the single
+ * allowed cross-file exception — since the host lacked them.
+ * ==================================================================== */
+.pet-arcade::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  z-index: -2;
+  background-image: url('/bg/reactor.webp');
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.6) saturate(1.05);
+  pointer-events: none;
+}
+.pet-arcade::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--pill-room-scrim);
+}

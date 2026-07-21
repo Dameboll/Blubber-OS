@@ -1,0 +1,217 @@
+/* MiniAnalytics — Dashboard "Analytics" tab. A compact mirror of the real
+   Analytics hero: live-pulse readout + CSS-flex daily bars + top-burner rows.
+   No stretched SVG (Item 4 fix). Same card language as .dashboard-tabmini. */
+
+.mini-analytics {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-panel);
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+  overflow: hidden;
+}
+
+.mini-analytics__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.mini-analytics__head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid oklch(70% 0.19 155 / 16%);
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.mini-analytics__total {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-analytics__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  overflow: hidden;
+}
+
+.mini-analytics__empty {
+  margin: auto;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+/* ── hero row: pulse column + daily bars, side by side ─────────────────── */
+.mini-analytics__grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 0.9fr) 1.6fr;
+  gap: 0.7rem;
+  align-items: stretch;
+}
+
+/* PULSE — big token number + runs/streak (mirror .analytics-pulse) */
+.mini-analytics__pulse {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.mini-analytics__pulse-value {
+  color: var(--core-accent-bright);
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 14px oklch(74% 0.2 151 / 35%);
+}
+
+.mini-analytics__pulse-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mini-analytics__pulse-row {
+  display: flex;
+  gap: 0.7rem;
+  margin-top: 0.3rem;
+}
+
+.mini-analytics__pulse-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* DAILY BARS — CSS flex columns (mirror .analytics-daily) */
+.mini-analytics__daily {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.2rem;
+  min-width: 0;
+  height: 100%;
+}
+
+.mini-analytics__daily-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.2rem;
+  height: 100%;
+}
+
+.mini-analytics__daily-bar {
+  width: 100%;
+  max-width: 0.7rem;
+  min-height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(
+    180deg,
+    oklch(82% 0.24 149),
+    oklch(58% 0.19 151)
+  );
+  box-shadow: 0 0 8px oklch(74% 0.2 151 / 30%);
+}
+
+.mini-analytics__daily-label {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  line-height: 1;
+}
+
+/* TOP BURNERS — one row each (mirror .analytics-agents__row) */
+.mini-analytics__burners {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex-shrink: 0;
+}
+
+.mini-analytics__burners li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.mini-analytics__burner-icon {
+  flex-shrink: 0;
+  color: oklch(72% 0.2 60);
+}
+
+.mini-analytics__burner-name {
+  flex-shrink: 0;
+  max-width: 7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+}
+
+.mini-analytics__burner-bar {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: oklch(30% 0.03 155 / 60%);
+  overflow: hidden;
+}
+
+.mini-analytics__burner-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, oklch(58% 0.19 151), oklch(82% 0.24 149));
+}
+
+.mini-analytics__burner-pct {
+  flex-shrink: 0;
+  color: var(--core-accent-bright);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-variant-numeric: tabular-nums;
+}

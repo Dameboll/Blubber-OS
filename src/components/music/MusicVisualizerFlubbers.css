@@ -1,0 +1,125 @@
+/* MusicVisualizerFlubbers — the swarm of shiny MID mini Flubbers that dances
+   around the hero DJ, replacing the old CSS bar/equalizer strip. See the .tsx
+   header for the real-audio data flow. Tokens only; overflow is clipped by the
+   hero (.mps-hero overflow:hidden), so nothing here can add page scroll. */
+
+.mvf {
+  position: absolute;
+  inset: 0;
+  z-index: 2; /* between the backdrop/floor (0-1) and the DJ mascot stage (3) */
+  pointer-events: none;
+}
+
+/* Positioned anchor point on the hero floor; centered on its left% by margin so
+   the spawn/despawn animation on this element never fights the per-frame motion
+   transform that lives on the inner __body. */
+.mvf-mini {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  margin-left: -23px;
+}
+
+.mvf-mini--in {
+  animation: mvf-pop 340ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.mvf-mini--out {
+  animation: mvf-melt 340ms ease-in forwards;
+}
+
+@keyframes mvf-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.2) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes mvf-melt {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.1) translateY(14px);
+  }
+}
+
+/* Per-frame motion (rAF) writes transform here. Default keeps it at rest so
+   reduced-motion (rAF never starts) still shows a settled, centered mini. */
+.mvf-mini__body {
+  width: 46px;
+  height: 46px;
+  transform: translateY(0);
+  will-change: transform;
+  filter: drop-shadow(0 6px 10px oklch(60% 0.22 145 / 30%));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mvf-mini--in,
+  .mvf-mini--out {
+    animation: none;
+  }
+  .mvf-mini--out {
+    opacity: 0;
+  }
+  .mvf-mini__body {
+    will-change: auto;
+  }
+  .mvf-slime-drop {
+    animation: none !important;
+  }
+}
+
+/* ── LANE 5: slime dripping from ceiling ────────────────────────────────
+   Decorative falling globs of goo, beat-reactive via staggered animations.
+   Compositor-friendly (transform + opacity only). */
+.mvf-slime-drips {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mvf-slime-drop {
+  position: absolute;
+  top: -4px;
+  width: 8px;
+  height: 14px;
+  border-radius: 4px 4px 0 0;
+  background: oklch(82% 0.24 145 / 50%);
+  box-shadow: 0 0 8px oklch(82% 0.24 145 / 40%);
+  animation: mvf-drip 2.2s ease-in infinite;
+  opacity: 0;
+}
+
+.mvf-slime-drop:nth-child(1) { left: 15%; animation-delay: 0s; }
+.mvf-slime-drop:nth-child(2) { left: 28%; animation-delay: 0.3s; }
+.mvf-slime-drop:nth-child(3) { left: 42%; animation-delay: 0.6s; }
+.mvf-slime-drop:nth-child(4) { left: 58%; animation-delay: 0.9s; }
+.mvf-slime-drop:nth-child(5) { left: 72%; animation-delay: 1.2s; }
+.mvf-slime-drop:nth-child(6) { left: 85%; animation-delay: 1.5s; }
+
+@keyframes mvf-drip {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scaleY(1);
+  }
+  10% {
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.6;
+    transform: translateY(100%) scaleY(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(110%) scaleY(0.4);
+  }
+}

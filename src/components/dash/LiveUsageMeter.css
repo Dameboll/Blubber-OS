@@ -1,0 +1,440 @@
+/* LiveUsageMeter — the in-depth live-burn pill (Lane B).
+   Shares the pill-room plate language (src/styles/pill-room.css) and the same
+   card grammar as MiniAnalytics. Green-first world; the limit bars carry a
+   semantic warning ramp inline. All motion is transform/opacity only and
+   reduced-motion guarded. */
+
+.lum {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-panel);
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+  overflow: hidden;
+}
+
+.lum__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.lum__head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid oklch(70% 0.19 155 / 16%);
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.lum__title {
+  letter-spacing: 0.01em;
+}
+
+.lum-dot {
+  margin-left: auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.lum-dot--live {
+  background: var(--core-accent-bright);
+  opacity: 1;
+  box-shadow: 0 0 8px oklch(87% 0.29 142 / 70%);
+}
+
+.lum-dot--sync {
+  background: oklch(80% 0.2 75);
+  opacity: 0.6;
+}
+
+.lum__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.62rem;
+  padding: 0.7rem 0.85rem 0.8rem;
+  overflow-y: auto;
+}
+
+/* ---- limit bars ---- */
+
+.lum-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.lum-bar__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lum-bar__label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: var(--text-secondary);
+}
+
+.lum-bar__pct {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.lum-bar__track {
+  position: relative;
+  height: 7px;
+  border-radius: 4px;
+  background: oklch(30% 0.02 155 / 65%);
+  overflow: hidden;
+}
+
+/* Fill scales on the X axis (transform, not width) so it animates on the
+   compositor — the track's overflow:hidden + radius clips the left cap. */
+.lum-bar__fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border-radius: 4px;
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lum-bar__sub {
+  font-family: var(--font-ui);
+  font-size: 0.64rem;
+  color: var(--text-secondary);
+}
+
+.lum__note {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+/* ---- live burn ---- */
+
+.lum__burn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid oklch(70% 0.19 155 / 12%);
+}
+
+.lum__burn-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.lum__burn-rate {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.lum__burn-num {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--core-accent-bright);
+}
+
+.lum__burn-unit {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.lum__burn-idle {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.lum-spark {
+  width: 100%;
+  height: 28px;
+  display: block;
+}
+
+.lum-spark__area {
+  fill: oklch(74% 0.2 151 / 14%);
+}
+
+.lum-spark__line {
+  fill: none;
+  stroke: var(--core-accent-bright);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---- today total + split ---- */
+
+.lum__today {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid oklch(70% 0.19 155 / 12%);
+}
+
+.lum__today-total {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.lum__today-num {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.lum__today-label {
+  font-family: var(--font-ui);
+  font-size: 0.66rem;
+  color: var(--text-secondary);
+}
+
+.lum__splits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+}
+
+.lum-split {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.32rem 0.45rem;
+  border-radius: 10px;
+  background: oklch(24% 0.02 155 / 55%);
+  border: 1px solid oklch(70% 0.19 155 / 10%);
+}
+
+.lum-split__label {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+}
+
+.lum-split__val {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+/* ---- top burner ---- */
+
+.lum__burner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid oklch(70% 0.19 155 / 12%);
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+}
+
+.lum__burner-label {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.lum__burner-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.lum__burner-pct {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--core-accent-bright);
+}
+
+/* ---- skeleton ---- */
+
+.lum__skeleton {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 0.85rem;
+}
+
+.lum-skel {
+  position: relative;
+  border-radius: 8px;
+  background: oklch(28% 0.02 155 / 55%);
+  overflow: hidden;
+}
+
+.lum-skel--bar {
+  height: 26px;
+}
+
+.lum-skel--wide {
+  height: 44px;
+}
+
+.lum-skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(74% 0.2 151 / 10%),
+    transparent
+  );
+  animation: lum-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes lum-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ---- weekly recap half (showWeekly) ---- */
+
+/* Seam divider between the live half and the weekly recap half — a labeled
+   hairline rather than a plain border-top so it reads as a deliberate section
+   break inside one continuous pill, not two panels glued together. */
+.lum-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.15rem;
+}
+
+.lum-divider__line {
+  flex: 1;
+  height: 1px;
+  background: oklch(70% 0.19 155 / 18%);
+}
+
+.lum-divider__label {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.lum-weekly {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* Reference renders all weekday bars bright green (BarChart.css dims
+   non-peak bars to 35% by default) — brighten only within this weekly chart,
+   same treatment the old dashboard-token-usage panel used. */
+.lum-weekly__chart .bar-chart__bar {
+  fill: oklch(70% 0.19 155 / 68%);
+}
+
+.lum-weekly__chart {
+  position: relative;
+  width: 100%;
+  height: 6rem;
+}
+
+/* Floating callout above the highlighted bar. BarChart.tsx only attaches a
+   native SVG <title>, so this reproduces the shared component's own bar-
+   geometry math (see computeWeeklyBarCallout above) to place an always-
+   visible callout without modifying ui/BarChart.tsx. */
+.lum-weekly__callout {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 8px));
+  padding: 0.3rem 0.55rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-glow);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 16px oklch(0% 0 0 / 35%);
+}
+
+.lum-weekly__total {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.lum-weekly__total-num {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.lum-weekly__total-split {
+  font-variant-numeric: tabular-nums;
+}
+
+/* compact variant trims to the two bars + today total */
+.lum--compact .lum__body {
+  gap: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lum-bar__fill {
+    transition: none;
+  }
+  .lum-skel::after {
+    animation: none;
+  }
+}

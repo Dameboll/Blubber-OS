@@ -1,0 +1,38 @@
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+  min-width: 0;
+}
+
+.activity-item__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 25%);
+  color: var(--core-accent-bright);
+}
+
+.activity-item__text {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-item__time {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}

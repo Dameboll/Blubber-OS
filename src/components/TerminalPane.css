@@ -1,0 +1,86 @@
+.terminal-pane {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  /* Pane owns the base color — the xterm theme background is transparent
+     (allowTransparency) so the watermark below can show through. A faint
+     slime-green wash "flubberizes" the black: a soft bloom anchored under the
+     Flubber watermark (bottom-right, matching ::before's px anchor) plus a very
+     low global tint. Alphas kept low (≤10%) so green-on-dark text contrast is
+     untouched — it's atmosphere, not a surface color. */
+  background:
+    radial-gradient(
+      120% 95% at calc(100% - 260px) calc(100% - 150px),
+      oklch(64% 0.17 150 / 11%) 0%,
+      transparent 58%
+    ),
+    radial-gradient(140% 130% at 50% 8%, oklch(58% 0.12 152 / 4%) 0%, transparent 72%),
+    #0d0d0d;
+}
+
+/* Blurred Flubber watermark behind the terminal text. Static decoration:
+   low opacity + blur keeps green-on-dark text contrast intact. Explicit
+   z-index on BOTH layers (plate-invisibility gotcha — never rely on default
+   stacking). */
+.terminal-pane::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: url('/terminal-flubber.png');
+  background-repeat: no-repeat;
+  background-position: right -40px bottom -60px;
+  background-size: min(58%, 520px) auto;
+  filter: blur(2.5px) saturate(0.9);
+  opacity: 0.17;
+  /* screen-blend drops the capture's dark room bg to nothing on #0d0d0d,
+     and the radial mask fades any remaining rectangle edge. */
+  mix-blend-mode: screen;
+  /* px-anchored to match the px-anchored background-position (a %-based mask
+     drifts as the pane resizes; this stays centered on the Flubber). */
+  -webkit-mask-image: radial-gradient(
+    ellipse 330px 310px at calc(100% - 290px) calc(100% - 165px),
+    black 40%,
+    transparent 80%
+  );
+  mask-image: radial-gradient(
+    ellipse 330px 310px at calc(100% - 290px) calc(100% - 165px),
+    black 40%,
+    transparent 80%
+  );
+  pointer-events: none;
+}
+
+.terminal-pane__surface {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.terminal-pane__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: oklch(7% 0 0 / 88%);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  text-align: center;
+  pointer-events: none;
+}
+
+.terminal-pane__overlay--exited {
+  color: var(--accent-danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terminal-pane__overlay {
+    transition: none;
+  }
+}

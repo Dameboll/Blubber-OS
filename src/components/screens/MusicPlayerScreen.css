@@ -1,0 +1,1514 @@
+/* MusicPlayerScreen — tab strip, hero visualizer with FlubberCharacter on a
+   glowing platform between two speakers, Playlist Queue table, sticky
+   transport bar, right rail (Now Playing / Playback Controls / Visualizer
+   Mode / Equalizer). See MusicPlayerScreen.tsx header for the real-vs-honest
+   data rundown. Tokens only, matches the frozen design system in
+   globals.css (same convention as AgentsScreen.css / VirtualPetScreen.css). */
+
+.mps-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.mps-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: clamp(1.25rem, 1rem + 1vw, 2rem);
+  padding-bottom: 1rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Header row: "MUSIC PLAYER" label + icon, then the tab strip          */
+/* (matches flubber 2.png — icon+label sits left of the view tabs,     */
+/* the shared user chip stays in AppShell's own topbar above this).    */
+/* ------------------------------------------------------------------ */
+
+.mps-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: clamp(1rem, 0.8rem + 0.8vw, 1.75rem);
+  border-bottom: 1px solid oklch(65% 0 0 / 14%);
+  padding-bottom: 0.1rem;
+}
+
+.mps-header__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-bottom: 0.6rem;
+  color: var(--core-accent-bright);
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tab strip                                                           */
+/* ------------------------------------------------------------------ */
+
+.mps-tabs {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.9rem, 0.7rem + 0.6vw, 1.5rem);
+  border-bottom: none;
+  padding-bottom: 0.1rem;
+}
+
+.mps-tab {
+  position: relative;
+  padding: 0.5rem 0.1rem;
+  background: transparent;
+  border: none;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 150ms ease-out;
+}
+
+.mps-tab:hover {
+  color: var(--text-primary);
+}
+
+.mps-tab--active {
+  color: var(--core-accent-bright);
+}
+
+.mps-tab--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 6px var(--core-accent-bright);
+}
+
+/* ------------------------------------------------------------------ */
+/* Panel restyle (shared convention)                                   */
+/* ------------------------------------------------------------------ */
+
+.mps-scroll .panel {
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+}
+
+.mps-scroll .panel__title {
+  color: var(--core-accent-bright);
+  text-shadow: 0 0 10px oklch(87% 0.29 142 / 22%);
+}
+
+.mps-queue-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+}
+
+.mps-empty {
+  margin: 0;
+  padding: 0.4rem 0;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+}
+
+.mps-tab-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.mps-tab-empty p {
+  margin: 0;
+  max-width: 24rem;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ */
+/* Layout: main column (hero + queue) + right rail                     */
+/* ------------------------------------------------------------------ */
+
+.mps-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 1.25rem;
+  /* LANE 5: was `align-items: start`, which sizes grid children to their own
+     content height instead of stretching them to the row — that's why the
+     dance floor never reached the transport bar despite flex:1 inside
+     .mps-main. `stretch` (the grid default, made explicit here) plus flex:1
+     below so this row actually fills .mps-scroll's available height. */
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+
+.mps-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+  flex: 1;
+  min-height: 0;
+}
+
+/* LANE 5: Hero now stretches to fill the entire main column height
+   (from tab strip down to transport bar), making the dance floor
+   the dominant visual. */
+.mps-main > .mps-hero {
+  flex: 1;
+  min-height: 0;
+}
+
+.mps-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Rail panel room plate: same pill-room recipe as every other plated panel.
+   z-index:0 is mandatory — position:relative alone doesn't create a stacking
+   context, so the negative-z ::before plate escapes to an ancestor and
+   paints invisibly without it. */
+.mps-rail .panel {
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.mps-rail .panel::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  z-index: -2;
+  background-image: url('/bg/studio2.webp');
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.46) saturate(1);
+  pointer-events: none;
+}
+
+.mps-rail .panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--pill-room-scrim, linear-gradient(180deg, oklch(8% 0.02 155 / 55%), oklch(8% 0.02 155 / 82%)));
+  pointer-events: none;
+}
+
+@media (max-width: 1080px) {
+  .mps-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero visualizer                                                     */
+/* ------------------------------------------------------------------ */
+
+.mps-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* LANE 5: stretched to fill main column. flex:1 in parent + min-height:0 handle overflow. */
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--border-glow);
+  background: oklch(9% 0.012 165);
+  overflow: hidden;
+  box-shadow: inset 0 0 60px oklch(0% 0 0 / 40%);
+}
+
+/* Dark music-studio backdrop (already carries a lit platform + monitors + EQ
+   wall) — darkened and vignetted so the 3D mascot stays dominant. Same proven
+   pattern as AgentsScreen .acc-stage__backdrop. */
+.mps-hero__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: url('/bg/studio.webp');
+  background-size: cover;
+  background-position: center 46%;
+  filter: saturate(1.18) brightness(0.78) contrast(1.05);
+}
+
+.mps-hero__backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(135% 100% at 50% 56%, transparent 38%, oklch(7% 0.02 162 / 58%) 100%);
+}
+
+/* Neon turntable the mascot dances on — a glowing green disc + outer ring. */
+.mps-hero__platform {
+  position: absolute;
+  bottom: clamp(1.4rem, 2vw, 2.4rem);
+  z-index: 2;
+  width: min(52%, 20rem);
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    oklch(94% 0.24 145 / 60%) 0%,
+    oklch(82% 0.24 145 / 26%) 40%,
+    transparent 70%
+  );
+  box-shadow: 0 0 44px oklch(82% 0.24 145 / 42%);
+  transition: box-shadow 300ms ease-out, opacity 300ms ease-out;
+}
+
+.mps-hero__platform::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 88%;
+  height: 62%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid oklch(90% 0.25 145 / 55%);
+  box-shadow: 0 0 14px oklch(88% 0.26 145 / 45%), inset 0 0 10px oklch(88% 0.26 145 / 25%);
+}
+
+.mps-hero__platform--active {
+  box-shadow: 0 0 74px oklch(88% 0.29 142 / 58%);
+}
+
+/* Stage wrapper = the 3D Flubber DJ. --mf-hero-lift / --mf-hero-scale are
+   written every frame by MusicVisualizerFlubbers off the REAL analyser energy
+   (+ beat impulse), so the DJ lifts and swells with the music. They default to
+   rest (0px / 1) so an idle or non-music mount looks unchanged, and the
+   visualizer clears them on unmount. Compositor-only (transform), and the
+   rAF that sets them never starts under prefers-reduced-motion. */
+.mps-hero__stage {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(calc(-4% - var(--mf-hero-lift, 0px))) scale(var(--mf-hero-scale, 1));
+  filter: drop-shadow(0 18px 40px oklch(60% 0.22 145 / 34%));
+}
+
+.mps-hero__stage .flubber-character {
+  position: relative;
+  z-index: 3;
+}
+
+/* DJ headphones are now real 3D geometry parented to the Flubber's Head bone
+   (see buildDjHeadphones in flubber3d/instance.ts) so they track his dance —
+   no CSS overlay any more. */
+
+/* Studio monitor cabinets flanking the stage. */
+.mps-speaker {
+  position: absolute;
+  bottom: clamp(0.75rem, 1.6vw, 1.6rem);
+  z-index: 2;
+  width: clamp(56px, 6vw, 92px);
+  aspect-ratio: 0.64;
+  border-radius: 12px;
+  padding: 11% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7%;
+  background: linear-gradient(158deg, oklch(25% 0.02 162) 0%, oklch(11% 0.01 162) 100%);
+  border: 1px solid oklch(55% 0.1 150 / 28%);
+  box-shadow: 0 12px 28px oklch(0% 0 0 / 55%), inset 0 1px 0 oklch(80% 0.1 150 / 12%);
+}
+
+.mps-speaker--left {
+  left: clamp(0.6rem, 3vw, 2.6rem);
+}
+
+.mps-speaker--right {
+  right: clamp(0.6rem, 3vw, 2.6rem);
+}
+
+.mps-speaker__tweeter {
+  width: 28%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, oklch(88% 0.26 145 / 88%) 0%, oklch(30% 0.06 150) 52%, oklch(11% 0.01 162) 100%);
+  box-shadow: 0 0 8px oklch(82% 0.24 145 / 40%), inset 0 0 0 1px oklch(86% 0.26 145 / 40%);
+}
+
+.mps-speaker__woofer {
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid oklch(82% 0.24 145 / 30%);
+  background: radial-gradient(
+    circle,
+    oklch(21% 0.02 162) 0%,
+    oklch(14% 0.01 162) 28%,
+    oklch(86% 0.26 145 / 85%) 45%,
+    oklch(42% 0.11 150) 54%,
+    oklch(15% 0.02 162) 70%,
+    oklch(23% 0.03 162) 100%
+  );
+  box-shadow: 0 0 18px oklch(82% 0.24 145 / 34%), inset 0 0 12px oklch(0% 0 0 / 60%);
+  transition: box-shadow 220ms ease-out;
+}
+
+.mps-speaker--live .mps-speaker__woofer {
+  box-shadow: 0 0 30px oklch(86% 0.28 145 / 55%), inset 0 0 12px oklch(0% 0 0 / 55%);
+}
+
+/* The old CSS bar/radial/pulse hero strip was removed in LANE C — the hero
+   visualizer is now MusicVisualizerFlubbers (a live 3D Flubber swarm). Its
+   styles live in src/components/music/MusicVisualizerFlubbers.css. */
+
+/* ------------------------------------------------------------------ */
+/* Track art + waveform (shared by track rows + now playing)           */
+/* ------------------------------------------------------------------ */
+
+.mps-art {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--core-accent-bright);
+  overflow: hidden;
+}
+
+.mps-waveform {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.mps-waveform__bar {
+  width: 2px;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--text-secondary);
+  transform-origin: bottom center;
+  transition: transform 150ms ease-out;
+}
+
+.mps-waveform--active .mps-waveform__bar {
+  background: var(--core-accent-bright);
+  animation: mps-waveform-bob 900ms ease-in-out infinite;
+}
+
+@keyframes mps-waveform-bob {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Track list / rows                                                   */
+/* ------------------------------------------------------------------ */
+
+.mps-track-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mps-track {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr) 4rem 3rem 2rem 2rem;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.35rem;
+  border-radius: 10px;
+  transition: background-color 150ms ease-out;
+}
+
+.mps-track:hover {
+  background: var(--bg-elevated);
+}
+
+.mps-track--active {
+  background: oklch(74% 0.2 151 / 12%);
+}
+
+.mps-track__playcell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.mps-track__playcell:hover {
+  color: var(--core-accent-bright);
+  background: oklch(74% 0.2 151 / 14%);
+}
+
+.mps-track__index {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.mps-track__playcell:hover .mps-track__index {
+  display: none;
+}
+
+.mps-track__playicon {
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.mps-track__playcell:hover .mps-track__playicon {
+  display: flex;
+}
+
+.mps-track__main {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.mps-track__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.mps-track__title {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mps-track__sub {
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.mps-track__waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.mps-track__duration {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.mps-track__heart,
+.mps-track__menu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 150ms ease-out, background-color 150ms ease-out;
+}
+
+.mps-track__heart:hover,
+.mps-track__menu:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.mps-track__heart--active {
+  color: var(--core-accent-bright);
+}
+
+.mps-track__heart:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .mps-track {
+    grid-template-columns: 2.2rem minmax(0, 1fr) 2rem 2rem;
+  }
+  .mps-track__waveform,
+  .mps-track__duration {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Now Playing (rail)                                                  */
+/* ------------------------------------------------------------------ */
+
+.mps-now-playing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  text-align: center;
+}
+
+.mps-now-playing__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+}
+
+.mps-now-playing__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.mps-now-playing__title {
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mps-now-playing__sub {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mps-now-playing__time {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* Transport controls (shared by rail + sticky bar)                    */
+/* ------------------------------------------------------------------ */
+
+.mps-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.mps-controls--lg {
+  gap: 0.9rem;
+}
+
+.mps-transport-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 150ms ease-out, background-color 150ms ease-out, transform 150ms ease-out;
+}
+
+.mps-transport-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.mps-transport-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mps-transport-btn--active {
+  color: var(--core-accent-bright);
+}
+
+.mps-transport-btn--play {
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--core-accent-bright);
+  background: var(--bg-primary);
+  border: 1.5px solid var(--core-accent-bright);
+  box-shadow: 0 0 16px oklch(87% 0.29 142 / 45%);
+}
+
+.mps-transport-btn--play:hover:not(:disabled) {
+  background: var(--bg-primary);
+  color: var(--core-accent-bright);
+  box-shadow: 0 0 22px oklch(87% 0.29 142 / 65%);
+  transform: scale(1.05);
+}
+
+.mps-transport-btn--sm {
+  width: 1.9rem;
+  height: 1.9rem;
+}
+
+.mps-transport-btn--sm.mps-transport-btn--play {
+  width: 2.4rem;
+  height: 2.4rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Visualizer mode selector                                            */
+/* ------------------------------------------------------------------ */
+
+.mps-viz-modes {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mps-viz-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 8px;
+  border: 1px solid oklch(65% 0 0 / 25%);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 150ms ease-out, border-color 150ms ease-out;
+}
+
+.mps-viz-btn:hover {
+  color: var(--text-primary);
+}
+
+.mps-viz-btn--active {
+  color: var(--bg-primary);
+  background: var(--core-accent-bright);
+  border-color: var(--core-accent-bright);
+  box-shadow: 0 0 10px oklch(87% 0.29 142 / 45%);
+}
+
+.mps-viz-sync {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-glow);
+}
+
+.mps-viz-sync__label {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.mps-viz-sync__toggle {
+  position: relative;
+  width: 38px;
+  height: 21px;
+  border-radius: 999px;
+  border: 1px solid oklch(65% 0 0 / 30%);
+  background: oklch(20% 0.01 159);
+  cursor: pointer;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.mps-viz-sync__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  transition: transform 150ms ease-out, background-color 150ms ease-out;
+}
+
+.mps-viz-sync__toggle--on {
+  background: oklch(74% 0.2 151 / 35%);
+  border-color: oklch(87% 0.29 142 / 55%);
+}
+
+.mps-viz-sync__toggle--on .mps-viz-sync__thumb {
+  transform: translateX(17px);
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 8px oklch(87% 0.29 142 / 60%);
+}
+
+/* ------------------------------------------------------------------ */
+/* Equalizer                                                           */
+/* ------------------------------------------------------------------ */
+
+.mps-eq-dropdown {
+  position: relative;
+}
+
+.mps-eq-dropdown__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  padding: 0.25rem 0.15rem;
+  cursor: pointer;
+  transition: color 150ms ease-out;
+}
+
+.mps-eq-dropdown__trigger:hover {
+  color: var(--core-accent-bright);
+}
+
+.mps-eq-dropdown__menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 5;
+  min-width: 8rem;
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-glow);
+  background: var(--bg-elevated);
+  box-shadow: var(--glow-shadow);
+}
+
+.mps-eq-dropdown__menu li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.mps-eq-dropdown__menu li button:hover {
+  background: oklch(74% 0.2 151 / 16%);
+  color: var(--core-accent-bright);
+}
+
+.mps-eq {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.35rem;
+  height: 7rem;
+  padding-top: 0.5rem;
+}
+
+.mps-eq__band {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  height: 100%;
+}
+
+.mps-eq__slider-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Native vertical range input (writing-mode), not a rotated horizontal one:
+   a rotate(-90deg) transform leaves the ORIGINAL unrotated width (previously
+   4.5rem) as the element's layout footprint, so 7 bands at 4.5rem each blew
+   way past the rail panel's ~300px width and the last 2 bands (6kHz/15kHz)
+   were clipped off-panel. writing-mode lays the track out vertically for
+   real, so each band's footprint is just the track's thickness. */
+.mps-eq__slider {
+  -webkit-appearance: none;
+  appearance: none;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 4px;
+  height: 100%;
+  border-radius: 999px;
+  background: oklch(65% 0 0 / 22%);
+  cursor: pointer;
+}
+
+.mps-eq__slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 6px oklch(87% 0.29 142 / 55%);
+  cursor: pointer;
+}
+
+.mps-eq__slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  background: var(--core-accent-bright);
+  cursor: pointer;
+}
+
+.mps-eq__label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* Sticky bottom bar: two separate, column-aligned widgets — the mini  */
+/* player bar (main column width) and the volume strip (rail column    */
+/* width), matching the .mps-layout main/rail split above.             */
+/* ------------------------------------------------------------------ */
+
+.mps-bottom-bar {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  align-items: stretch;
+  gap: 1.25rem;
+  padding: 0.75rem clamp(1.25rem, 1rem + 1vw, 2rem);
+  border-top: 1px solid var(--border-glow);
+  background: var(--bg-surface);
+}
+
+.mps-transport-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.mps-transport-bar__now {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.mps-transport-bar__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.mps-transport-bar__title {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mps-transport-bar__sub {
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.mps-transport-bar__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.mps-scrub {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 30rem;
+}
+
+.mps-scrub__time {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.mps-scrub__input,
+.mps-volume__input {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  background: linear-gradient(
+    to right,
+    var(--core-accent-bright) 0%,
+    var(--core-accent-bright) var(--mps-scrub-pct, 0%),
+    oklch(65% 0 0 / 22%) var(--mps-scrub-pct, 0%),
+    oklch(65% 0 0 / 22%) 100%
+  );
+}
+
+.mps-scrub__input::-webkit-slider-thumb,
+.mps-volume__input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 6px oklch(87% 0.29 142 / 55%);
+  cursor: pointer;
+  margin-top: -4px;
+}
+
+.mps-scrub__input::-moz-range-thumb,
+.mps-volume__input::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  background: var(--core-accent-bright);
+  cursor: pointer;
+}
+
+.mps-scrub__input:disabled,
+.mps-volume__input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mps-volume-strip {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.mps-volume__input {
+  width: 6rem;
+  flex: 1;
+  min-width: 3rem;
+}
+
+.mps-volume-strip__icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.mps-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.mps-icon-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+.mps-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1080px) {
+  .mps-bottom-bar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 780px) {
+  .mps-transport-bar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.6rem;
+  }
+  .mps-transport-bar__now,
+  .mps-volume-strip {
+    justify-content: center;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Full-screen drag-and-drop overlay (Library upload)                  */
+/* ------------------------------------------------------------------ */
+
+.mps-drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--core-accent-bright);
+  background: oklch(9% 0.02 165 / 88%);
+  border: 2px dashed oklch(87% 0.29 142 / 55%);
+  margin: 0.6rem;
+  border-radius: var(--radius-panel);
+  pointer-events: none;
+}
+
+.mps-drop-overlay p {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Library: upload dropzone + progress list                            */
+/* ------------------------------------------------------------------ */
+
+.mps-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.6rem 1rem;
+  border: 1.5px dashed oklch(65% 0 0 / 30%);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 150ms ease-out, background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.mps-dropzone:hover,
+.mps-dropzone:focus-visible {
+  border-color: oklch(87% 0.29 142 / 55%);
+  color: var(--core-accent-bright);
+  background: oklch(74% 0.2 151 / 6%);
+}
+
+.mps-dropzone--active {
+  border-color: var(--core-accent-bright);
+  color: var(--core-accent-bright);
+  background: oklch(74% 0.2 151 / 10%);
+}
+
+.mps-dropzone p {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+}
+
+.mps-dropzone__hint {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.mps-uploads {
+  list-style: none;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mps-upload {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 8rem) auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+}
+
+.mps-upload__name {
+  min-width: 0;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mps-upload__bar {
+  position: relative;
+  height: 5px;
+  border-radius: 999px;
+  background: oklch(65% 0 0 / 22%);
+  overflow: hidden;
+}
+
+.mps-upload__bar span {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 6px oklch(87% 0.29 142 / 50%);
+  transition: transform 150ms ease-out;
+}
+
+.mps-upload__error {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: oklch(72% 0.19 25);
+}
+
+.mps-upload--error {
+  background: oklch(72% 0.19 25 / 10%);
+}
+
+.mps-upload__dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.mps-upload__dismiss:hover {
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+
+/* Library track row delete button — replaces the decorative "more" slot. */
+.mps-track__delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 150ms ease-out, background-color 150ms ease-out;
+}
+
+.mps-track__delete:hover {
+  color: oklch(72% 0.19 25);
+  background: oklch(72% 0.19 25 / 12%);
+}
+
+.mps-track__delete--confirm {
+  color: oklch(72% 0.19 25);
+  background: oklch(72% 0.19 25 / 16%);
+}
+
+/* ------------------------------------------------------------------ */
+/* Playlists tab                                                       */
+/* ------------------------------------------------------------------ */
+
+.mps-playlist-create {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.mps-playlist-create__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid oklch(65% 0 0 / 25%);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+}
+
+.mps-playlist-create__input:focus-visible {
+  outline: 2px solid var(--core-accent-bright);
+  outline-offset: 1px;
+}
+
+.mps-playlist-create__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--core-accent-bright);
+  background: transparent;
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.mps-playlist-create__btn:hover:not(:disabled) {
+  background: oklch(74% 0.2 151 / 14%);
+}
+
+.mps-playlist-create__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mps-playlist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mps-playlist {
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.mps-playlist__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.6rem;
+}
+
+.mps-playlist__expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.mps-playlist__expand:hover {
+  color: var(--text-primary);
+}
+
+.mps-playlist__expand svg {
+  transition: transform 150ms ease-out;
+}
+
+.mps-playlist__name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mps-playlist__rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--core-accent-bright);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+}
+
+.mps-playlist__count {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.mps-icon-btn--danger:hover:not(:disabled) {
+  color: oklch(72% 0.19 25);
+  background: oklch(72% 0.19 25 / 12%);
+}
+
+.mps-icon-btn--confirm {
+  color: oklch(72% 0.19 25);
+  background: oklch(72% 0.19 25 / 16%);
+}
+
+.mps-playlist__body {
+  padding: 0 0.6rem 0.75rem;
+  border-top: 1px solid var(--border-glow);
+}
+
+.mps-playlist__tracks {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.mps-playlist__track {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.3rem;
+  border-radius: 6px;
+  cursor: grab;
+}
+
+.mps-playlist__track:hover {
+  background: var(--bg-surface);
+}
+
+.mps-playlist__grip {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.mps-playlist__track-title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mps-playlist__add {
+  margin-top: 0.6rem;
+  position: relative;
+}
+
+.mps-playlist__add-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: none;
+  background: transparent;
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.76rem;
+  padding: 0.3rem 0.1rem;
+  cursor: pointer;
+}
+
+.mps-playlist__add-toggle:hover {
+  text-decoration: underline;
+}
+
+.mps-playlist__add-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0.35rem;
+  max-height: 12rem;
+  overflow-y: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border-glow);
+  background: var(--bg-surface);
+}
+
+.mps-playlist__add-list li button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.mps-playlist__add-list li button:hover {
+  background: oklch(74% 0.2 151 / 14%);
+  color: var(--core-accent-bright);
+}
+
+/* ── compact rail queue (LANE 5) ──────────────────────────────────────────
+   Playlist Queue moved from main column to rail (replaces Equalizer panel).
+   Compact track rows + internal scroll so it stays within rail bounds. */
+.mps-rail-queue {
+  max-height: clamp(6rem, 20vh, 12rem);
+  overflow-y: auto;
+}

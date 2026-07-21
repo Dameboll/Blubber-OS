@@ -1,0 +1,237 @@
+/* MemoryScreen — LANE G. One-window (LAW 2): the screen is height:100% inside
+   AppShell's bounded content area and clips its own overflow; the header is
+   fixed and each bubble's body scrolls WITHIN its own box, so the page itself
+   never scrolls at any size. All colors come from the shared CSS custom
+   properties — no new palette introduced. */
+
+.memory-screen {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.memory-screen__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--core-accent-bright);
+}
+
+.memory-screen__header h1 {
+  font-size: 1.4rem;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.memory-screen__header p {
+  margin: 0.15rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.memory-screen__mascot {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.memory-screen__grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.1rem;
+}
+
+/* Each bubble is a full-height grid cell whose Panel body scrolls internally
+   so a long ai-context / preference list never grows the page. */
+.memory-panel {
+  min-height: 0;
+  min-width: 0;
+}
+
+.memory-panel .panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.memory-panel__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.memory-panel__body {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Honest empty state — kept visually distinct (muted, italic) from real
+   loaded prose so a blank bubble never reads as fabricated content. */
+.memory-panel__empty {
+  margin: 0;
+  color: var(--text-secondary);
+  opacity: 0.75;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.memory-panel__project,
+.memory-panel__project-tag {
+  font-family: var(--font-mono);
+  color: var(--core-accent-bright);
+}
+
+.memory-panel__project-tag {
+  align-self: flex-start;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--border-glow);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+}
+
+.memory-panel__source {
+  margin-top: auto;
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+/* Owner identity: USER.md fields --------------------------------------- */
+.memory-identity {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.memory-identity__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.memory-identity__label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--core-accent-bright);
+}
+
+.memory-identity__value {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+/* Beliefs + creed sections share a section frame with a mono heading. */
+.memory-identity__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-top: 1px solid var(--border-glow);
+  padding-top: 0.85rem;
+}
+
+.memory-identity__heading {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  opacity: 0.85;
+}
+
+/* PERSONA.md beliefs --------------------------------------------------- */
+.memory-beliefs {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.memory-beliefs__item {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+/* SOUL.md creed -------------------------------------------------------- */
+.memory-creed__line {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.memory-creed__line:first-of-type {
+  color: var(--text-primary);
+}
+
+@media (max-width: 900px) {
+  .memory-screen {
+    padding: 1.1rem;
+    gap: 1rem;
+  }
+
+  /* Stack into three equal-height rows so the page still fills one viewport
+     and each bubble scrolls internally rather than growing the page. */
+  .memory-screen__grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(0, 1fr);
+  }
+
+  .memory-screen__mascot {
+    display: none;
+  }
+}
+
+/* ── pill-room plate (pill-worlds pass) ────────────────────────────
+   All 3 bubbles (Session Context / Project Knowledge / Dame · OS Identity,
+   all `.memory-panel`) carry the archive-vault-jars room photo behind their
+   content via a negative-z pseudo-element pair (recipe:
+   src/styles/pill-room.css). Each bubble's own `.panel__body` still scrolls
+   internally, unaffected by the plate. */
+.memory-panel {
+  position: relative;
+  overflow: hidden;
+  /* z-index:0 needed so this actually establishes a stacking context —
+     otherwise the ::before/::after negative-z plate escapes to an ancestor
+     context and paints invisibly instead of behind this panel's own bg. */
+  z-index: 0;
+}
+.memory-panel::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  z-index: -2;
+  background-image: url('/bg/memory2.webp');
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.5) saturate(0.95);
+  pointer-events: none;
+}
+.memory-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--pill-room-scrim);
+}

@@ -1,0 +1,562 @@
+/* VirtualPetScreen — the Care / Quests / Play / Stats pet screen. Every color
+   here is a token var() or an oklch() tuned within the same green (H 139-159) /
+   neutral (C 0) hue families used across Panel.css, StatChip.css, ProgressBar.css
+   and AppShell.css — no hex, nothing outside the app's existing palette.
+
+   LAW 2 — ONE WINDOW: the screen is a bounded flex column that NEVER scrolls.
+   The Care tab packs the free-roam play tube, care controls, needs, a live quest
+   strip and level into one grid that fits its bounded parent; Quests / Play /
+   Stats each fill the same bounded body. The interactive tube lives in
+   ../pet/PetHabitatScene.css; care-action particles in ../pet/CarePayoffs.css;
+   quests in ../pet/QuestPanel.css; the stat board in ../pet/PetStats.css. */
+
+.pet-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: clamp(0.9rem, 0.7rem + 0.8vw, 1.5rem);
+}
+
+/* ------------------------------------------------------------------ */
+/* Header: paw + title, Care/Quests/Play/Stats tab strip               */
+/* ------------------------------------------------------------------ */
+
+.pet-screen__header {
+  display: flex;
+  align-items: center;
+  gap: clamp(1.25rem, 1rem + 2vw, 3rem);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.pet-screen__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.pet-screen__title svg {
+  color: var(--core-accent-bright);
+}
+
+.pet-screen__tabs {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 0.8rem + 0.6vw, 1.5rem);
+}
+
+.pet-screen__tab {
+  position: relative;
+  padding: 0.4rem 0.1rem;
+  background: transparent;
+  border: none;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 150ms ease-out;
+  min-height: 44px;
+}
+
+.pet-screen__tab:hover {
+  color: var(--text-primary);
+}
+
+.pet-screen__tab--active {
+  color: var(--core-accent-bright);
+}
+
+.pet-screen__tab--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 6px var(--core-accent-bright);
+}
+
+.pet-screen__tab--invite {
+  color: var(--core-accent-bright);
+  animation: pet-tab-invite 0.7s ease-in-out infinite;
+}
+
+@keyframes pet-tab-invite {
+  0%,
+  100% { opacity: 0.55; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+
+/* Body: the active tab fills the remaining height and never overflows out. */
+.pet-screen__body {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ------------------------------------------------------------------ */
+/* Shared panel restyle: green all-caps headers + ambient glow         */
+/* ------------------------------------------------------------------ */
+
+.pet-panel {
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+}
+
+.pet-panel .panel__title {
+  color: var(--core-accent-bright);
+  text-shadow: 0 0 10px oklch(87% 0.29 142 / 22%);
+}
+
+.pet-level__loading {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+/* ================================================================== */
+/* CARE TAB — free-roam play stage + rail, one bounded window          */
+/* ================================================================== */
+
+.pet-care-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(260px, 24vw, 320px);
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.pet-care-view__stage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-height: 0;
+  min-width: 0;
+}
+
+.pet-care-view__mood {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* "FLUBBER 💚" — blocky retro phosphor-green display type. */
+.pet-crt__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 0.95rem + 1vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--core-accent-bright);
+  text-shadow:
+    0 0 2px oklch(87% 0.29 142 / 85%),
+    0 0 14px oklch(87% 0.29 142 / 55%),
+    0 0 30px oklch(74% 0.2 151 / 45%);
+}
+
+.pet-crt__brand svg {
+  color: var(--core-accent-bright);
+  filter: drop-shadow(0 0 6px oklch(87% 0.29 142 / 70%));
+}
+
+.pet-crt__mood {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow: 0 0 10px oklch(87% 0.29 142 / 35%);
+}
+
+/* The play tube fills the free vertical space; the scene inside stretches to it
+   so the pet has a real room to be flung around in. */
+.pet-care-view__tube {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  padding: clamp(12px, 1.2vw, 20px);
+  border-radius: 26px;
+  background: linear-gradient(
+    163deg,
+    oklch(31% 0.045 152) 0%,
+    oklch(19% 0.03 152) 46%,
+    oklch(13% 0.02 152) 100%
+  );
+  box-shadow:
+    inset 0 2px 0 oklch(62% 0.09 152 / 32%),
+    inset 0 -5px 12px oklch(0% 0 0 / 55%),
+    inset 0 0 0 1px oklch(48% 0.06 152 / 45%),
+    0 18px 42px oklch(0% 0 0 / 55%),
+    0 0 34px oklch(74% 0.2 151 / 12%);
+}
+
+.pet-care-view__tube .pet-hab {
+  height: 100%;
+  min-height: 0;
+}
+
+.pet-care-view__actions {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.5rem;
+}
+
+.pet-care-view__status {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+/* ---- Care action buttons (compact) ---- */
+.pet-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.35rem;
+  min-height: 44px;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 20%);
+  border-radius: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 150ms ease-out, transform 150ms ease-out, background-color 150ms ease-out;
+}
+
+.pet-action-btn:hover {
+  border-color: var(--core-accent-bright);
+  background: oklch(74% 0.2 151 / 10%);
+  transform: translateY(-2px);
+}
+
+.pet-action-btn:active {
+  transform: translateY(0);
+}
+
+.pet-action-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: oklch(74% 0.2 151 / 14%);
+  color: var(--core-accent-bright);
+}
+
+.pet-action-btn__label {
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+}
+
+/* ---- Care rail ---- */
+.pet-care-view__rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pet-needs-panel,
+.pet-level-panel {
+  flex-shrink: 0;
+}
+
+.pet-quest-strip-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pet-quest-strip-panel .panel__body {
+  overflow: hidden;
+}
+
+.pet-quest-ready {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--core-accent-bright);
+}
+
+.pet-needs__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pet-needs__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.pet-needs__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-top: 0.05rem;
+  border-radius: 8px;
+  background: oklch(74% 0.2 151 / 12%);
+  color: var(--core-accent-bright);
+}
+
+/* ---- Level & XP ---- */
+.pet-level-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.pet-level__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pet-level__badge {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--core-accent-bright);
+  text-shadow: 0 0 14px oklch(87% 0.29 142 / 35%);
+}
+
+.pet-level__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.pet-level__streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--core-accent-bright);
+}
+
+.pet-level__streak svg {
+  flex-shrink: 0;
+}
+
+.pet-level__care-stars {
+  display: flex;
+  align-items: center;
+  gap: 0.18rem;
+}
+
+.pet-care__star {
+  color: oklch(65% 0 0 / 30%);
+}
+
+.pet-care__star--filled {
+  color: var(--core-accent-bright);
+  filter: drop-shadow(0 0 4px oklch(87% 0.29 142 / 50%));
+}
+
+.pet-level__care-count {
+  margin-left: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--text-secondary);
+}
+
+/* ================================================================== */
+/* QUESTS TAB — full board                                             */
+/* ================================================================== */
+
+.pet-quest-board-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pet-quest-board-panel .panel__body {
+  flex: 1;
+  min-height: 0;
+  /* Current-tier-per-chain cards (QuestPanel.css .quest-board) are compact
+     enough that all 6 chains fit one window at 1440×900 with zero scroll —
+     no internal scroller needed here anymore. */
+  overflow: hidden;
+}
+
+/* ================================================================== */
+/* STATS TAB                                                           */
+/* ================================================================== */
+
+.pet-stats-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pet-stats-panel .panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ================================================================== */
+/* PLAY TAB — arcade (GamesHub, external)                              */
+/* ================================================================== */
+
+.pet-arcade {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  flex: 1;
+  min-height: 0;
+  /* plate host for the arcade room plate (reactor.webp) — the plate itself
+     lives in pill-room.css (Lane E law); these three props only establish
+     the stacking context + edge clip the negative-z ::before/::after pseudo
+     pair needs so the photo paints behind the intro + hub instead of
+     escaping to an ancestor context. */
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.pet-arcade__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.pet-arcade__intro p {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+/* The arcade fills the Play tab's remaining height and NEVER scrolls the screen
+   (LAW 2). GamesHub sizes its card grid / mounted game to this bounded box. */
+.pet-arcade__hub {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ================================================================== */
+/* Honest loading / error notice                                       */
+/* ================================================================== */
+
+.pet-notice {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pet-notice__body {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.pet-notice__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.pet-notice__copy p {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-width: 26rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Responsive                                                          */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 1100px) {
+  .pet-care-view {
+    grid-template-columns: 1fr;
+    /* Single-column below 1100px: keep the SCREEN bounded to one window (LAW 2 —
+       the page itself never scrolls) by splitting the height between the play
+       stage and the rail. If the stacked rail runs tight it becomes the ONE
+       contained scroll region (same pattern as the app's other panels/lists);
+       the page never moves and nothing is clipped away. */
+    grid-template-rows: minmax(0, 1.1fr) minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .pet-care-view__rail {
+    overflow-y: auto;
+  }
+
+  .pet-quest-strip-panel {
+    flex: initial;
+  }
+}
+
+@media (max-width: 620px) {
+  .pet-screen__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .pet-care-view__actions {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .pet-notice__body {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-screen__tab--invite {
+    animation: none;
+  }
+}

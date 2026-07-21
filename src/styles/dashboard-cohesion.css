@@ -1,0 +1,133 @@
+/**
+ * dashboard-cohesion.css — Lane C, CSS-only dashboard workspace cohesion.
+ *
+ * WIRING TODO — NOT YET IMPORTED ANYWHERE (integration phase must add it):
+ *   Add `import '../../styles/dashboard-cohesion.css';` to
+ *   DashboardScreen.tsx, AFTER its existing `import './DashboardScreen.css';`
+ *   line, so these rules land later in cascade order and can win on
+ *   equal-specificity selectors against DashboardScreen.css. This file does
+ *   NOTHING until that import line exists — same "silently inert" gotcha
+ *   that hit pill-room.css earlier in this project (it was referenced only
+ *   in a comment, never actually imported). Don't repeat that here.
+ *
+ * WHAT THIS FILE IS FOR:
+ *   A design review wanted the dashboard to feel like one continuous
+ *   workspace instead of separate floating cards, without touching the DOM
+ *   (that would risk the zero-scroll layout and the shared Panel component
+ *   used by the other 8 screens). So this is pure CSS, scoped entirely under
+ *   `.dashboard-screen` / `.dashboard-screen__bottom` / `.dashboard-screen__midrow`
+ *   so it can never leak onto another screen. No new colors — every value
+ *   below reuses this project's existing oklch custom properties, including
+ *   `--dashboard-hairline` (defined on `.dashboard-screen` itself in
+ *   DashboardScreen.css), which is exactly the token that screen's own
+ *   tab-mini/range-toggle hairlines already use.
+ *   DashboardScreen.css's grid/layout rules are NOT touched (that's Lane A's
+ *   file) — everything here is additive override CSS.
+ *
+ * NOTE ON GLASS DEPTH (Task 1, ui/Panel.css): DashboardScreen.css already
+ * gives `.dashboard-panel` / `.dashboard-panel.panel--accent` their own
+ * quiet, dashboard-specific box-shadow (a soft green ambient glow, no dark
+ * layered depth). That box-shadow rule sits at equal-or-higher specificity
+ * than Panel.css's new depth treatment and fully replaces it (box-shadow
+ * doesn't merge across rules) — so the dashboard's panels intentionally keep
+ * their existing flatter, quieter shadow instead of picking up the new
+ * heavier layered depth. That's the right call for THIS file's actual goal:
+ * a flatter, more unified "one workspace" read benefits from less shadow
+ * separation, not more. Box-shadow is deliberately left alone here.
+ */
+
+/* ------------------------------------------------------------------ *
+ * Shared surface tone
+ * Every dashboard region — Panel-based cards, the terminal anchor, and the
+ * tab-preview minis — already pulls from --bg-surface, but each does so
+ * independently in DashboardScreen.css. Restate it here explicitly so the
+ * whole screen is a guaranteed literal shared fill and can't quietly drift.
+ * ------------------------------------------------------------------ */
+
+.dashboard-screen .dashboard-panel,
+.dashboard-screen .dashboard-terminal-anchor,
+.dashboard-screen .terminal-preview,
+.dashboard-screen .dashboard-tabmini {
+  background-color: var(--bg-surface);
+}
+
+/* ------------------------------------------------------------------ *
+ * One-workspace border treatment
+ * Dial the per-panel outline down from a decorative accent border to a
+ * quiet structural hairline, so panels read as regions of one slab rather
+ * than individually framed cards. Selectors are 3 classes deep
+ * (.dashboard-screen .dashboard-panel.panel--accent) specifically so this
+ * wins over DashboardScreen.css's 2-class `.dashboard-panel.panel--accent`
+ * regardless of import order once this file is wired in.
+ * ------------------------------------------------------------------ */
+
+.dashboard-screen .dashboard-panel,
+.dashboard-screen .dashboard-panel.panel--accent,
+.dashboard-screen .dashboard-terminal-anchor,
+.dashboard-screen .terminal-preview,
+.dashboard-screen .dashboard-tabmini {
+  border-color: oklch(var(--dashboard-hairline) / 10%);
+}
+
+/* ------------------------------------------------------------------ *
+ * Bottom row (Token Usage / Usage Overview / Top Agents / Live Usage) —
+ * the clearest "row of floating cards" pattern on this screen. Tighten the
+ * gap slightly now that borders are quieter, and mark the touching edge
+ * between neighbors with the same hairline tone the screen already uses
+ * for its tab-mini/range-toggle dividers, so the row reads as one divided
+ * strip instead of four separate tiles.
+ * ------------------------------------------------------------------ */
+
+.dashboard-screen__bottom {
+  gap: 0.55rem;
+}
+
+.dashboard-screen__bottom > *:not(:first-child) {
+  border-left: 1px solid oklch(var(--dashboard-hairline) / 16%);
+}
+
+/* ------------------------------------------------------------------ *
+ * Midrow (terminal/tab-preview + Activity Feed) — same divided-workspace
+ * seam between its two side-by-side regions.
+ * ------------------------------------------------------------------ */
+
+.dashboard-screen__midrow {
+  gap: 0.6rem;
+}
+
+.dashboard-screen__midrow > *:not(:first-child) {
+  border-left: 1px solid oklch(var(--dashboard-hairline) / 16%);
+}
+
+/* ------------------------------------------------------------------ *
+ * Responsive — mirrors DashboardScreen.css's own breakpoints (1180px,
+ * 560px) so the hairline seams stay correct once the grid re-wraps rather
+ * than stranding a stray left-border on an item that's no longer beside a
+ * left-hand neighbor.
+ * ------------------------------------------------------------------ */
+
+@media (max-width: 1180px) {
+  /* .dashboard-screen__midrow collapses to a single stacked column at this
+     width — no side-by-side adjacency left to mark. */
+  .dashboard-screen__midrow > *:not(:first-child) {
+    border-left: none;
+  }
+
+  /* .dashboard-screen__bottom collapses to 2 columns here — only the
+     right-hand cell of each row now sits beside a left-hand neighbor; the
+     item that starts a new row (3rd) shouldn't carry a stray left seam. */
+  .dashboard-screen__bottom > *:not(:first-child) {
+    border-left: none;
+  }
+
+  .dashboard-screen__bottom > *:nth-child(2n) {
+    border-left: 1px solid oklch(var(--dashboard-hairline) / 16%);
+  }
+}
+
+@media (max-width: 560px) {
+  /* Single column at this width — nothing left to divide horizontally. */
+  .dashboard-screen__bottom > * {
+    border-left: none;
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "blubber-os",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node server.js",
+    "start": "cross-env NODE_ENV=production NEXT_DIST_DIR=.next-build node server.js",
+    "build": "cross-env NEXT_DIST_DIR=.next-build next build",
+    "typecheck": "tsc --noEmit",
+    "verify:assets": "node scripts/verify-assets.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "gsap": "^3.12.5",
+    "lucide-react": "^0.462.0",
+    "next": "14.2.35",
+    "node-pty": "^1.1.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "sharp": "^0.35.3",
+    "three": "^0.169.0",
+    "ts-node": "^10.9.2",
+    "ws": "^8.18.0",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/three": "^0.169.0",
+    "@types/ws": "^8.5.13",
+    "cross-env": "^7.0.3",
+    "playwright": "^1.61.1",
+    "typescript": "^5.6.3"
+  }
+}

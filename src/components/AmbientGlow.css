@@ -1,0 +1,19 @@
+/*
+ * AmbientGlow.css — the single fixed 2D-canvas mote layer.
+ *
+ * Sits at z-index:-1 (above the body::before/::after breathing wash at -2,
+ * below the transparent app-shell content at 0). Strictly decorative and
+ * inert to pointer input. NO WebGL — a plain 2D canvas painting <=80 soft
+ * green glow motes. The whole thing collapses to nothing under
+ * prefers-reduced-motion (the component renders null; the breathing gradient
+ * in globals.css carries the living-green look on its own).
+ */
+.ambient-glow {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}

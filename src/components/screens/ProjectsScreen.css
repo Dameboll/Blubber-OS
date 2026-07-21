@@ -1,0 +1,1409 @@
+/* ProjectsScreen — Projects hero (stats + New Project + mascot), All
+   Projects (grid/list + filter + search), a bottom row split between
+   Project Templates (wider) and Project Stats, and a right rail of Project
+   Overview / Active Agents / Recent Activity. See ProjectsScreen.tsx header
+   for what's real vs. deterministic-presentational. Tokens only, no
+   hardcoded hex except the screen-local --status-hold/--status-completed
+   family below (globals.css's warning token is deliberately green-family
+   app-wide) — matches the frozen design system in globals.css (same
+   convention as AgentsScreen.css / VirtualPetScreen.css / SettingsScreen.css). */
+
+.projects-screen {
+  display: grid;
+  /* Main : right-rail ratio. The reference's right rail is a touch narrower
+     than a flat 2.3:1, which also gives the bottom row (5 template tiles + 4
+     stat tiles, both single rows) the width it needs to keep labels/values on
+     one line. */
+  grid-template-columns: minmax(0, 2.6fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  /* Trimmed padding + gap (LAW 2, LANE L) so the hero + grid + bottom row sit
+     closer to one window; this screen self-contains its own overflow, so the
+     topbar/footer stay pinned regardless. */
+  padding: clamp(1rem, 0.85rem + 0.7vw, 1.6rem);
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+
+  /* "On Hold" / "Completed" status colors, scoped to this screen only —
+     globals.css's --accent-warning is deliberately green-family for the
+     rest of the app, so the amber/blue-teal 3-way status palette this
+     screen's card grid + pills need lives here instead. */
+  --status-hold: oklch(80% 0.16 75);
+  --status-hold-bright: oklch(87% 0.19 78);
+  --status-completed: oklch(72% 0.13 210);
+  --status-completed-bright: oklch(80% 0.13 205);
+}
+
+/* Hero sits at the top of the main column (not spanning both columns), so
+   the right rail's first panel ("Project Overview") starts at the same
+   vertical position as the "Projects" page title, matching the reference. */
+.projects-screen__main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.projects-screen__side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.projects-panel {
+  box-shadow: 0 0 26px oklch(74% 0.2 151 / 6%);
+}
+
+/* Panel's own `title` renders neutral/white text (see ui/Panel.css). Same
+   restyle every other screen in this app uses: recolor the title within
+   this screen only, without touching the shared component. */
+.projects-panel .panel__title {
+  color: var(--core-accent-bright);
+  text-shadow: 0 0 10px oklch(87% 0.29 142 / 22%);
+}
+
+.projects-panel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: transparent;
+  border: none;
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.projects-panel-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.projects-panel-link:disabled {
+  color: var(--text-secondary);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.projects-screen__scope-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+}
+
+.projects-screen__subtitle {
+  margin: -0.35rem 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.projects-screen__empty-note {
+  margin: 0;
+  padding: 0.15rem 0;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.projects-screen__hint {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+}
+
+.projects-screen__status-body {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.projects-screen__status-body p {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.projects-screen__pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 34px;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid oklch(87% 0.29 142 / 45%);
+  background: oklch(74% 0.2 151 / 16%);
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, transform 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.projects-screen__pill-btn:hover:not(:disabled) {
+  background: oklch(74% 0.2 151 / 26%);
+  box-shadow: var(--glow-shadow);
+  transform: translateY(-1px);
+}
+
+.projects-screen__pill-btn:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.projects-screen__pill-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.projects-screen__pill-btn--block {
+  flex: 1;
+}
+
+.projects-screen__pill-btn--icon {
+  flex-shrink: 0;
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.projects-screen__spin {
+  animation: projects-screen-spin 900ms linear infinite;
+}
+
+@keyframes projects-screen-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Hero: title + subtitle + stats + New Project, mascot on the right    */
+/* ------------------------------------------------------------------ */
+
+.projects-screen__hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1.1rem 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--glow-shadow);
+}
+
+.projects-screen__hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.projects-screen__hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.projects-screen__hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: oklch(74% 0.2 151 / 16%);
+  border: 1px solid var(--border-glow);
+  color: var(--core-accent-bright);
+}
+
+.projects-screen__hero-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+.projects-screen__hero-sub {
+  margin: 0.2rem 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.projects-screen__hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.65rem;
+}
+
+.projects-screen__new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 34px;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: 1px solid oklch(87% 0.29 142 / 45%);
+  background: oklch(74% 0.2 151 / 16%);
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, transform 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.projects-screen__new-btn:hover:not(:disabled) {
+  background: oklch(74% 0.2 151 / 26%);
+  box-shadow: var(--glow-shadow);
+  transform: translateY(-1px);
+}
+
+.projects-screen__new-btn:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.projects-screen__new-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.projects-screen__hero-mascot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* All Projects controls: view toggle + status filter + search          */
+/* ------------------------------------------------------------------ */
+
+.projects-screen__controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.projects-screen__view-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid oklch(65% 0 0 / 25%);
+  background: var(--bg-elevated);
+}
+
+.projects-screen__view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.32rem 0.6rem;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 150ms ease-out, background-color 150ms ease-out;
+}
+
+.projects-screen__view-btn:hover {
+  color: var(--text-primary);
+}
+
+.projects-screen__view-btn--active {
+  color: var(--core-accent-bright);
+  background: oklch(74% 0.2 151 / 16%);
+}
+
+.projects-screen__view-btn:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.projects-screen__status-select {
+  min-height: 34px;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid oklch(65% 0 0 / 25%);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.projects-screen__status-select:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.projects-screen__search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 11rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid oklch(65% 0 0 / 25%);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+.projects-screen__search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+}
+
+.projects-screen__search input:focus-visible {
+  outline: none;
+}
+
+.projects-screen__search input::placeholder {
+  color: var(--text-secondary);
+}
+
+/* ------------------------------------------------------------------ */
+/* Status pill — shared by cards, list rows, and the overview panel     */
+/* ------------------------------------------------------------------ */
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-family: var(--font-ui);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.status-pill--active {
+  color: var(--core-accent-bright);
+  background: oklch(74% 0.2 151 / 18%);
+  border: 1px solid oklch(87% 0.29 142 / 40%);
+}
+
+.status-pill--on-hold {
+  color: var(--status-hold-bright);
+  background: oklch(80% 0.16 75 / 16%);
+  border: 1px solid oklch(80% 0.16 75 / 40%);
+}
+
+.status-pill--completed {
+  color: var(--status-completed-bright);
+  background: oklch(72% 0.13 210 / 14%);
+  border: 1px solid oklch(72% 0.13 210 / 34%);
+}
+
+/* ------------------------------------------------------------------ */
+/* Project card grid                                                    */
+/* ------------------------------------------------------------------ */
+
+.projects-screen__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.9rem 0.9rem 1rem;
+  border-radius: 16px;
+  border: 1px solid oklch(70% 0.19 155 / 16%);
+  background: var(--bg-elevated);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease-out, transform 150ms ease-out, box-shadow 150ms ease-out;
+  font-family: var(--font-ui);
+  color: inherit;
+  /* Room-plate host (Phase 4, last-hard-push) — explicit stacking context so
+     the negative-z plate/scrim pseudo-pair below paints behind this card's
+     own in-flow real content instead of escaping to an ancestor stacking
+     context. Same documented gotcha as pill-room.css / MiniProjects.css:
+     plates render invisible without this z-index. */
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.project-card:hover {
+  border-color: oklch(87% 0.29 142 / 45%);
+  transform: translateY(-2px);
+}
+
+.project-card:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.project-card--selected {
+  border-color: oklch(87% 0.29 142 / 65%);
+  box-shadow: var(--glow-shadow);
+}
+
+.project-card__portrait {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0 0.1rem;
+}
+
+.project-card__portrait .status-pill {
+  position: absolute;
+  top: -0.3rem;
+  left: -0.15rem;
+}
+
+.project-card__title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-card__star {
+  flex-shrink: 0;
+  color: var(--core-accent-bright);
+}
+
+.project-card__desc {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.project-card__stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.75rem;
+}
+
+.project-card__stat-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--text-secondary);
+}
+
+.project-card__avatars {
+  display: flex;
+  align-items: center;
+}
+
+.project-card__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: -0.4rem;
+  border-radius: 50%;
+  background: var(--core-accent);
+  border: 2px solid var(--bg-elevated);
+  color: var(--bg-primary);
+  font-size: 0.58rem;
+  font-weight: 700;
+}
+
+.project-card__avatar:first-child {
+  margin-left: 0;
+}
+
+.project-card__avatar--more {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-color: var(--bg-elevated);
+}
+
+/* ------------------------------------------------------------------ */
+/* Project card / list row room plate (Phase 4, last-hard-push)         */
+/* ------------------------------------------------------------------ */
+/* Same deterministic plate treatment MiniProjects.tsx uses for the
+   dashboard mini tiles — src/lib/project-plates.ts is the shared
+   hash+assignment logic both now draw from — applied to the real Projects
+   screen's grid tiles and list rows. ProjectThumb icon size is completely
+   untouched here; this only adds a background plate + scrim behind the
+   existing pill.
+
+   Negative z-index pseudo-element pair (the same `.projects-panel::before/
+   ::after` recipe already used above for the whole-panel plate, per
+   pill-room.css option B) so zero JSX/markup restructuring was needed on
+   ProjectCard.tsx / ProjectListRow — their real content (portrait/title/
+   desc/stat-row, ProjectThumb, meta spans; all non-positioned, in-flow)
+   keeps painting above automatically. The host just needs its own explicit
+   position + overflow + z-index:0 (set on .project-card / .project-list-row
+   above) so this pair stays local instead of escaping to an ancestor
+   stacking context. The per-card image comes from a `--card-plate-url`
+   custom property set inline by ProjectCard.tsx / ProjectListRow (same
+   technique as MusicPlayerScreen's scrub fill / SettingsScreen's slider
+   fill — see --mps-scrub-pct / --slider-fill for precedent). */
+.project-card::before,
+.project-list-row::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  z-index: -2;
+  background-image: var(--card-plate-url, none);
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.46) saturate(0.95);
+  pointer-events: none;
+}
+.project-card::after,
+.project-list-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--pill-room-scrim);
+}
+
+/* ------------------------------------------------------------------ */
+/* Project list view                                                    */
+/* ------------------------------------------------------------------ */
+
+.projects-screen__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.project-list-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.6fr) minmax(7rem, 0.9fr) auto auto auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 14px;
+  border: 1px solid oklch(70% 0.19 155 / 14%);
+  background: var(--bg-elevated);
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  color: inherit;
+  transition: border-color 150ms ease-out, transform 150ms ease-out;
+  /* Same room-plate host treatment as .project-card above. */
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.project-list-row:hover {
+  border-color: oklch(87% 0.29 142 / 40%);
+}
+
+.project-list-row:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.project-list-row--selected {
+  border-color: oklch(87% 0.29 142 / 60%);
+  box-shadow: var(--glow-shadow);
+}
+
+.project-list-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.project-list-row__title-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.project-list-row__title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-list-row__desc {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-list-row__progress {
+  min-width: 7rem;
+}
+
+.project-list-row__meta {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ */
+/* Bottom row: Project Templates (left, wider) + Project Stats (right)  */
+/* ------------------------------------------------------------------ */
+
+.projects-screen__bottom-row {
+  display: grid;
+  /* Templates is the wider left panel (a single row of five tiles), Stats the
+     narrower right (a single row of four) — matching the reference's split.
+     The ~1.7:1 ratio gives the five template tiles enough width to keep their
+     label + sublabel on one line at this content width. */
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.projects-screen__templates {
+  display: grid;
+  /* Symmetric single row of four real templates — each opens the guided New
+     Project flow pre-seeded with that template. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.template-card {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.5rem;
+  border-radius: 12px;
+  border: 1px solid oklch(70% 0.19 155 / 18%);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+  transition: border-color 140ms ease, background 140ms ease, transform 100ms ease, box-shadow 140ms ease;
+}
+.template-card:hover {
+  border-color: oklch(78% 0.19 145 / 55%);
+  background: var(--bg-surface);
+  box-shadow: 0 6px 20px oklch(8% 0.02 155 / 40%);
+}
+.template-card:active {
+  transform: translateY(1px);
+}
+
+.template-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glow);
+  color: var(--core-accent-bright);
+}
+
+.template-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.template-card__label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-card__sub {
+  font-size: 0.56rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.template-card--more {
+  justify-content: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--core-accent-bright);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ */
+/* Right rail: Project Overview                                         */
+/* ------------------------------------------------------------------ */
+
+.project-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.project-overview__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.project-overview__title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.project-overview__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.project-overview__title {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-overview__star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.project-overview__star[aria-pressed='true'] {
+  color: var(--core-accent-bright);
+}
+
+.project-overview__meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  color: var(--text-secondary);
+}
+
+.project-overview__started {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.project-overview__desc {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.project-overview__facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-overview__facts li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.project-overview__fact-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-ui);
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.project-overview__fact-label svg {
+  color: var(--core-accent-bright);
+  flex-shrink: 0;
+}
+
+.project-overview__fact-value {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.project-overview__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.project-overview__agent-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.project-overview__agent-list > * + * {
+  border-top: 1px solid oklch(65% 0 0 / 10%);
+}
+
+.project-overview__activity-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.project-overview__activity-list > * + * {
+  border-top: 1px solid oklch(65% 0 0 / 10%);
+}
+
+/* ------------------------------------------------------------------ */
+/* Project Stats                                                        */
+/* ------------------------------------------------------------------ */
+
+.project-stats {
+  display: grid;
+  /* Single row of four (Tasks Completed · Agents Active · Time Saved · Lines of
+     Code), matching the reference. Local borderless tiles (not shared StatChip)
+     so the up-percent stacks below the number instead of overflowing inline. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.project-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.project-stat__label {
+  font-family: var(--font-ui);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  line-height: 1.25;
+}
+
+.project-stat__value {
+  /* UI font (not the wide drippy display face) so five-character values like
+     "36.9h" fit these narrow four-across columns without truncating — bold
+     weight keeps them reading as prominent numbers, matching the reference. */
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-stat__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--core-accent-bright);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* Project Pulse — slim full-width strip (Phase 4, last-hard-push)      */
+/* Real trailing-7-day per-project event counts (weeklyEventCount from  */
+/* /api/projects/summary — see ProjectsScreen.tsx's pulseProjects).     */
+/* Spans BOTH grid columns as a third row under .projects-screen__main  */
+/* + .projects-screen__side, matching the layout's own 2-col grid.      */
+/* ------------------------------------------------------------------ */
+
+.projects-screen .projects-screen__pulse-panel.projects-screen__pulse-panel {
+  grid-column: 1 / -1;
+}
+
+.pulse-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pulse-row {
+  display: grid;
+  grid-template-columns: auto minmax(6rem, 12rem) 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pulse-row__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.pulse-row--top .pulse-row__icon {
+  color: var(--core-accent-bright);
+}
+
+.pulse-row__name {
+  font-family: var(--font-ui);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pulse-row--top .pulse-row__name {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.pulse-row__track {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: oklch(65% 0 0 / 14%);
+  overflow: hidden;
+}
+
+.pulse-row__bar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: oklch(70% 0.19 155 / 55%);
+  /* Compositor-friendly fill: a full-width bar scaled via `transform`, never
+     an animated `width` — the fill ratio arrives as the `--pulse-pct`
+     custom property (0-1), set inline per row. */
+  transform-origin: left center;
+  transform: scaleX(var(--pulse-pct, 0));
+  transition: transform 220ms ease-out;
+}
+
+.pulse-row--top .pulse-row__bar {
+  background: linear-gradient(90deg, oklch(78% 0.22 145 / 85%), oklch(87% 0.29 142 / 95%));
+  box-shadow: 0 0 10px oklch(80% 0.22 145 / 45%);
+}
+
+.pulse-row__count {
+  min-width: 1.6rem;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pulse-row--top .pulse-row__count {
+  color: var(--core-accent-bright);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-row__bar {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Responsive — this app is PC-only by scope (see AgentsScreen.css), so */
+/* this is a minimum-robustness breakpoint set, matching existing       */
+/* precedent.                                                            */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 1180px) {
+  .projects-screen {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 980px) {
+  .projects-screen__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .projects-screen__bottom-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .projects-screen__hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .projects-screen__hero-mascot {
+    align-self: center;
+  }
+
+  .projects-screen__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-list-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    row-gap: 0.4rem;
+  }
+
+  .project-list-row__progress,
+  .project-list-row__meta {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 720px) {
+  .projects-screen__templates {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .project-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .projects-screen__templates {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── pill-room plate (pill-worlds pass) ────────────────────────────
+   Every Projects panel (hero, grid, templates, stats, overview, active
+   agents, recent activity — all share `.projects-panel`) now carries the
+   crystal-vault room photo behind its content via a negative-z
+   pseudo-element pair (recipe: src/styles/pill-room.css). vault.webp is the
+   brightest plate in the inventory, so this uses the HEAVY scrim variant —
+   mandatory for text contrast per the image inventory notes. */
+.projects-panel {
+  position: relative;
+  overflow: hidden;
+  /* z-index:0 forces this to actually establish a stacking context — without
+     it, position:relative alone leaves z-index:auto, and the ::before/::after
+     negative-z plate below escapes to an ancestor context instead of staying
+     local, painting invisibly behind the whole page instead of this panel. */
+  z-index: 0;
+}
+.projects-panel::before {
+  content: '';
+  position: absolute;
+  inset: -4%;
+  z-index: -2;
+  background-image: url('/bg/vault.webp');
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.42) saturate(1);
+  pointer-events: none;
+}
+.projects-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--pill-room-scrim-heavy);
+}
+
+/* ── New Project flow (Item 7): guided, real folder creator ──────────────── */
+.np-flow {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: oklch(6% 0.01 155 / 62%);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.np-flow__panel {
+  width: min(520px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid oklch(78% 0.14 145 / 34%);
+  background: oklch(12% 0.02 155 / 96%);
+  box-shadow: 0 26px 70px oklch(4% 0.02 155 / 66%);
+}
+.np-flow__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.np-flow__title {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 720;
+  color: var(--text-primary);
+}
+.np-flow__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid oklch(60% 0.04 155 / 30%);
+  background: oklch(15% 0.02 155 / 60%);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.np-flow__close:hover {
+  color: var(--text-primary);
+  border-color: oklch(78% 0.12 145 / 46%);
+}
+.np-flow__field-label {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+.np-flow__hint {
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.7;
+}
+.np-flow__roots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.np-flow__root {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  border: 1px solid oklch(55% 0.03 155 / 28%);
+  background: oklch(15% 0.02 155 / 55%);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+  transition: border-color 130ms ease, background 130ms ease;
+}
+.np-flow__root:hover {
+  border-color: oklch(72% 0.14 145 / 46%);
+}
+.np-flow__root--active {
+  border-color: oklch(80% 0.19 145 / 66%);
+  background: oklch(22% 0.06 145 / 60%);
+  box-shadow: 0 0 16px oklch(74% 0.2 145 / 16%);
+}
+.np-flow__root-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: oklch(94% 0.02 150);
+}
+.np-flow__root-blurb {
+  font-size: 9px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.np-flow__input,
+.np-flow__brief {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid oklch(60% 0.05 155 / 34%);
+  background: oklch(8% 0.02 155 / 72%);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  resize: none;
+}
+.np-flow__input:focus-visible,
+.np-flow__brief:focus-visible {
+  outline: 2px solid oklch(80% 0.19 145 / 60%);
+  outline-offset: 1px;
+}
+.np-flow__templates {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.np-flow__tpl {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border-radius: 10px;
+  border: 1px solid oklch(55% 0.03 155 / 28%);
+  background: oklch(15% 0.02 155 / 55%);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 9.5px;
+  min-width: 0;
+  transition: border-color 130ms ease, background 130ms ease;
+}
+.np-flow__tpl:hover {
+  border-color: oklch(72% 0.14 145 / 46%);
+}
+.np-flow__tpl--active {
+  border-color: oklch(80% 0.19 145 / 66%);
+  background: oklch(22% 0.06 145 / 60%);
+  color: var(--core-accent-bright, #b6ff7a);
+  box-shadow: 0 0 16px oklch(74% 0.2 145 / 16%);
+}
+.np-flow__tpl-label {
+  text-align: center;
+  line-height: 1.15;
+}
+.np-flow__tpl-rec {
+  position: absolute;
+  top: -7px;
+  right: -4px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: oklch(70% 0.18 145 / 90%);
+  color: oklch(14% 0.03 155);
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.np-flow__backed {
+  margin: 2px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+}
+.np-flow__error {
+  margin: 2px 0 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid oklch(60% 0.2 25 / 45%);
+  background: oklch(28% 0.12 25 / 30%);
+  color: oklch(85% 0.1 25);
+  font-size: 12px;
+}
+.np-flow__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+.np-flow__cancel {
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid oklch(55% 0.03 155 / 30%);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+}
+.np-flow__cancel:hover {
+  color: var(--text-primary);
+}
+.np-flow__create {
+  min-height: 40px;
+  padding: 8px 20px;
+  border-radius: 10px;
+  border: 1px solid oklch(80% 0.19 145 / 50%);
+  background: linear-gradient(180deg, oklch(70% 0.2 145 / 34%), oklch(55% 0.18 145 / 16%));
+  color: var(--core-accent-bright, #b6ff7a);
+  font-weight: 700;
+  cursor: pointer;
+  transition: box-shadow 140ms ease, transform 100ms ease;
+}
+.np-flow__create:hover:not(:disabled) {
+  box-shadow: 0 0 22px oklch(75% 0.2 145 / 34%);
+}
+.np-flow__create:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.np-flow__create:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+@media (max-width: 560px) {
+  .np-flow__roots,
+  .np-flow__templates {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

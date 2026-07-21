@@ -1,0 +1,892 @@
+/* TerminalScreen — chrome around the real TabBar/TerminalPane PTY terminal.
+   See TerminalScreen.tsx header for what's real vs. decorative. Tokens only,
+   no hardcoded hex — matches the frozen design system in globals.css. */
+
+.terminal-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: clamp(0.85rem, 0.65rem + 0.7vw, 1.5rem);
+  height: 100%;
+  min-height: 0;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Hero row: terminal + command bar (left) / stat rail (right)             */
+/* ---------------------------------------------------------------------- */
+
+/* STRETCH (terminal-sessions lane, 2026-07-18): the hero row now fills every
+   pixel of height this screen has left after the compact bottom strip below
+   claims its own fixed height -- no more blank void under a short fixed-height
+   terminal card. `flex: 1 1 auto` + `min-height: 0` is the standard "grow to
+   fill, but allow shrinking below content size so overflow scrolls instead of
+   bleeding" pair for a flex-column child that itself contains scrollable
+   content; `align-items: stretch` (grid's own default, made explicit here)
+   makes both columns -- .terminal-screen__main and .terminal-screen__sidebar
+   -- match this row's real height so the sidebar's Live Output panel can also
+   flex-fill (see its own rule below) instead of leaving dead space under a
+   short fixed-height card. */
+.terminal-screen__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22rem;
+  gap: 1rem;
+  align-items: stretch;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.terminal-screen__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* flex: 1 (was a fixed height: 22rem) -- the terminal card now grows to fill
+   every pixel .terminal-screen__main has left after the command bar below it
+   claims its own natural height, instead of stopping at a fixed 22rem and
+   leaving the rest of the screen empty. min-height keeps it from collapsing
+   below a usable size if the viewport is very short. */
+.terminal-screen__terminal-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 17rem;
+  padding: 1rem 1rem 0.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--glow-shadow);
+  overflow: hidden;
+}
+
+.terminal-screen__terminal-card > .tab-bar {
+  flex: 1;
+  min-height: 0;
+  /* Sit above the empty-state hero stage (positioned, z-index:0) so the real
+     terminal/empty-state content is never painted over by the backdrop. */
+  position: relative;
+  z-index: 1;
+}
+
+/* Window controls: icon-based minimize/maximize/close, top-right of the
+   terminal card header row (matches the reference's terminal chrome — not
+   the colored macOS-style traffic-light dots this used to render). Stays
+   purely decorative/aria-hidden, same as before: this is a fixed-layout
+   screen, not an actual floating OS window, so there's no real minimize/
+   maximize/close action to wire up. */
+.terminal-screen__window-chrome {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  padding-bottom: 0.6rem;
+  flex-shrink: 0;
+}
+
+.terminal-screen__window-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+}
+
+.terminal-screen__window-icon--close:hover {
+  color: var(--core-accent-bright);
+}
+
+/* Mini-flubber cluster -- one real blob per open PTY tab (PLAN-FLUBBER.md
+   #2), floating top-right of the terminal card, pushed down clear of the
+   window-chrome icon row above it (top-right) and the flubber dock
+   (bottom-right). Collapses to fully transparent/inert on its own (see
+   MiniFlubberField.css) when no tabs are open, so no visibility logic is
+   needed here. */
+.terminal-screen__mini-flubbers {
+  position: absolute;
+  top: 2.1rem;
+  right: 0.9rem;
+  z-index: 6;
+  max-width: min(55%, 15rem);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Empty-state hero stage — dark backdrop + perspective grid floor + glow   */
+/* behind the big Flubber. Only mounted when no PTY session is open, so an   */
+/* active terminal's real output is never covered. Matches the reference     */
+/* "grid-floor hero" (flubber 4 / flubber 5). All layers are aria-hidden     */
+/* decoration; the terminal chrome/TabBar paint above them (later in DOM).   */
+.terminal-screen__hero-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: var(--radius-panel);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.terminal-screen__hero-backdrop {
+  position: absolute;
+  inset: 0;
+  background-image: url('/bg/terminal.webp');
+  background-size: cover;
+  background-position: center;
+  filter: saturate(0.95) brightness(0.3);
+}
+
+.terminal-screen__hero-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(115% 100% at 65% 52%, transparent 6%, oklch(7% 0.015 155 / 92%) 86%);
+}
+
+/* Perspective grid floor, centered under the mascot (right of center). Bright,
+   glowing slime-green lines receding into the dark — the reference "grid-floor
+   hero" look. */
+.terminal-screen__hero-grid {
+  position: absolute;
+  left: 65%;
+  bottom: -8px;
+  width: 720px;
+  height: 230px;
+  transform: translateX(-50%) perspective(280px) rotateX(66deg);
+  transform-origin: bottom center;
+  background-image:
+    repeating-linear-gradient(90deg, oklch(90% 0.28 142 / 50%) 0 1.5px, transparent 1.5px 48px),
+    repeating-linear-gradient(0deg, oklch(90% 0.28 142 / 38%) 0 1.5px, transparent 1.5px 48px);
+  -webkit-mask-image: radial-gradient(72% 100% at 50% 100%, black 4%, transparent 74%);
+  mask-image: radial-gradient(72% 100% at 50% 100%, black 4%, transparent 74%);
+}
+
+/* Slime bloom + vertical light beam rising from the mascot's feet on the grid. */
+.terminal-screen__hero-glow {
+  position: absolute;
+  left: 65%;
+  bottom: -46px;
+  width: 500px;
+  height: 380px;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(58% 80% at 50% 80%, oklch(86% 0.27 145 / 58%) 0%, transparent 60%),
+    radial-gradient(26% 118% at 50% 58%, oklch(90% 0.25 145 / 32%) 0%, transparent 72%);
+}
+
+/* Flubber + speech bubble float over the terminal stage, bottom-right,
+   matching the reference screenshot (large mascot overlapping the terminal
+   body, not a small corner badge). pointer-events:none on the dock itself
+   so it never blocks clicks into the terminal beneath it; the bubble alone
+   re-enables pointer-events since it has no interactive content but should
+   still be selectable text. */
+.terminal-screen__flubber-dock {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.25rem;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  max-width: min(65%, 21rem);
+  pointer-events: none;
+}
+
+/* Hero mode: center-right the big mascot, sit it on the grid floor, and push
+   the speech bubble up-and-left of it like the reference. */
+.terminal-screen__flubber-dock--hero {
+  right: 9%;
+  bottom: 0.75rem;
+  align-items: center;
+  max-width: min(70%, 26rem);
+}
+
+.terminal-screen__flubber-dock--hero .flubber-character {
+  filter: drop-shadow(0 16px 30px oklch(70% 0.24 145 / 45%));
+}
+
+.terminal-screen__flubber-dock--hero .terminal-screen__speech-bubble {
+  align-self: flex-start;
+  margin-left: -5.5rem;
+  margin-bottom: -0.4rem;
+}
+
+/* Light/white bubble with dark text -- the reference shows a white speech
+   bubble, not a dark panel-colored one. A faint green tint keeps it in the
+   Flubber palette rather than a flat neutral white. */
+.terminal-screen__speech-bubble {
+  pointer-events: auto;
+  padding: 0.65rem 0.9rem;
+  background: oklch(97% 0.015 150 / 97%);
+  border: 1px solid oklch(87% 0.29 142 / 25%);
+  border-radius: 14px;
+  color: oklch(18% 0.02 150);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  box-shadow: 0 10px 28px oklch(0% 0 0 / 40%);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Compact mode (dashboard tile)                                          */
+/* ---------------------------------------------------------------------- */
+
+/* Compact (anchored inside the Dashboard's Terminal tab tile, ~700x350px —
+   see TerminalScreenProps.compact): the 22rem sidebar column alone is wider
+   than the whole tile, so it overflowed straight into the Dashboard's other
+   tiles. Drop it — the Dashboard already shows System Status / Activity Feed
+   equivalents elsewhere — and let the terminal card take the full tile.
+   Also hide the hero Flubber column and empty-state decorations to render
+   ONLY the tab strip + xterm panes (pure terminal mirror). */
+.terminal-screen--compact {
+  padding: 0.6rem;
+  gap: 0.5rem;
+}
+
+.terminal-screen--compact .terminal-screen__hero {
+  grid-template-columns: 1fr;
+}
+
+.terminal-screen--compact .terminal-screen__sidebar {
+  display: none;
+}
+
+/* Hide the Flubber dock (character + speech bubble) entirely in compact mode. */
+.terminal-screen--compact .terminal-screen__flubber-dock {
+  display: none;
+}
+
+/* Hide mini-flubber cluster in compact mode. */
+.terminal-screen--compact .terminal-screen__mini-flubbers {
+  display: none;
+}
+
+/* Hide empty-state hero stage (backdrop + grid + glow) in compact mode. */
+.terminal-screen--compact .terminal-screen__hero-stage {
+  display: none;
+}
+
+/* Hide window chrome (minimize/maximize/close icons) in compact mode. */
+.terminal-screen--compact .terminal-screen__window-chrome {
+  display: none;
+}
+
+/* Reduce padding on terminal card in compact mode so room background extends
+   to the pill edge. */
+.terminal-screen--compact .terminal-screen__terminal-card {
+  padding: 0;
+}
+
+/* Same overflow problem, different row: .terminal-screen__bottom-row (Token
+   Usage / Session Info) sits BELOW the hero,
+   not inside the sidebar just hidden above — easy to miss since both read as
+   "the stats stuff". It duplicates what the Dashboard's own tiles already
+   show (Tokens Today, Latest Activity), so drop it here too. */
+.terminal-screen--compact .terminal-screen__bottom-row {
+  display: none;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Command bar                                                             */
+/* ---------------------------------------------------------------------- */
+
+.terminal-screen__command-bar {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.terminal-screen__command-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.terminal-screen__command-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.65rem 1.1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glow);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.terminal-screen__command-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.terminal-screen__command-input:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.terminal-screen__command-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.terminal-screen__icon-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border-glow);
+  background: var(--bg-elevated);
+  color: var(--core-accent-bright);
+  cursor: pointer;
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out, border-color 150ms ease-out;
+}
+
+.terminal-screen__icon-btn:hover:not(:disabled) {
+  transform: scale(1.06);
+  box-shadow: var(--glow-shadow);
+  border-color: oklch(87% 0.29 142 / 55%);
+}
+
+.terminal-screen__icon-btn:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.terminal-screen__icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.terminal-screen__quick-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.terminal-screen__pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0.4rem 0.85rem;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(65% 0 0 / 20%);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out;
+}
+
+.terminal-screen__pill:hover:not(:disabled) {
+  border-color: var(--core-accent);
+  transform: translateY(-1px);
+}
+
+.terminal-screen__pill:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.terminal-screen__pill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.terminal-screen__pill-add {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--core-accent-bright);
+}
+
+.terminal-screen__clear-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 36px;
+  padding: 0.4rem 0.7rem;
+  background: transparent;
+  border: 1px solid oklch(65% 0 0 / 20%);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: color 150ms ease-out, border-color 150ms ease-out;
+}
+
+.terminal-screen__clear-btn:hover {
+  color: var(--accent-danger);
+  border-color: oklch(60% 0.22 28 / 45%);
+}
+
+.terminal-screen__clear-btn:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.terminal-screen__empty-note {
+  margin: 0;
+  padding: 0.15rem 0;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Sidebar: System Overview / Active Agents / Live Output                  */
+/* ---------------------------------------------------------------------- */
+
+.terminal-screen__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The Live Output panel (last in the sidebar) is the one real reason to fill
+   the sidebar's now-stretched height: System Overview and Active Agents keep
+   their natural content height (flex-shrink: 0 below), and Live Output grows
+   to soak up whatever's left, so the sidebar's own bottom edge lines up with
+   the terminal card's instead of leaving a gap under a short fixed-height
+   panel. The panel's own scroll region (.terminal-screen__live-output) grows
+   with it via flex: 1 further down instead of stopping at a fixed max-height. */
+.terminal-screen__sidebar > .panel:first-child,
+.terminal-screen__sidebar > .panel:nth-child(2) {
+  flex-shrink: 0;
+}
+
+.terminal-screen__sidebar > .panel:last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.terminal-screen__sidebar > .panel:last-child > .panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.terminal-screen__status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+.terminal-screen__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--core-accent-bright);
+  box-shadow: 0 0 8px var(--core-accent-bright);
+  flex-shrink: 0;
+}
+
+.terminal-screen__status-dot--warn {
+  background: var(--accent-warning);
+  box-shadow: 0 0 8px var(--accent-warning);
+}
+
+.terminal-screen__status-dot--offline {
+  background: var(--text-secondary);
+  box-shadow: none;
+}
+
+/* 3 columns (CPU/MEM/PROC) -- this app's real /api/system gauges, not the
+   reference's 4 (which included a fabricated NET/DISK pair). Used to be a
+   base-4 class overridden with an inline style prop; the real value lives
+   here now. */
+.terminal-screen__stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+/* Wraps StatChip + Sparkline as one visually merged card -- the sparkline
+   sits "beneath the number" inside the same surface rather than floating
+   below it as a separate element. Colors/radius intentionally mirror
+   StatChip.css's own values (read, not edited -- that file is shared ui/). */
+.terminal-screen__stat-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.45rem 0.4rem 0.35rem;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 18%);
+  border-radius: 10px;
+}
+
+/* Higher-specificity override of StatChip's own card chrome (via its public
+   `className` prop) so it renders flush inside .terminal-screen__stat-cell
+   instead of as a second nested card. */
+.terminal-screen__stat-cell .terminal-screen__stat-chip.stat-chip {
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.terminal-screen__stat-spark {
+  width: 100%;
+  height: 24px;
+  display: block;
+}
+
+/* Compact the StatChip label/value inside the tight 4-across cells so the
+   sparkline reads clearly beneath the number (reference layout). */
+.terminal-screen__stat-cell .terminal-screen__stat-chip.stat-chip .stat-chip__label {
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+}
+
+.terminal-screen__stat-cell .terminal-screen__stat-chip.stat-chip .stat-chip__value {
+  font-size: 1rem;
+}
+
+.terminal-screen__link-btn {
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.terminal-screen__link-btn:hover {
+  text-decoration: underline;
+}
+
+.terminal-screen__agent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.terminal-screen__agent-item {
+  padding: 0.15rem 0 0.5rem;
+  border-bottom: 1px solid oklch(65% 0 0 / 10%);
+}
+
+.terminal-screen__agent-item:last-child {
+  border-bottom: none;
+}
+
+.terminal-screen__view-all-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.terminal-screen__view-all-btn:hover {
+  text-decoration: underline;
+}
+
+.terminal-screen__view-all-btn:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.terminal-screen__live-output {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1 1 auto;
+  min-height: 8rem;
+  max-height: none;
+  overflow-y: auto;
+}
+
+.terminal-screen__streaming-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: oklch(74% 0.2 151 / 14%);
+  color: var(--core-accent-bright);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+.terminal-screen__streaming-pill--idle {
+  background: oklch(65% 0 0 / 12%);
+  color: var(--text-secondary);
+}
+
+.terminal-screen__streaming-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: terminal-screen-blink 1.4s ease-in-out infinite;
+}
+
+.terminal-screen__streaming-pill--idle .terminal-screen__streaming-dot {
+  animation: none;
+}
+
+@keyframes terminal-screen-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Bottom row: Token Usage / Top Commands / Session Info -- now a genuinely */
+/* COMPACT STRIP (terminal-sessions lane, 2026-07-18), not three tall       */
+/* full-height panels. grid-auto-rows fixes every row (there's normally     */
+/* just one, but the ≤900px/≤560px breakpoints below wrap into 2 or 3) to a */
+/* single compact height instead of growing to fit whatever content each    */
+/* panel happens to have; grid's own default item alignment (stretch)      */
+/* makes each Panel fill that fixed row height, and the overflow rules      */
+/* right below let any panel whose real content is taller than the strip    */
+/* scroll internally rather than the strip growing back into a tall block   */
+/* or clipping content invisibly. The Context Window + Top Commands panels   */
+/* were both removed (no real data backs either in this app) -- 2 columns    */
+/* is the real count, split so the two survivors fill the full width.        */
+/* ---------------------------------------------------------------------- */
+.terminal-screen__bottom-row {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  grid-auto-rows: 10.5rem;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.terminal-screen__bottom-row .panel {
+  height: 100%;
+  min-height: 0;
+  padding: 0.7rem 0.95rem;
+  gap: 0.4rem;
+  overflow: hidden;
+}
+
+.terminal-screen__bottom-row .panel__header {
+  flex-shrink: 0;
+}
+
+.terminal-screen__bottom-row .panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.terminal-screen__toggle-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(65% 0 0 / 16%);
+  border-radius: 999px;
+}
+
+.terminal-screen__toggle-pill {
+  padding: 0.22rem 0.6rem;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.terminal-screen__toggle-pill:hover {
+  color: var(--text-primary);
+}
+
+.terminal-screen__toggle-pill--active {
+  background: oklch(74% 0.2 151 / 20%);
+  color: var(--core-accent-bright);
+}
+
+.terminal-screen__toggle-pill:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.terminal-screen__token-header {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.terminal-screen__token-total {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.terminal-screen__token-trend {
+  margin: 0.15rem 0 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.terminal-screen__token-trend--up {
+  color: var(--core-accent-bright);
+}
+
+.terminal-screen__token-trend--down {
+  color: var(--text-secondary);
+}
+
+.terminal-screen__token-total-value {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.terminal-screen__token-total-label {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+
+.terminal-screen__info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.terminal-screen__info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+}
+
+.terminal-screen__info-key {
+  color: var(--text-secondary);
+}
+
+.terminal-screen__info-value {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.terminal-screen__export-btn {
+  margin-top: 0.3rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 34px;
+  padding: 0.45rem 0.9rem;
+  background: oklch(74% 0.2 151 / 14%);
+  border: 1px solid oklch(87% 0.29 142 / 35%);
+  border-radius: 10px;
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, transform 150ms ease-out;
+}
+
+.terminal-screen__export-btn:hover {
+  background: oklch(74% 0.2 151 / 22%);
+  transform: translateY(-1px);
+}
+
+.terminal-screen__export-btn:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Responsive — this app is PC-only by scope (see AppShell.css), so this   */
+/* is a minimum-robustness breakpoint set, matching existing precedent,    */
+/* not a full mobile-first pass.                                          */
+/* ---------------------------------------------------------------------- */
+
+@media (max-width: 1180px) {
+  .terminal-screen__hero {
+    grid-template-columns: 1fr;
+  }
+
+  .terminal-screen__terminal-card {
+    height: 20rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .terminal-screen__bottom-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .terminal-screen__bottom-row {
+    grid-template-columns: 1fr;
+  }
+
+  .terminal-screen__stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .terminal-screen__flubber-dock {
+    max-width: 70%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terminal-screen__streaming-dot {
+    animation: none;
+  }
+}

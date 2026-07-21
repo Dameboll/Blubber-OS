@@ -20,3 +20,6 @@ data/spawned-agents.json
 data/quests.json
 *.tsbuildinfo
 dist-electron/
+test-results/
+playwright-report/
+blob-report/

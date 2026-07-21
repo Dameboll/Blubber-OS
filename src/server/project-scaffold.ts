@@ -1,6 +1,6 @@
 /**
  * project-scaffold — the REAL, sandboxed project creator behind POST
- * /api/projects (Item 7). Creates a new folder under exactly one of Dame's four
+ * /api/projects (Item 7). Creates a new folder under exactly one of the four
  * Development roots and lays down a small, honest starter scaffold for the
  * chosen template. No shell, no npm, no network — just fs writes inside a
  * hard-fenced path.

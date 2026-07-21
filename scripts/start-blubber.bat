@@ -1,6 +1,6 @@
 @echo off
 setlocal
 cd /d "%~dp0.."
-echo Starting DameOS...
+echo Starting Blubber...
 node server.js
 pause

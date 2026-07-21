@@ -21,7 +21,7 @@
   min-height: 0;
 }
 
-/* REVIVED (2026-07-20, Dame's explicit ask): the two earlier full-bleed
+/* REVIVED (2026-07-20, explicit ask): the two earlier full-bleed
    attempts read as broken because the plate was competing for attention with
    the hero/pool's OWN room photos at similar brightness. This pass instead
    uses the plate purely as CONTINUITY — the same pool.webp recipe as
@@ -188,7 +188,7 @@
 
 /* ── frameless "part of the room" panels ───────────────────────── */
 /* The hero, the spawned crew, and the pool all read as part of the room, so
-   their panel chrome is stripped. RE-REVERTED (Dame's #1 ask): the pool is
+   their panel chrome is stripped. RE-REVERTED (top ask): the pool is
    frameless again — full-bleed exactly like the hero, zero black box, the
    image IS the pill. AgentPoolWorld.css's `.pw` carries its own thin
    terrarium rim so the room still reads as a contained space even with the

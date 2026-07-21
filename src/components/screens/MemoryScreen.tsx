@@ -6,11 +6,12 @@
  * the work/break clock and Blubber just sits in a thinking pose.
  *
  * Real data only, three bubbles, all sourced from /api/memory:
- *   - Dame · OS Identity: ALWAYS filled from the global DAME-OS markdown his
- *     system already keeps — ~/.claude/USER.md (who he is / mission / family),
- *     ~/.claude/PERSONA.md (his top beliefs / morals) and ~/.claude/SOUL.md
- *     (the DAME-OS mantra — what the system is, what he's building). This is
- *     the OWNER'S OWN creed, not a contacts list. Independent of any project.
+ *   - Operator · OS Identity: ALWAYS filled from the global identity markdown
+ *     the operator's own system already keeps — ~/.claude/USER.md (who they
+ *     are / mission / family), ~/.claude/PERSONA.md (their top beliefs /
+ *     morals) and ~/.claude/SOUL.md (the system mantra — what the system is,
+ *     what they're building). This is the OWNER'S OWN creed, not a contacts
+ *     list. Independent of any project.
  *   - Session Context + Project Knowledge: HONESTLY BLANK ("Open a project in
  *     the terminal to load its context") until a project is actually open in
  *     the persistent terminal. The open terminal tabs come from useSession()'s
@@ -165,7 +166,7 @@ export default function MemoryScreen() {
           />
         </Panel>
 
-        <Panel accent title="Dame &middot; OS Identity" className="memory-panel">
+        <Panel accent title="Operator &middot; OS Identity" className="memory-panel">
           <IdentityBubble state={state} identity={identity} />
         </Panel>
       </div>

@@ -4,7 +4,7 @@
  * Why this exists: public/ ships whole, so anything dropped in there lands in
  * the deploy whether code loads it or not. Before 2026-07-19 that meant ~19.5MB
  * of dead weight — three superseded Flubber GLBs (one a byte-identical
- * duplicate of the live model), four unreferenced springfield GLBs, and the
+ * duplicate of the live model), four unreferenced experimental GLBs, and the
  * retired PNG sprite pipeline. All invisible, all shipped.
  *
  * Every Flubber in the app is the ONE live V3.8 GLB rendered through the shared

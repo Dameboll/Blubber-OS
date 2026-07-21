@@ -30,7 +30,7 @@
  * Data reality check (see /api/tracks/route.ts): a Track is only
  * { id, title, file, sizeBytes } — no artist/producer, no duration, no art.
  * This screen never fabricates that missing metadata:
- *   - "prod. by" subtext -> replaced with an honest "dame-os library" tag.
+ *   - "prod. by" subtext -> replaced with an honest "local library" tag.
  *   - Album art -> a deterministic generated gradient tile (seeded off the
  *     track id), not a fake photo.
  *   - Duration -> read for REAL via a lightweight metadata-only probe
@@ -312,7 +312,7 @@ function TrackRow({
         <TrackArt seed={track.id} size={40} />
         <span className="mps-track__meta">
           <span className="mps-track__title">{track.title}</span>
-          <span className="mps-track__sub">dame-os library</span>
+          <span className="mps-track__sub">local library</span>
         </span>
       </button>
 
@@ -880,7 +880,7 @@ export default function MusicPlayerScreen() {
                   <div className="mps-now-playing__row">
                     <span className="mps-now-playing__meta">
                       <span className="mps-now-playing__title">{currentTrack?.title ?? '—'}</span>
-                      <span className="mps-now-playing__sub">{currentTrack ? 'dame-os library' : '—'}</span>
+                      <span className="mps-now-playing__sub">{currentTrack ? 'local library' : '—'}</span>
                     </span>
                     <button
                       type="button"
@@ -988,7 +988,7 @@ export default function MusicPlayerScreen() {
                 }
               >
                 {engine.loading && <p className="mps-empty">Loading playlist…</p>}
-                {!engine.loading && !hasQueueTracks && <p className="mps-empty">Drop audio files into dame-os/music/ (or use the Library tab) to get started</p>}
+                {!engine.loading && !hasQueueTracks && <p className="mps-empty">Drop audio files into music/ (or use the Library tab) to get started</p>}
                 {!engine.loading && hasQueueTracks && (
                   <ul className="mps-track-list mps-rail-queue">
                     {engine.queue.map((track, index) => (
@@ -1063,7 +1063,7 @@ export default function MusicPlayerScreen() {
             <Panel title="LIBRARY" avoidRoam action={hasLibraryTracks ? <span className="mps-queue-meta">{formatSongCount(engine.tracks.length)}</span> : undefined}>
               {engine.loading && <p className="mps-empty">Loading playlist…</p>}
               {!engine.loading && !hasLibraryTracks && (
-                <p className="mps-empty">Drop audio files above, or straight into dame-os/music/, to get started</p>
+                <p className="mps-empty">Drop audio files above, or straight into music/, to get started</p>
               )}
               {!engine.loading && hasLibraryTracks && (
                 <ul className="mps-track-list">
@@ -1323,7 +1323,7 @@ export default function MusicPlayerScreen() {
             <TrackArt seed={currentTrack?.id ?? 'idle'} size={44} />
             <div className="mps-transport-bar__meta">
               <span className="mps-transport-bar__title">{currentTrack?.title ?? '—'}</span>
-              <span className="mps-transport-bar__sub">{currentTrack ? 'dame-os library' : hasQueueTracks ? 'Select a track' : 'No tracks loaded'}</span>
+              <span className="mps-transport-bar__sub">{currentTrack ? 'local library' : hasQueueTracks ? 'Select a track' : 'No tracks loaded'}</span>
             </div>
             <button
               type="button"

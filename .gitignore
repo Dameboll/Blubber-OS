@@ -18,3 +18,4 @@ data/playlists.json
 data/brain-config.json
 data/spawned-agents.json
 data/quests.json
+*.tsbuildinfo

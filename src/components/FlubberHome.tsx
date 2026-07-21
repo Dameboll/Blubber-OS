@@ -3,7 +3,7 @@
 /**
  * FlubberHome — the room Blubber actually lives in, and his dynamic workspace.
  *
- * Dame's vision: Blubber is the Claude Code agent with a skin on, so his home
+ * The vision: Blubber is the Claude Code agent with a skin on, so its home
  * should visibly DO whatever the agent is doing. This composes:
  *   1. a photographic server-lab backdrop (public/bg/lab.png — it already has a
  *      central glowing dais the hero stands on),

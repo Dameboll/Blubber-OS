@@ -194,7 +194,7 @@ app.prepare().then(() => {
     if (err && err.code === "EADDRINUSE") {
       console.error(
         `\n[server] Port ${port} is already in use.\n` +
-          `Another DameOS (or process) is holding it. Kill that process, or start with a different port:\n` +
+          `Another Blubber (or process) is holding it. Kill that process, or start with a different port:\n` +
           `  PORT=3001 npm run dev\n`,
       );
       process.exit(1);
@@ -204,6 +204,6 @@ app.prepare().then(() => {
   });
 
   server.listen(port, BIND_HOST, () => {
-    console.log(`> DameOS ready on http://${hostname}:${port} (ws: ${WS_PATH})`);
+    console.log(`> Blubber ready on http://${hostname}:${port} (ws: ${WS_PATH})`);
   });
 });

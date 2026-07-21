@@ -13,7 +13,7 @@
  * locomotion. This stays pure data; FlubberHome owns turning a step into a
  * real playGesture()/CarePayoffs() call.
  *
- * THE IDEA (Dame's vision): Blubber is the agent with a skin on. Whatever the
+ * THE IDEA (the vision): Blubber is the agent with a skin on. Whatever the
  * real Claude Code session is doing — writing code, running a terminal command,
  * researching the web, planning, testing — Blubber's home visibly does the same
  * thing. Each activity resolves to a small set of holographic work-panels that

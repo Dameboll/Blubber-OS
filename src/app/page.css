@@ -58,7 +58,7 @@
   pointer-events: none;
 }
 
-/* Boot-cinematic wordmark -- "DameOS" coasting in centered over/near the orb
+/* Boot-cinematic wordmark -- "Blubber" coasting in centered over/near the orb
    during the reveal phase, matching the OG Xbox boot's "XBOX" wordmark
    arriving after the zoom-out. Starts invisible (GSAP fromTo drives it in);
    fades back out once the persistent small header title takes over. */

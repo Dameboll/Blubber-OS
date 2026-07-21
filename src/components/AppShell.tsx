@@ -69,7 +69,7 @@ const NAV_ITEMS: NavItemConfig[] = [
 ];
 
 // Data screens with no hero backdrop of their own get a dim cinematic "room"
-// wallpaper behind the whole content frame (see AppShell.css .dame-shell__room).
+// wallpaper behind the whole content frame (see AppShell.css .blubber-shell__room).
 // The other screens (dashboard/terminal/agents/music/pet) render their own room
 // via FlubberHome or a screen-scoped plate, so they're intentionally absent here.
 const ROOM_BY_NAV: Partial<Record<NavId, string>> = {
@@ -198,12 +198,12 @@ function useNarrationQueue(): NarrationMessage | null {
 // Only the keyframe + reduced-motion rule (inline `style` objects can't
 // express either) — everything else about the bubble is inline below.
 const NARRATION_KEYFRAMES_CSS = `
-@keyframes dame-narration-in {
+@keyframes blubber-narration-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dame-shell__narration-bubble { animation: none !important; opacity: 1 !important; }
+  .blubber-shell__narration-bubble { animation: none !important; opacity: 1 !important; }
 }
 `;
 
@@ -234,7 +234,7 @@ function NarrationToast() {
     >
       <div
         key={message.ts}
-        className="dame-shell__narration-bubble"
+        className="blubber-shell__narration-bubble"
         style={{
           pointerEvents: 'auto',
           padding: '0.6rem 0.9rem',
@@ -246,7 +246,7 @@ function NarrationToast() {
           fontSize: '0.8rem',
           lineHeight: 1.4,
           boxShadow: '0 12px 28px oklch(0% 0 0 / 45%)',
-          animation: 'dame-narration-in 220ms ease-out',
+          animation: 'blubber-narration-in 220ms ease-out',
           ...narrationMoodStyle(message.mood),
         }}
       >
@@ -298,12 +298,12 @@ function useRecentOutputActivity(sessionIds: readonly string[]): Set<string> {
 // else about the pill row is inline below, same convention as the narration
 // bubble's own local <style> tag (see NARRATION_KEYFRAMES_CSS above).
 const SESSION_PILL_KEYFRAMES_CSS = `
-@keyframes dame-session-pill-pulse {
+@keyframes blubber-session-pill-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(0.7); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dame-shell__session-pill-pulse { animation: none !important; }
+  .blubber-shell__session-pill-pulse { animation: none !important; }
 }
 `;
 
@@ -355,7 +355,7 @@ function SessionPills() {
           >
             {!isActive && recentActivity.has(session.id) && (
               <span
-                className="dame-shell__session-pill-pulse"
+                className="blubber-shell__session-pill-pulse"
                 aria-hidden="true"
                 style={{
                   width: 6,
@@ -363,7 +363,7 @@ function SessionPills() {
                   borderRadius: '50%',
                   background: 'var(--core-accent-bright)',
                   boxShadow: '0 0 6px var(--core-accent-bright)',
-                  animation: 'dame-session-pill-pulse 1.1s ease-in-out infinite',
+                  animation: 'blubber-session-pill-pulse 1.1s ease-in-out infinite',
                 }}
               />
             )}
@@ -396,7 +396,7 @@ function ShellChrome({ quote, statusLabel, statusOk, activeNavId, children }: Sh
           -- AppShell.css belongs to another lane, so this stays local to
           this component instead of adding a class there. */}
       <style>{NARRATION_KEYFRAMES_CSS}</style>
-      {/* Item 3 — the two dead pills (live-usage chip + "Dame · Local session"
+      {/* Item 3 — the two dead pills (live-usage chip + "Operator · Local session"
           user chip) are gone; they did nothing and just added scroll. What's
           left is the FUNCTIONAL session switcher (SessionPills, 2+ terminals).
           On the DASHBOARD the whole topbar is suppressed so the screen shifts
@@ -404,12 +404,12 @@ function ShellChrome({ quote, statusLabel, statusOk, activeNavId, children }: Sh
           the switcher only when it actually has tabs to switch. An empty
           <header> still eats height, so it's not rendered at all otherwise. */}
       {activeNavId !== 'dashboard' && session.sessions.length >= 2 && (
-        <header className="dame-shell__topbar" style={{ justifyContent: 'flex-start' }}>
+        <header className="blubber-shell__topbar" style={{ justifyContent: 'flex-start' }}>
           <SessionPills />
         </header>
       )}
 
-      <main className="dame-shell__content">
+      <main className="blubber-shell__content">
         {/* The real terminal lives here, mounted once and kept alive across nav
             switches (LANE P). It's absolutely positioned to fill this content
             area and only VISIBLE on the terminal nav; every other screen renders
@@ -423,16 +423,16 @@ function ShellChrome({ quote, statusLabel, statusOk, activeNavId, children }: Sh
         <PersistentTerminalHost activeNavId={activeNavId}>{children}</PersistentTerminalHost>
       </main>
 
-      <footer className="dame-shell__footer">
-        <span className="dame-shell__footer-version">
+      <footer className="blubber-shell__footer">
+        <span className="blubber-shell__footer-version">
           <FlaskConical size={13} aria-hidden="true" />
           Blubber OS v1.0.0
         </span>
-        <span className="dame-shell__footer-quote">{quote}</span>
-        <span className="dame-shell__footer-status">
-          <span className="dame-shell__uptime">Uptime: {session.uptime}</span>
-          <span className={`dame-shell__status-pill${statusOk ? '' : ' dame-shell__status-pill--warn'}`}>
-            <Smile size={13} aria-hidden="true" className="dame-shell__status-smile" />
+        <span className="blubber-shell__footer-quote">{quote}</span>
+        <span className="blubber-shell__footer-status">
+          <span className="blubber-shell__uptime">Uptime: {session.uptime}</span>
+          <span className={`blubber-shell__status-pill${statusOk ? '' : ' blubber-shell__status-pill--warn'}`}>
+            <Smile size={13} aria-hidden="true" className="blubber-shell__status-smile" />
             {statusLabel}
           </span>
         </span>
@@ -581,12 +581,12 @@ export default function AppShell({
   const quote = useRotating(QUOTES, 14000);
 
   return (
-    <div className={['dame-shell', className].filter(Boolean).join(' ')}>
-      <aside className="dame-shell__sidebar">
-        <div className="dame-shell__brand">
+    <div className={['blubber-shell', className].filter(Boolean).join(' ')}>
+      <aside className="blubber-shell__sidebar">
+        <div className="blubber-shell__brand">
           {/* eslint-disable-next-line @next/next/no-img-element -- static /public asset, no next/image usage elsewhere in this app */}
           <img
-            className="dame-shell__brand-logo"
+            className="blubber-shell__brand-logo"
             src="/brand/flubber-wordmark.webp"
             alt="BLUBBER — Claude OS"
             width={178}
@@ -594,7 +594,7 @@ export default function AppShell({
           />
         </div>
 
-        <nav className="dame-shell__nav" aria-label="Primary">
+        <nav className="blubber-shell__nav" aria-label="Primary">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = item.id === activeNavId;
@@ -602,7 +602,7 @@ export default function AppShell({
               <button
                 key={item.id}
                 type="button"
-                className={`dame-shell__nav-item${isActive ? ' dame-shell__nav-item--active' : ''}`}
+                className={`blubber-shell__nav-item${isActive ? ' blubber-shell__nav-item--active' : ''}`}
                 onClick={() => onNavChange(item.id)}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -613,12 +613,12 @@ export default function AppShell({
           })}
         </nav>
 
-        <div className="dame-shell__recent">
-          <div className="dame-shell__recent-header">
+        <div className="blubber-shell__recent">
+          <div className="blubber-shell__recent-header">
             <span className="section-label">{recentHeading}</span>
             <button
               type="button"
-              className="dame-shell__recent-add"
+              className="blubber-shell__recent-add"
               onClick={() => onNavChange(recentTargetNavId)}
               aria-label={`Browse all ${recentHeading.toLowerCase()}`}
               title={`Browse all ${recentHeading.toLowerCase()}`}
@@ -627,11 +627,11 @@ export default function AppShell({
             </button>
           </div>
 
-          <ul className="dame-shell__recent-list">
-            {recentLoading && <li className="dame-shell__recent-status">Loading…</li>}
-            {!recentLoading && recentError && <li className="dame-shell__recent-status">{recentError}</li>}
+          <ul className="blubber-shell__recent-list">
+            {recentLoading && <li className="blubber-shell__recent-status">Loading…</li>}
+            {!recentLoading && recentError && <li className="blubber-shell__recent-status">{recentError}</li>}
             {!recentLoading && !recentError && recentEntries.length === 0 && (
-              <li className="dame-shell__recent-status">{recentEmptyLabel}</li>
+              <li className="blubber-shell__recent-status">{recentEmptyLabel}</li>
             )}
             {!recentLoading &&
               !recentError &&
@@ -639,7 +639,7 @@ export default function AppShell({
                 <li key={entry.key}>
                   <button
                     type="button"
-                    className="dame-shell__recent-item"
+                    className="blubber-shell__recent-item"
                     onClick={() => onNavChange(recentTargetNavId)}
                     title={entry.label}
                   >
@@ -649,39 +649,39 @@ export default function AppShell({
                       // flat micro look (see Flubber3D's size→tier logic). The
                       // shared host caps MID bodies and overflows to micro past
                       // budget, so ~5 recent slots stay safe.
-                      <AgentAvatar name={entry.label} size={30} tier="mid" className="dame-shell__recent-flubber" />
+                      <AgentAvatar name={entry.label} size={30} tier="mid" className="blubber-shell__recent-flubber" />
                     ) : (
-                      <span className="dame-shell__recent-avatar" aria-hidden="true">
+                      <span className="blubber-shell__recent-avatar" aria-hidden="true">
                         {entry.label.charAt(0).toUpperCase()}
                       </span>
                     )}
-                    <span className="dame-shell__recent-name">{entry.label}</span>
+                    <span className="blubber-shell__recent-name">{entry.label}</span>
                   </button>
                 </li>
               ))}
           </ul>
 
-          <button type="button" className="dame-shell__view-all" onClick={() => onNavChange(recentTargetNavId)}>
+          <button type="button" className="blubber-shell__view-all" onClick={() => onNavChange(recentTargetNavId)}>
             View All {recentHeading.replace(/^Recent /, '')} →
           </button>
         </div>
 
-        <div className="dame-shell__tip">
+        <div className="blubber-shell__tip">
           {/* Glossy MID 3D flubber (was the flat FlubberCharacter — which is
               FROZEN and only stays imported for the topbar user chip). tier="mid"
               keeps the shiny clearcoat-goo material at this 44px size instead of
               auto-flattening to micro. */}
-          <Flubber3D expression="happy" size={44} tier="mid" className="dame-shell__tip-flubber" />
-          <div className="dame-shell__tip-copy">
-            <span className="dame-shell__tip-label">Blubber Tip</span>
+          <Flubber3D expression="happy" size={44} tier="mid" className="blubber-shell__tip-flubber" />
+          <div className="blubber-shell__tip-copy">
+            <span className="blubber-shell__tip-label">Blubber Tip</span>
             <p>{tip}</p>
           </div>
         </div>
       </aside>
 
-      <div className="dame-shell__main">
+      <div className="blubber-shell__main">
         {roomSlug && (
-          <div className={`dame-shell__room dame-shell__room--${roomSlug}`} aria-hidden="true" />
+          <div className={`blubber-shell__room blubber-shell__room--${roomSlug}`} aria-hidden="true" />
         )}
         {/* SessionProvider mounts here — ABOVE page.tsx's per-nav screen swap
             (children below is whichever screen is active). Because this div

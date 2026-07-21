@@ -82,7 +82,7 @@ function slugify(part: string): string {
   return part.replace(/[^A-Za-z0-9]/g, "-");
 }
 
-/** Map of slug-suffix ("Development-HOBBY-dame-os") -> project folder name,
+/** Map of slug-suffix ("Development-HOBBY-my-project") -> project folder name,
  * built from the real filesystem once per indexing pass. Longest-suffix match
  * wins so names containing dashes resolve correctly. */
 function buildProjectResolver(): (filePath: string) => string | null {

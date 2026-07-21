@@ -1,7 +1,7 @@
 /**
  * AgentPoolWorld.css — the glass slime-ROOM the dormant Flubbers live in.
  *
- * FULL-BLEED (Dame's #1 ask, pill-worlds pass): the pool matches the Agent
+ * FULL-BLEED (top ask, pill-worlds pass): the pool matches the Agent
  * Control Center hero's exact recipe now — `.pw`'s own dark fill is gone,
  * `.pw__roomdrop` is the pool.webp server-hall photo running edge-to-edge
  * (inset -4%, brightness 0.52 — identical grade to `.fh__backdrop`), and the
@@ -254,7 +254,7 @@
   line-height: 1.4;
 }
 
-/* "Dame cleared the toy pool on break" hint — distinct from the real drained
+/* "The user cleared the toy pool on break" hint — distinct from the real drained
    message so we never claim agents are deployed when they aren't. */
 .pw__cleared {
   position: absolute;

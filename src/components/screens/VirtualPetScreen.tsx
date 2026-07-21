@@ -3,7 +3,7 @@
 /**
  * VirtualPetScreen — the "pet" nav screen (AppShell's NAV_ITEMS id "pet").
  *
- * SEPARATE SURFACE (LANE E/F): this is Dame's PET, its own world. It IGNORES the
+ * SEPARATE SURFACE (LANE E/F): this is the user's PET, its own world. It IGNORES the
  * work clock entirely — no `isWorking`, no crew behaviour. It is always alive and
  * always playable, whatever a task is doing elsewhere.
  *
@@ -145,7 +145,7 @@ const PET_REFRESH_MS = 60_000;
 const QUEST_REFRESH_MS = 60_000;
 const AMBIENT_REFRESH_MS = 300_000; // re-read the clock every 5 min
 // Dashboard-hero scale (FlubberHome's HERO_MAX is 300, its dashboard-tile
-// default renders ~300px at typical viewport widths) — Dame: "as big as the
+// default renders ~300px at typical viewport widths) — feedback: "as big as the
 // main dashboard hero." Bumped from 200; see PetHabitatScene's
 // GROUND_BIAS_FRAC for the matching downward rest-position tune so the
 // bigger hero's feet land on the pedestal instead of floating higher.

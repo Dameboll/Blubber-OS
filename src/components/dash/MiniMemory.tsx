@@ -3,7 +3,7 @@
 /**
  * MiniMemory — Dashboard "Memory" tab (PILL WORLDS + MINI DASH, Lane 2). A
  * compact, self-fetching version of MemoryScreen's real three bubbles
- * (Session Context / Project Knowledge / Dame · OS Identity), all sourced from
+ * (Session Context / Project Knowledge / Operator · OS Identity), all sourced from
  * the same real /api/memory route MemoryScreen uses — same honest-empty
  * states, condensed for a dashboard tile. See MemoryScreen.tsx for the full
  * per-field breakdown of what each bubble reads.
@@ -130,7 +130,7 @@ export default function MiniMemory() {
               </p>
             </div>
             <div className="mini-memory__bubble">
-              <span className="mini-memory__bubble-title">Dame &middot; OS Identity</span>
+              <span className="mini-memory__bubble-title">Operator &middot; OS Identity</span>
               <p className="mini-memory__bubble-text">
                 {identityLine ? truncate(identityLine, TRUNCATE_LENGTH) : 'No identity recorded yet.'}
               </p>

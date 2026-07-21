@@ -3,17 +3,17 @@
 // The one real read behind the Memory screen (LANE G, docs/plans/
 // idle-life-and-wiring.md). Honest sources only, nothing invented.
 //
-//   identity — the OWNER'S OWN creed, read straight from the global DAME-OS
-//              markdown his system already keeps. This is who Dame is / what he
-//              stands for, NOT a contacts list:
+//   identity — the OWNER'S OWN creed, read straight from the global identity
+//              markdown their system already keeps. This is who the owner is /
+//              what they stand for, NOT a contacts list:
 //                fields  — the identity key:value lines of ~/.claude/USER.md
-//                          (name, mission, family, background, how he works).
+//                          (name, mission, family, background, how they work).
 //                          Pure-technical / other-people lines (Stack, Active
 //                          ventures, Key contacts) are filtered out.
-//                beliefs — the bullet lines of ~/.claude/PERSONA.md (his top
+//                beliefs — the bullet lines of ~/.claude/PERSONA.md (their top
 //                          beliefs / morals, strongest floated to top).
 //                creed   — the mantra paragraphs of ~/.claude/SOUL.md (the
-//                          DAME-OS identity: what the system is, what he's
+//                          system identity: what the system is, what they're
 //                          building, the mission). Curated to the creed
 //                          sections, faithful to the file, never a raw dump.
 //              `identity` is null only when ALL THREE files are missing — an
@@ -52,15 +52,16 @@ const SOUL_PATH = path.join(CLAUDE_HOME, "SOUL.md");
 
 const MAX_PROSE_LENGTH = 520;
 
-// USER.md lines that describe HIS identity are kept; technical + other-people
-// lines are dropped so this bubble stays about who Dame is, not a stack sheet
-// or a contacts list (the whole point of this lane). Matched case-insensitively.
+// USER.md lines that describe the owner's identity are kept; technical +
+// other-people lines are dropped so this bubble stays about who the owner is,
+// not a stack sheet or a contacts list (the whole point of this lane). Matched
+// case-insensitively.
 const IDENTITY_FIELD_DENYLIST = new Set(["stack", "active ventures", "key contacts"]);
 
 // SOUL.md sections whose prose is the owner's creed / mantra. Reasoning and
 // operating-procedure sections are intentionally left out — this is identity,
 // not the runbook.
-const SOUL_CREED_SECTIONS = new Set(["WHAT THIS SYSTEM IS", "WHAT DAME IS BUILDING"]);
+const SOUL_CREED_SECTIONS = new Set(["WHAT THIS SYSTEM IS", "WHAT THE OWNER IS BUILDING"]);
 
 export interface IdentityField {
   label: string;
@@ -143,8 +144,8 @@ function parseBeliefBullets(raw: string): string[] {
  * inside the mantra sections (SOUL_CREED_SECTIONS). A paragraph is a run of
  * consecutive prose lines; blank lines, headings, rules, "# " file comments and
  * "**bold**" sub-labels break/skip it. The long J.A.R.V.I.S. analogy paragraph
- * is dropped so the creed stays about Dame, not Tony Stark. Faithful to the
- * file's own words, never rewritten. */
+ * is dropped so the creed stays about the owner, not a pop-culture reference.
+ * Faithful to the file's own words, never rewritten. */
 function parseSoulCreed(raw: string): string[] {
   const creed: string[] = [];
   let inSection = false;

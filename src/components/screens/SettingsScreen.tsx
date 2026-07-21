@@ -20,7 +20,7 @@
  * column, matching the reference screenshot's proportions.
  *
  * OWNERSHIP: this file + SettingsScreen.css only. Reuses Panel + FlubberCharacter
- * from the frozen foundation (see file header in dame-os's screen-builder brief);
+ * from the frozen foundation (see file header in the project's screen-builder brief);
  * everything else here (toggle switch, slider, select, integration tile, theme
  * swatch, danger button) is a small local control built for this screen because
  * the shared ui/ kit has no interactive form controls yet (ProgressBar is

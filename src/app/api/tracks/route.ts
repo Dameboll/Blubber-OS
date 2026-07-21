@@ -1,9 +1,9 @@
 /**
  * /api/tracks
  *
- * GET    — lists audio files in HOBBY/dame-os/music/ (relative to the project
- *          root, i.e. process.cwd() since server.js/next both run from the
- *          project dir). Creates the folder if it doesn't exist yet — Dame
+ * GET    — lists audio files in music/ (relative to the project root, i.e.
+ *          process.cwd() since server.js/next both run from the project
+ *          dir). Creates the folder if it doesn't exist yet — the user
  *          hasn't dropped any tracks in there yet, so an empty/missing folder
  *          is the expected default state, not an error.
  * POST   — uploads a new track into that same folder (multipart/form-data,

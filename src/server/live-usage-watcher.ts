@@ -270,14 +270,14 @@ class LiveUsageWatcher extends EventEmitter {
 // for things like a shared Prisma/DB client, so we never end up with two
 // competing poll loops.
 const globalForWatcher = globalThis as unknown as {
-  __dameOsLiveUsageWatcher?: LiveUsageWatcher;
+  __blubberLiveUsageWatcher?: LiveUsageWatcher;
 };
 
 export const liveUsageWatcher: LiveUsageWatcher =
-  globalForWatcher.__dameOsLiveUsageWatcher ?? new LiveUsageWatcher();
+  globalForWatcher.__blubberLiveUsageWatcher ?? new LiveUsageWatcher();
 
-if (!globalForWatcher.__dameOsLiveUsageWatcher) {
-  globalForWatcher.__dameOsLiveUsageWatcher = liveUsageWatcher;
+if (!globalForWatcher.__blubberLiveUsageWatcher) {
+  globalForWatcher.__blubberLiveUsageWatcher = liveUsageWatcher;
   liveUsageWatcher.start();
 }
 

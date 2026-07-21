@@ -110,7 +110,7 @@ function cardKey(p: ProjectSummaryEntry): string {
   return `${p.root}/${p.name}`;
 }
 
-/** Real "Dame worked here" sort key: real indexed transcript activity wins
+/** Real "the user worked here" sort key: real indexed transcript activity wins
  * over a doc file's mtime. Falls back to `modifiedAt` only when a project has
  * no indexed sessions yet (lastActivityAt null), and to 0 when neither is
  * present, so unsorted/never-touched projects sink to the bottom. */

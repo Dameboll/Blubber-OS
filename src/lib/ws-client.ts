@@ -1,7 +1,7 @@
 /**
  * ws-client.ts
  *
- * Typed browser WebSocket client for the DameOS terminal protocol (see
+ * Typed browser WebSocket client for the Blubber terminal protocol (see
  * PLAN.md "WebSocket protocol"). A single WebSocket connection is shared and
  * multiplexed across every open tab — each message carries its own
  * `sessionId`, so one socket serves any number of concurrent PTY sessions.

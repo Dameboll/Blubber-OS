@@ -1,11 +1,11 @@
 /**
  * GET /api/audio/[filename]
  *
- * Streams a single audio file out of HOBBY/dame-os/music/ so <audio src="...">
- * has something to hit. Next.js App Router only auto-serves static files out
- * of /public, and the music folder intentionally lives outside /public (per
- * PLAN-FLUBBER.md: HOBBY/dame-os/music/), so this route exists purely to
- * bridge that gap — MusicPlayer.tsx points each track's <audio> src at
+ * Streams a single audio file out of music/ so <audio src="..."> has
+ * something to hit. Next.js App Router only auto-serves static files out
+ * of /public, and the music folder intentionally lives outside /public, so
+ * this route exists purely to bridge that gap — MusicPlayer.tsx points each
+ * track's <audio> src at
  * `/api/audio/<file>` rather than a static path.
  *
  * Path-traversal guard: rejects any filename containing a path separator or

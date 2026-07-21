@@ -54,7 +54,7 @@ const TERMINAL_THEME = {
   selectionForeground: '#b9ffcf',
   // normal — EVERY slot green (total flubberization, zero red/orange)
   black: '#0d0d0d',
-  red: '#2f9e44', // was danger red -> deep green (Dame wants everything green)
+  red: '#2f9e44', // was danger red -> deep green (design call: everything green)
   green: '#39d353',
   yellow: '#7CFC00', // was orange/yellow -> neon green (KILLS Claude's orange)
   blue: '#16a016', // -> green

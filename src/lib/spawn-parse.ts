@@ -1,5 +1,5 @@
 /**
- * spawn-parse.ts — turns what Dame types into the hero's spawn ask ("audit my
+ * spawn-parse.ts — turns what the user types into the hero's spawn ask ("audit my
  * auth flow", "2 game devs and 3 UI experts") into a list of REAL roster agents
  * to put on standby. No fabricated slime names anymore: every spawn resolves to
  * an actual ~/.claude/agents/*.md agent (name + file), matched by the words in
@@ -106,7 +106,7 @@ export function rankAgents(phrase: string, roster: RosterAgent[]): RankedAgent[]
 /** The outcome of resolving a single free-text spawn ask:
  *  - confident: one agent clearly wins → spawn it.
  *  - multi: explicit counts/roles ("2 game devs, 3 UI") → spawn the batch.
- *  - ambiguous: several plausible agents, no clear winner → let Dame pick.
+ *  - ambiguous: several plausible agents, no clear winner → let the user pick.
  *  - none: nothing in the roster plausibly fits → say so honestly. */
 export type SpawnResolution =
   | { kind: 'confident'; agent: RosterAgent; purpose: string }
@@ -119,7 +119,7 @@ const CONFIDENT_LEAD = 2; // top must clear the runner-up by this much
 const MAX_CANDIDATES = 4;
 
 /** Confidence-aware resolution for a spawn ask. Explicit-count asks stay
- *  auto (Dame was specific); a single vague brief either wins clearly, offers
+ *  auto (the user was specific); a single vague brief either wins clearly, offers
  *  a short pick-list, or honestly finds nothing. Never invents an agent. */
 export function resolveSpawn(text: string, roster: RosterAgent[]): SpawnResolution {
   const trimmed = text.trim();

@@ -2,7 +2,7 @@
 
 /**
  * Workfloor — the dynamic strip of live agent "workrooms" under the hero
- * Blubber (last-hard-push Phase 2). Dame's ask: whenever Claude fires a real
+ * Blubber (last-hard-push Phase 2). The ask: whenever Claude fires a real
  * agent/skill run, it gets its own little command room the moment it starts,
  * and stays there until it's done — visible, one by one, never all at once.
  *

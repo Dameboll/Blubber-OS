@@ -487,14 +487,14 @@ interface SpawnPromptProps {
   submitting: boolean;
   onSubmit: (purpose: string) => void;
   onCancel: () => void;
-  /** When set, the ask matched several real roster agents — show them so Dame
-   *  picks the exact one instead of Blubber guessing. */
+  /** When set, the ask matched several real roster agents — show them so the
+   *  user picks the exact one instead of Blubber guessing. */
   choices?: RosterAgent[] | null;
   onChoose?: (agent: RosterAgent) => void;
 }
 
 /** The inline "What agent do you need?" panel — the big hero Blubber asking
- *  Dame directly. Focus-trapped: Tab cycles inside it, Esc cancels, Enter
+ *  the user directly. Focus-trapped: Tab cycles inside it, Esc cancels, Enter
  *  submits. Never window.prompt. When the ask is ambiguous it shows the real
  *  matching agents as a pick-list. */
 function SpawnPrompt({ submitting, onSubmit, onCancel, choices, onChoose }: SpawnPromptProps) {
@@ -873,7 +873,7 @@ export default function AgentsScreen({ className }: AgentsScreenProps) {
   const [promptOpen, setPromptOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   // When a vague ask matches several real roster agents, hold the short-list so
-  // the spawn panel can ask Dame which one (instead of guessing or inventing).
+  // the spawn panel can ask the user which one (instead of guessing or inventing).
   const [spawnChoices, setSpawnChoices] = useState<{ candidates: RosterAgent[]; purpose: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pulling, setPulling] = useState<string | null>(null);
@@ -1089,7 +1089,7 @@ export default function AgentsScreen({ className }: AgentsScreenProps) {
   // The hero's idle "playtime" tie to the pool below it: fires once per real
   // AgentPoolWorld scheduler event (a toss, a chase, a pile-up, a peek). Only
   // reacts while the hero is genuinely idle and the prompt isn't open — real
-  // work (or asking Dame a question) always wins over playful banter.
+  // work (or asking the user a question) always wins over playful banter.
   const handlePoolVignette = useCallback(
     (kind: PoolEventKind) => {
       if (heroActivity !== 'idle' || promptOpen) return;
@@ -1103,7 +1103,7 @@ export default function AgentsScreen({ className }: AgentsScreenProps) {
     [heroActivity, promptOpen],
   );
 
-  // Dame dragged a pool mini UP to the hero (break-only) — the REAL round trip
+  // The user dragged a pool mini UP to the hero (break-only) — the REAL round trip
   // (LANE 5): the hero reacts immediately (unchanged), then a HandoffOverlay
   // clone arcs from the exact release point into the hero stage; once it
   // lands, FlubberHome's own playmate takes over the same spot for a real
@@ -1358,7 +1358,7 @@ export default function AgentsScreen({ className }: AgentsScreenProps) {
     setSpawnChoices(null);
   }, []);
 
-  // Spawn one or more REAL roster agents from Dame's ask. The text is resolved
+  // Spawn one or more REAL roster agents from the user's ask. The text is resolved
   // to actual ~/.claude/agents by parseSpawnRequest (keyword-matched, with
   // multi-spawn counts like "2 game devs, 3 UI experts"). Each spawn stores the
   // real slug + file, so the card is a real agent on standby — no invented
@@ -1416,7 +1416,7 @@ export default function AgentsScreen({ className }: AgentsScreenProps) {
         });
         return;
       }
-      // Not sure — surface the real roster candidates and let Dame pick, rather
+      // Not sure — surface the real roster candidates and let the user pick, rather
       // than guess. The spawn panel renders them; choosing one calls spawnChoice.
       if (resolution.kind === 'ambiguous') {
         setSpawnChoices({ candidates: resolution.candidates, purpose: resolution.purpose });
@@ -1480,7 +1480,7 @@ export default function AgentsScreen({ className }: AgentsScreenProps) {
     [submitting, spawnOne, revealSpawned],
   );
 
-  // Dame picked one of the ambiguous candidates — spawn that exact roster agent
+  // The user picked one of the ambiguous candidates — spawn that exact roster agent
   // with the original ask as its standby brief.
   const chooseSpawnCandidate = useCallback(
     async (agent: RosterAgent) => {

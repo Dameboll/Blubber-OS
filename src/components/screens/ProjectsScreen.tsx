@@ -103,7 +103,7 @@ const PROJECT_TYPES: ProjectTypeProfile[] = [
 ];
 
 // The four real Development roots, with what each is actually for (from
-// file-routing rules) — shown in the New Project flow so Dame picks the right home.
+// file-routing rules) — shown in the New Project flow so the user picks the right home.
 const ROOT_META: { label: string; blurb: string }[] = [
   { label: 'ACTIVE', blurb: 'Main ventures' },
   { label: 'HOBBY', blurb: 'Side projects' },
@@ -122,7 +122,7 @@ const TEMPLATE_AGENTS: Record<string, string[]> = {
 };
 
 // Recommend a template from the free-text brief — keyword affinity, honest
-// fallback to web-app (Dame's most common build).
+// fallback to web-app (the most common build).
 function recommendTemplate(brief: string): string {
   const b = brief.toLowerCase();
   if (/\b(agent|bot|assistant|automation|llm|chat)\b/.test(b)) return 'ai-agent';
@@ -346,7 +346,7 @@ function NewProjectFlow({ roster, initialTemplate, onClose, onCreated }: NewProj
     nameRef.current?.focus();
   }, []);
 
-  // Recommend a template as Dame types the brief — unless he's already chosen one.
+  // Recommend a template as the user types the brief — unless they've already chosen one.
   useEffect(() => {
     if (templateTouched || !brief.trim()) return;
     setTemplate(recommendTemplate(brief));
@@ -429,7 +429,7 @@ function NewProjectFlow({ roster, initialTemplate, onClose, onCreated }: NewProj
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. nitez-door-list"
+          placeholder="e.g. my-new-project"
           autoComplete="off"
           spellCheck={false}
         />
@@ -923,8 +923,8 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
           columns — real trailing-7-day per-project event counts from the same
           indexed usage.db rollup /api/projects/summary already computes
           (getProjectActivityRollup), never fabricated. Fills the bottom void
-          Dame flagged with something he'd actually read: who he's really been
-          working in this week, not a decorative empty panel. */}
+          that was flagged with something the user would actually read: who they've
+          really been working in this week, not a decorative empty panel. */}
       <Panel accent title="Project Pulse — This Week" className="projects-panel projects-screen__pulse-panel" avoidRoam>
         {pulseProjects.length === 0 ? (
           <p className="projects-screen__empty-note">

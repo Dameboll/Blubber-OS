@@ -203,7 +203,7 @@
 }
 
 /* ── pill-room plate (pill-worlds pass) ────────────────────────────
-   All 3 bubbles (Session Context / Project Knowledge / Dame · OS Identity,
+   All 3 bubbles (Session Context / Project Knowledge / Operator · OS Identity,
    all `.memory-panel`) carry the archive-vault-jars room photo behind their
    content via a negative-z pseudo-element pair (recipe:
    src/styles/pill-room.css). Each bubble's own `.panel__body` still scrolls

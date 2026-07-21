@@ -1,10 +1,10 @@
-.dame-shell {
-  --dame-sidebar-width: 232px;
+.blubber-shell {
+  --blubber-sidebar-width: 232px;
   display: grid;
-  grid-template-columns: var(--dame-sidebar-width) 1fr;
+  grid-template-columns: var(--blubber-sidebar-width) 1fr;
   /* Fixed to the viewport (not min-height) so the footer status bar stays
      pinned at the bottom like every reference screenshot -- only the main
-     content column scrolls internally (see .dame-shell__content below).
+     content column scrolls internally (see .blubber-shell__content below).
      Previously this was min-height:100vh, which let the whole shell grow
      past the viewport on any tall screen (Dashboard especially) and pushed
      the footer off-screen until the ENTIRE page was scrolled. */
@@ -16,7 +16,7 @@
 /* Sidebar                                                                 */
 /* ---------------------------------------------------------------------- */
 
-.dame-shell__sidebar {
+.blubber-shell__sidebar {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -27,14 +27,14 @@
   overflow-y: auto;
 }
 
-.dame-shell__brand {
+.blubber-shell__brand {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
   padding: 0.25rem 0.4rem 0.75rem;
 }
 
-.dame-shell__brand-logo {
+.blubber-shell__brand-logo {
   display: block;
   width: 100%;
   max-width: 178px;
@@ -45,17 +45,17 @@
   transition: filter 0.2s ease-out;
 }
 
-.dame-shell__brand-logo:hover {
+.blubber-shell__brand-logo:hover {
   filter: drop-shadow(0 0 12px oklch(75% 0.2 140 / 0.35)) brightness(1.08);
 }
 
-.dame-shell__nav {
+.blubber-shell__nav {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-.dame-shell__nav-item {
+.blubber-shell__nav-item {
   display: flex;
   align-items: center;
   gap: 0.7rem;
@@ -72,36 +72,36 @@
   transition: background-color 150ms ease-out, color 150ms ease-out;
 }
 
-.dame-shell__nav-item:hover {
+.blubber-shell__nav-item:hover {
   background: var(--bg-elevated);
   color: var(--text-primary);
 }
 
-.dame-shell__nav-item--active {
+.blubber-shell__nav-item--active {
   background: oklch(72% 0.2 151 / 40%);
   color: var(--text-primary);
   box-shadow: inset 0 0 0 1px oklch(87% 0.29 142 / 30%), 0 0 14px oklch(74% 0.2 151 / 20%);
 }
 
-.dame-shell__nav-item--active:hover {
+.blubber-shell__nav-item--active:hover {
   background: oklch(74% 0.2 151 / 20%);
 }
 
-.dame-shell__recent {
+.blubber-shell__recent {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
   min-height: 0;
 }
 
-.dame-shell__recent-header {
+.blubber-shell__recent-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 0.4rem;
 }
 
-.dame-shell__recent-add {
+.blubber-shell__recent-add {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -116,12 +116,12 @@
   transition: background-color 150ms ease-out, transform 150ms ease-out;
 }
 
-.dame-shell__recent-add:hover {
+.blubber-shell__recent-add:hover {
   background: var(--bg-elevated);
   transform: scale(1.08);
 }
 
-.dame-shell__recent-list {
+.blubber-shell__recent-list {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -131,14 +131,14 @@
   overflow-y: auto;
 }
 
-.dame-shell__recent-status {
+.blubber-shell__recent-status {
   padding: 0.4rem 0.4rem;
   font-family: var(--font-ui);
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
 
-.dame-shell__recent-item {
+.blubber-shell__recent-item {
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -155,11 +155,11 @@
   transition: background-color 150ms ease-out;
 }
 
-.dame-shell__recent-item:hover {
+.blubber-shell__recent-item:hover {
   background: var(--bg-elevated);
 }
 
-.dame-shell__recent-avatar {
+.blubber-shell__recent-avatar {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -174,13 +174,13 @@
   font-weight: 700;
 }
 
-.dame-shell__recent-name {
+.blubber-shell__recent-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.dame-shell__view-all {
+.blubber-shell__view-all {
   align-self: flex-start;
   padding: 0.25rem 0.4rem;
   border: none;
@@ -192,11 +192,11 @@
   cursor: pointer;
 }
 
-.dame-shell__view-all:hover {
+.blubber-shell__view-all:hover {
   text-decoration: underline;
 }
 
-.dame-shell__tip {
+.blubber-shell__tip {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -210,18 +210,18 @@
 /* The tip card is a flex row with a growing copy block; the raw Flubber3D
    canvas (unlike AgentAvatar, which is flex-shrink:0 by default) would get
    squished without this. */
-.dame-shell__tip-flubber {
+.blubber-shell__tip-flubber {
   flex-shrink: 0;
 }
 
-.dame-shell__tip-copy {
+.blubber-shell__tip-copy {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
   min-width: 0;
 }
 
-.dame-shell__tip-label {
+.blubber-shell__tip-label {
   font-family: var(--font-ui);
   font-size: 0.78rem;
   font-weight: 700;
@@ -229,7 +229,7 @@
   color: var(--core-accent-bright);
 }
 
-.dame-shell__tip-copy p {
+.blubber-shell__tip-copy p {
   margin: 0;
   font-family: var(--font-ui);
   font-size: 0.75rem;
@@ -241,7 +241,7 @@
 /* Main column: topbar / content / footer                                  */
 /* ---------------------------------------------------------------------- */
 
-.dame-shell__main {
+.blubber-shell__main {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -254,13 +254,13 @@
    content frame on the data screens that don't own a hero backdrop. topbar /
    content / footer sit above it (z-index:1); those screens are transparent, so
    the room shows through the gaps between their cards. */
-.dame-shell__topbar,
-.dame-shell__content,
-.dame-shell__footer {
+.blubber-shell__topbar,
+.blubber-shell__content,
+.blubber-shell__footer {
   position: relative;
   z-index: 1;
 }
-.dame-shell__room {
+.blubber-shell__room {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -269,18 +269,18 @@
   background-position: center;
   filter: brightness(0.34) saturate(1.12);
 }
-.dame-shell__room::after {
+.blubber-shell__room::after {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, oklch(6% 0.02 155 / 0.5), oklch(5% 0.02 155 / 0.82));
 }
-.dame-shell__room--projects { background-image: url('/bg/projects.webp'); }
-.dame-shell__room--memory { background-image: url('/bg/memory.webp'); }
-.dame-shell__room--analytics { background-image: url('/bg/analytics.webp'); }
-.dame-shell__room--engine { background-image: url('/bg/engine.webp'); }
+.blubber-shell__room--projects { background-image: url('/bg/projects.webp'); }
+.blubber-shell__room--memory { background-image: url('/bg/memory.webp'); }
+.blubber-shell__room--analytics { background-image: url('/bg/analytics.webp'); }
+.blubber-shell__room--engine { background-image: url('/bg/engine.webp'); }
 
-.dame-shell__topbar {
+.blubber-shell__topbar {
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -288,7 +288,7 @@
   flex-shrink: 0;
 }
 
-.dame-shell__user-chip {
+.blubber-shell__user-chip {
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -301,31 +301,31 @@
   transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
 }
 
-.dame-shell__user-chip:hover {
+.blubber-shell__user-chip:hover {
   border-color: oklch(87% 0.29 142 / 45%);
   box-shadow: var(--glow-shadow);
 }
 
-.dame-shell__user-copy {
+.blubber-shell__user-copy {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   line-height: 1.2;
 }
 
-.dame-shell__user-name {
+.blubber-shell__user-name {
   font-family: var(--font-ui);
   font-size: 0.8125rem;
   font-weight: 600;
 }
 
-.dame-shell__user-mode {
+.blubber-shell__user-mode {
   font-family: var(--font-ui);
   font-size: 0.6875rem;
   color: var(--core-accent-bright);
 }
 
-.dame-shell__content {
+.blubber-shell__content {
   flex: 1;
   min-height: 0;
   min-width: 0;
@@ -347,7 +347,7 @@
    its PTYs, xterm panes, and TabBar's tab list never get torn down. It fills
    the content area absolutely and is toggled with VISIBILITY (never
    display:none) so xterm keeps its measured box the whole time and needs no
-   refit when you nav back. .dame-shell__content is position:relative (see the
+   refit when you nav back. .blubber-shell__content is position:relative (see the
    room block above), so inset:0 resolves to this content area. TerminalScreen's
    own root is height:100%, which resolves against this bounded host. */
 .persistent-terminal-host {
@@ -383,7 +383,7 @@
   overflow: hidden;
 }
 
-.dame-shell__footer {
+.blubber-shell__footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -395,7 +395,7 @@
   flex-shrink: 0;
 }
 
-.dame-shell__footer-version {
+.blubber-shell__footer-version {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -404,11 +404,11 @@
   color: var(--text-secondary);
 }
 
-.dame-shell__status-smile {
+.blubber-shell__status-smile {
   color: var(--core-accent-bright);
 }
 
-.dame-shell__footer-quote {
+.blubber-shell__footer-quote {
   font-family: var(--font-ui);
   font-size: 0.75rem;
   font-style: italic;
@@ -421,7 +421,7 @@
   white-space: nowrap;
 }
 
-.dame-shell__footer-status {
+.blubber-shell__footer-status {
   display: flex;
   align-items: center;
   gap: 0.85rem;
@@ -430,7 +430,7 @@
   color: var(--text-secondary);
 }
 
-.dame-shell__status-pill {
+.blubber-shell__status-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -440,12 +440,12 @@
   color: var(--core-accent-bright);
 }
 
-.dame-shell__status-pill--warn {
+.blubber-shell__status-pill--warn {
   background: oklch(89% 0.24 139 / 16%);
   color: var(--accent-warning);
 }
 
-.dame-shell__status-dot {
+.blubber-shell__status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -461,28 +461,28 @@
 /* ---------------------------------------------------------------------- */
 
 @media (max-width: 960px) {
-  .dame-shell {
-    --dame-sidebar-width: 72px;
+  .blubber-shell {
+    --blubber-sidebar-width: 72px;
   }
 
-  .dame-shell__nav-item span,
-  .dame-shell__recent,
-  .dame-shell__tip-copy,
-  .dame-shell__user-copy {
+  .blubber-shell__nav-item span,
+  .blubber-shell__recent,
+  .blubber-shell__tip-copy,
+  .blubber-shell__user-copy {
     display: none;
   }
 
-  .dame-shell__nav-item {
+  .blubber-shell__nav-item {
     justify-content: center;
     padding: 0.6rem;
   }
 
-  .dame-shell__tip {
+  .blubber-shell__tip {
     justify-content: center;
     padding: 0.6rem;
   }
 
-  .dame-shell__footer-quote {
+  .blubber-shell__footer-quote {
     display: none;
   }
 }

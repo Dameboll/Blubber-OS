@@ -141,7 +141,7 @@ export default function PersistentTerminalHost({ activeNavId, children }: Persis
 
   // Measure + track the dashboard anchor's real viewport rect while it's
   // registered. Fixed positioning is always relative to the viewport (no
-  // transformed ancestor sits between .dame-shell__content and <body> — see
+  // transformed ancestor sits between .blubber-shell__content and <body> — see
   // AppShell.css), so raw getBoundingClientRect() coordinates apply directly.
   useEffect(() => {
     if (!dashAnchorEl) {

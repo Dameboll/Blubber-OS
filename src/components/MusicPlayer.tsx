@@ -29,7 +29,7 @@
  * ============================================================================
  * QUEUE MODEL (read this before wiring in a new consumer)
  * ============================================================================
- * `tracks` is the full library (everything in dame-os/music/, from
+ * `tracks` is the full library (everything in music/, from
  * /api/tracks) — stable, used for Library/Liked browsing and playlist
  * "add track" pickers. `queue` is the ordered list actually being played
  * through — `currentIndex`/`currentTrack`/next/prev/shuffle all operate on
@@ -84,8 +84,8 @@
  * truth for playback — a headless consumer never touches an <audio> element
  * itself, it only drives the singleton through this ref.
  *
- * Audio files are NOT served from /public — they live in HOBBY/dame-os/music/
- * and are streamed (with HTTP Range support, required for seeking + Safari)
+ * Audio files are NOT served from /public — they live in music/ (relative
+ * to the project root) and are streamed (with HTTP Range support, required for seeking + Safari)
  * through /api/audio/[filename].
  */
 
@@ -108,7 +108,7 @@ export interface EqGains {
 
 /** Full playback snapshot handed to onStateChange whenever it changes. */
 export interface MusicEngineState {
-  /** Full library — every file in dame-os/music/, unaffected by the active queue. */
+  /** Full library — every file in music/, unaffected by the active queue. */
   tracks: Track[];
   /** The ordered list actually being played through (library by default, or a playlist). */
   queue: Track[];
@@ -699,7 +699,7 @@ const MusicPlayer = forwardRef<MusicPlayerHandle, MusicPlayerProps>(function Mus
     return (
       <div className="music-player music-player--empty">
         <Music size={16} aria-hidden="true" />
-        <span>Drop audio files into dame-os/music/ to get started</span>
+        <span>Drop audio files into music/ to get started</span>
       </div>
     );
   }

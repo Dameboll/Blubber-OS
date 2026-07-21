@@ -4,8 +4,8 @@
  * AgentWorkstation — a single mini agent's little workspace, made legible.
  *
  * The old version put a 120px procedural 3D desk behind each mini flubber; at
- * that size it read as mush. Dame wanted the crew's stations "more visually
- * clear and established," each visibly doing its job. So a station now composes:
+ * that size it read as mush. The ask was for the crew's stations to be "more
+ * visually clear and established," each visibly doing its job. So a station now composes:
  *   - a framed bay with corner brackets (the "established" tech read),
  *   - the agent's activity as a compact HoloPanel monitor (a Designer shows a
  *     design canvas, a QA Tester a test runner — same visual language as the

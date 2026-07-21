@@ -23,7 +23,7 @@
  * on-the-clock roam (in-flight vignettes finish naturally). On BREAK the view
  * calls setWorkMode(false) and the goofing resumes. See idle-life-and-wiring.md.
  *
- * BREAK-ONLY POINTER PLAY (LANE R): on break the view lets Dame grab a resident
+ * BREAK-ONLY POINTER PLAY (LANE R): on break the view lets the user grab a resident
  * (grab/release — freezes its brain like the pull/peek paths already do), fling
  * one out of the pool (remove), add one (add), or clear the pool (setCount 0).
  * grab/release/add/remove are all REFERENTIALLY STABLE via resident id (below),
@@ -110,7 +110,7 @@ export interface PoolScheduler {
   beginPull(): number;
   /** Resume a pulled resident (pull was cancelled before it exited). */
   releasePull(id: number): void;
-  /** BREAK-ONLY: Dame grabbed this resident with the pointer — freeze its brain
+  /** BREAK-ONLY: the user grabbed this resident with the pointer — freeze its brain
    * (step() no longer touches it) so the view's drag owns its node. */
   grab(id: number): void;
   /** Release a grabbed resident back into the pool, optionally dropped at a new
@@ -118,7 +118,7 @@ export interface PoolScheduler {
   release(id: number, x?: number, y?: number): void;
   /** BREAK-ONLY: append one fresh resident; returns its new id. */
   add(): number;
-  /** BREAK-ONLY: remove one resident by id (Dame flung it out / handed it up).
+  /** BREAK-ONLY: remove one resident by id (the user flung it out / handed it up).
    * Referentially safe — never disturbs another resident's vignette. */
   remove(id: number): void;
   /** Resolve a resident by id (or undefined if it's gone). */
@@ -243,7 +243,7 @@ interface Resident extends PoolResident {
   busy: boolean; // locked into a group vignette (skips nap/idle-wave)
   pulled: boolean; // owned by a REAL spawn pull
   peeking: boolean; // owned by a cosmetic peek vignette
-  held: boolean; // owned by a break-time pointer drag (Dame is holding it)
+  held: boolean; // owned by a break-time pointer drag (the user is holding it)
   vignette: Vignette;
   gesture: GestureName | null;
 }
@@ -790,7 +790,7 @@ export function createPoolScheduler(): PoolScheduler {
     if (residents.length === 0) return -1;
     // Prefer a free, awake resident nearest the pool centre — a clean subject
     // for the tractor-beam lift. `busy`/`peeking`/`held` are a HARD exclusion,
-    // not a penalty: a resident mid-vignette or in Dame's hand is owned
+    // not a penalty: a resident mid-vignette or in the user's hand is owned
     // elsewhere and a real spawn pull must never grab it out from under that.
     let best: Resident | null = null;
     let bestScore = Infinity;

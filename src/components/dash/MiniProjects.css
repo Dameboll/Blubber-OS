@@ -1,7 +1,7 @@
 /* MiniProjects — Dashboard "Projects" tab. Real 8-recent (4x2) grid of
    ProjectThumb cards, same tile card language as .dashboard-tabmini.
 
-   Thumb is size=72 (bumped from 48 — Dame: "they look really tiny"). Sizing
+   Thumb is size=72 (bumped from 48 — feedback: "they look really tiny"). Sizing
    math below is tuned against the tightest real case for the 4-column
    layout: DashboardScreen.css's .dashboard-screen__midrow sits at
    `min-height: clamp(16rem, 12rem + 14vw, 24rem)`, and the 4-col grid only

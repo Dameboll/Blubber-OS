@@ -117,11 +117,11 @@ function createSchema(db: Database.Database): void {
 // live-usage-watcher.ts) so we never open two competing connections to the
 // same SQLite file.
 const globalForDb = globalThis as unknown as {
-  __dameOsDb?: Database.Database;
+  __blubberDb?: Database.Database;
 };
 
 function openDb(): Database.Database {
-  if (globalForDb.__dameOsDb) return globalForDb.__dameOsDb;
+  if (globalForDb.__blubberDb) return globalForDb.__blubberDb;
 
   ensureDataDir();
   const db = new Database(DB_PATH);
@@ -142,7 +142,7 @@ function openDb(): Database.Database {
     }
   }
 
-  globalForDb.__dameOsDb = db;
+  globalForDb.__blubberDb = db;
   return db;
 }
 

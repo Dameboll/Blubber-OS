@@ -156,11 +156,11 @@ const CHAINS: QuestChainDef[] = [
     label: 'Veteran',
     metric: 'daysActive',
     tiers: [
-      { title: 'Day One', description: 'Run DameOS for 1 day.', target: 1, xp: 40 },
-      { title: 'One Week In', description: 'Run DameOS for 7 days.', target: 7, xp: 120 },
-      { title: 'Seasoned', description: 'Run DameOS for 30 days.', target: 30, xp: 260 },
-      { title: 'Old Timer', description: 'Run DameOS for 90 days.', target: 90, xp: 460 },
-      { title: 'Institution', description: 'Run DameOS for 180 days.', target: 180, xp: 760 },
+      { title: 'Day One', description: 'Run Blubber for 1 day.', target: 1, xp: 40 },
+      { title: 'One Week In', description: 'Run Blubber for 7 days.', target: 7, xp: 120 },
+      { title: 'Seasoned', description: 'Run Blubber for 30 days.', target: 30, xp: 260 },
+      { title: 'Old Timer', description: 'Run Blubber for 90 days.', target: 90, xp: 460 },
+      { title: 'Institution', description: 'Run Blubber for 180 days.', target: 180, xp: 760 },
     ],
   },
 ];
@@ -225,8 +225,8 @@ function writeStore(store: StoreShape): void {
 /** Reuse the pet-store's live SQLite connection (set on globalThis when
  * pet-store is imported above) to count real care-action history. */
 function careActionsTotal(): number {
-  const g = globalThis as unknown as { __dameOsPetDb?: Database.Database };
-  const petDb = g.__dameOsPetDb;
+  const g = globalThis as unknown as { __blubberPetDb?: Database.Database };
+  const petDb = g.__blubberPetDb;
   if (!petDb) return 0;
   try {
     const row = petDb.prepare('SELECT COUNT(*) AS n FROM pet_actions').get() as { n: number };

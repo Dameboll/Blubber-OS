@@ -88,15 +88,15 @@ function createSchema(db: Database.Database): void {
   `);
 }
 
-const globalForPet = globalThis as unknown as { __dameOsPetDb?: Database.Database };
+const globalForPet = globalThis as unknown as { __blubberPetDb?: Database.Database };
 
 function openDb(): Database.Database {
-  if (globalForPet.__dameOsPetDb) return globalForPet.__dameOsPetDb;
+  if (globalForPet.__blubberPetDb) return globalForPet.__blubberPetDb;
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   const db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
   createSchema(db);
-  globalForPet.__dameOsPetDb = db;
+  globalForPet.__blubberPetDb = db;
   return db;
 }
 

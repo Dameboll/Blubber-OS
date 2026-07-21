@@ -20,7 +20,7 @@
  *     play is OFF — nothing is grabbable, and the +1 / EMPTY POOL controls (in
  *     AgentsScreen) are disabled. During work the pool shows the REAL dormant
  *     roster count, untouchable.
- *   - ON BREAK: horseplay resumes AND the pool becomes Dame's playground —
+ *   - ON BREAK: horseplay resumes AND the pool becomes the user's playground —
  *     grab + drag a mini (its brain freezes like the pull/peek paths already
  *     do), fling it OFF the room → it despawns, drag it UP past the top → hand
  *     it to the Agents hero (onHeroGrab), or use the +1 / EMPTY controls. These
@@ -54,7 +54,7 @@
  * ZERO fake data: `dormantCount` is the real number of idle agents. At most
  * MAX_LIVE swim live; the rest are an honest "+N sleeping" tag. Ambient energy
  * subtly tracks real recent activity (GET /api/recent). An empty pool shows a
- * drained state, never fake residents — except while Dame has deliberately
+ * drained state, never fake residents — except while the user has deliberately
  * emptied the toy pool on break, which shows a distinct "cleared" hint.
  */
 
@@ -91,7 +91,7 @@ export interface AgentPoolWorldProps {
   /** SessionProvider's work/break latch (LAW 1). true = residents clock in and
    *  pointer play + controls are OFF; false (break) = horseplay + playground. */
   isWorking?: boolean;
-  /** Fired when Dame drags a mini UP out of the pool toward the Agents hero —
+  /** Fired when the user drags a mini UP out of the pool toward the Agents hero —
    *  the caller hands it to the hero (a gesture + a line) AND, real playtime
    *  (LANE 5): the release point (viewport px) and the resident's own id (used
    *  as a stable seed) so a HandoffOverlay can arc a clone from this exact spot
@@ -102,7 +102,7 @@ export interface AgentPoolWorldProps {
   onControlsReady?: (controls: PoolControls | null) => void;
 }
 
-// Pool holds a small calm cluster (Dame's call 2026-07-20: "lessen the pool,
+// Pool holds a small calm cluster (design call 2026-07-20: "lessen the pool,
 // start with ~3"). Starts at INITIAL_LIVE and gently ramps to this cap; the
 // honest "+N sleeping" overflow tag covers the real dormant remainder.
 const MAX_LIVE = 5;
@@ -153,7 +153,7 @@ export function AgentPoolWorld({
   // the scheduler's live residents; updated after every structural change so
   // React keys nodes by STABLE id (grab/fling a specific one, no index shuffle).
   const [renderIds, setRenderIds] = useState<number[]>([]);
-  // Break-time playground flag: once Dame adds/removes/empties, the count is his
+  // Break-time playground flag: once the user adds/removes/empties, the count is their
   // toy layer and stops auto-syncing to the real dormant count until work
   // resumes (which discards it — see the sync effect).
   const [playing, setPlaying] = useState(false);
@@ -218,7 +218,7 @@ export function AgentPoolWorld({
     };
   }, []);
 
-  // ── count sync: real dormant count, unless Dame is mid-play on break ───────
+  // ── count sync: real dormant count, unless the user is mid-play on break ───
   useEffect(() => {
     // While working we always show the real count; break-time play (`playing`)
     // owns the count until work resumes.
@@ -671,7 +671,7 @@ export function AgentPoolWorld({
 
   // ── empty pool: honest drained state, no fake residents ───────────────────
   // Only the REAL drained message (all agents deployed) when it's genuinely
-  // real — never when Dame just cleared the toy pool on break.
+  // real — never when the user just cleared the toy pool on break.
   if (dormantCount === 0 && !playing) {
     return (
       <div className="pw pw--empty" ref={domeRef} aria-label="Agent pool: empty">

@@ -70,7 +70,6 @@ const TESTING_SET = new Set(['e2e-runner', 'qa-gate', 'tdd-guide']);
 const CONTENT_EXTRA = new Set([
   'marketing-agent',
   'media-creator',
-  'slumlords-fashion-designer',
   'ecom-growth-operator',
   'content-strategist',
 ]);
@@ -94,7 +93,6 @@ const DOMAIN_SET = new Set([
   'financial-ops',
   'game-developer',
   'travel-specialist',
-  'nitez-marketplace-expert',
   'network-troubleshooter',
   'homelab-architect',
   'sales-operator',

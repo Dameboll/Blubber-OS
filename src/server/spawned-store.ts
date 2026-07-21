@@ -5,7 +5,7 @@
  * (tmp file + rename) so a crash mid-write never corrupts the roster.
  *
  * REAL identities only (LAW 1): `name` is an actual ~/.claude/agents slug (e.g.
- * "security-reviewer", "game-developer") resolved from Dame's spawn ask, and
+ * "security-reviewer", "game-developer") resolved from the user's spawn ask, and
  * `file` is that agent's source .md. No more fabricated slime names — a spawned
  * card is a real agent on standby, matched to a live run the moment Claude fires
  * it. If a caller somehow omits a name we fall back to the real built-in

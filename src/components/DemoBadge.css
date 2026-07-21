@@ -1,0 +1,40 @@
+/* DemoBadge — fixed top-right pill, always-on-top, never blocks clicks.
+   z-index sits above every panel/screen (max other z-index in the app is the
+   200 HandoffOverlay) but pointer-events:none keeps it purely informational
+   so it can never eat a click meant for something underneath it. */
+
+.demo-badge {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-glow);
+  box-shadow: var(--glow-shadow);
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
+}
+
+.demo-badge svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .demo-badge {
+    top: 8px;
+    right: 8px;
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+}

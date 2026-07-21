@@ -90,7 +90,7 @@ import {
 } from 'lucide-react';
 import FlubberCharacter from '../FlubberCharacter';
 import MusicVisualizerFlubbers from '../music/MusicVisualizerFlubbers';
-import { Panel } from '../ui';
+import { Panel, Skeleton, SkeletonRow } from '../ui';
 import MusicPlayer, { type MusicEngineState, type MusicPlayerHandle, type Track } from '../MusicPlayer';
 import { useFlubberBrainApi } from '../../hooks/useFlubberBrain';
 import './MusicPlayerScreen.css';
@@ -348,6 +348,22 @@ function TrackRow({
         </button>
       )}
     </li>
+  );
+}
+
+/** Shape-matches a real TrackRow (play cell + art + title/sub lines + duration)
+ *  so a loading playlist/library reads as "tracks are coming", not a bare
+ *  "Loading…" line with no shape at all. */
+function TrackListSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <ul className="mps-track-list mps-track-list--skeleton" aria-hidden="true">
+      {Array.from({ length: rows }).map((_, i) => (
+        <li key={i} className="mps-track mps-track--skeleton">
+          <SkeletonRow avatar avatarSize={40} lines={2} />
+          <Skeleton width={36} height="0.78rem" radius={4} />
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -987,8 +1003,16 @@ export default function MusicPlayerScreen() {
                   </span>
                 }
               >
-                {engine.loading && <p className="mps-empty">Loading playlist…</p>}
-                {!engine.loading && !hasQueueTracks && <p className="mps-empty">Drop audio files into music/ (or use the Library tab) to get started</p>}
+                {engine.loading && <TrackListSkeleton rows={4} />}
+                {!engine.loading && !hasQueueTracks && (
+                  <div className="mps-tab-empty">
+                    <FlubberCharacter expression="thinking" size={56} mode="character" showToggle={false} />
+                    <p>Nothing queued yet — add tracks from your library to get started.</p>
+                    <button type="button" className="mps-empty-action" onClick={() => setActiveTab('library')}>
+                      Go to Library
+                    </button>
+                  </div>
+                )}
                 {!engine.loading && hasQueueTracks && (
                   <ul className="mps-track-list mps-rail-queue">
                     {engine.queue.map((track, index) => (
@@ -1061,9 +1085,15 @@ export default function MusicPlayerScreen() {
             </Panel>
 
             <Panel title="LIBRARY" avoidRoam action={hasLibraryTracks ? <span className="mps-queue-meta">{formatSongCount(engine.tracks.length)}</span> : undefined}>
-              {engine.loading && <p className="mps-empty">Loading playlist…</p>}
+              {engine.loading && <TrackListSkeleton rows={6} />}
               {!engine.loading && !hasLibraryTracks && (
-                <p className="mps-empty">Drop audio files above, or straight into music/, to get started</p>
+                <div className="mps-tab-empty">
+                  <FlubberCharacter expression="thinking" size={56} mode="character" showToggle={false} />
+                  <p>No tracks in your library yet — drop audio files above, or straight into music/.</p>
+                  <button type="button" className="mps-empty-action" onClick={() => fileInputRef.current?.click()}>
+                    Browse files
+                  </button>
+                </div>
               )}
               {!engine.loading && hasLibraryTracks && (
                 <ul className="mps-track-list">
@@ -1148,7 +1178,15 @@ export default function MusicPlayerScreen() {
               </button>
             </div>
 
-            {playlistsLoading && <p className="mps-empty">Loading playlists…</p>}
+            {playlistsLoading && (
+              <ul className="mps-playlist-list mps-playlist-list--skeleton" aria-hidden="true">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <li key={i} className="mps-playlist mps-playlist--skeleton">
+                    <Skeleton height="2rem" radius={8} />
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {!playlistsLoading && playlists.length === 0 && (
               <div className="mps-tab-empty">

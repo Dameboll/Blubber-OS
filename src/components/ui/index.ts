@@ -27,3 +27,6 @@ export type { AgentRowProps, AgentRowVariant } from './AgentRow';
 
 export { default as ActivityItem } from './ActivityItem';
 export type { ActivityItemProps } from './ActivityItem';
+
+export { Skeleton, SkeletonText, SkeletonRow } from './Skeleton';
+export type { SkeletonProps, SkeletonTextProps, SkeletonRowProps } from './Skeleton';

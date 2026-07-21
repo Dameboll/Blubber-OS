@@ -13,10 +13,16 @@
  *          which has no dependency-free per-second reading).
  *
  * Node runtime (os.cpus / process.memoryUsage are unavailable on the edge).
+ *
+ * Demo Mode: when the `blubber_demo` cookie is set (see src/lib/demo-mode.ts),
+ * this returns hand-picked plausible vitals instead of reading the real
+ * machine — a demo visitor's laptop isn't the thing being demonstrated.
  */
 
 import os from "node:os";
 import { NextResponse } from "next/server";
+import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { getDemoSystemStats } from "../../../server/demo-dataset";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +46,11 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (isDemoModeRequest(request)) {
+    return NextResponse.json(getDemoSystemStats(), { headers: { "Cache-Control": "no-store" } });
+  }
+
   const a = cpuSnapshot();
   await delay(120);
   const b = cpuSnapshot();

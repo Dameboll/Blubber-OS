@@ -139,6 +139,52 @@
   line-height: 1.5;
 }
 
+/* Real recovery action inside an empty state (Playlist Queue / Library) —
+   same pill shape as the playlist-create button so it reads as one family. */
+.mps-empty-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--core-accent-bright);
+  background: transparent;
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.mps-empty-action:hover {
+  background: oklch(74% 0.2 151 / 14%);
+}
+
+.mps-empty-action:focus-visible {
+  outline: 2px solid var(--core-accent-bright);
+  outline-offset: 2px;
+}
+
+/* Loading skeleton rows — shape-match the real .mps-track row (playcell +
+   art + meta lines + duration) so the swap to real tracks never shifts the
+   list's height. Compound selector (.mps-track.mps-track--skeleton) so this
+   wins over the base .mps-track grid layout regardless of source order. */
+.mps-track.mps-track--skeleton {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.5rem;
+}
+
+.mps-track--skeleton .skeleton-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.mps-playlist--skeleton {
+  padding: 0.15rem 0;
+}
+
 /* ------------------------------------------------------------------ */
 /* Layout: main column (hero + queue) + right rail                     */
 /* ------------------------------------------------------------------ */

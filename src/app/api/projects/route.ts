@@ -10,6 +10,13 @@
  *   <home>\Development\HOBBY\
  *   <home>\Development\general\
  *   <home>\Development\research\
+ *
+ * Demo Mode: when the `blubber_demo` cookie is set (see src/lib/demo-mode.ts),
+ * GET returns the bundled demo dataset's project names under a placeholder
+ * HOBBY root instead of reading the real filesystem -- a demo visitor's
+ * machine has no ACTIVE/HOBBY/general/research folders to list. POST (real
+ * folder creation via scaffoldProject) is intentionally left untouched here —
+ * see this lane's INTEGRATION REPORT for why that still needs a follow-up.
  */
 
 import fs from "node:fs/promises";
@@ -17,6 +24,8 @@ import os from "node:os";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { scaffoldProject } from "../../../server/project-scaffold";
+import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { getDemoProjectRoots } from "../../../server/demo-dataset";
 
 export const runtime = "nodejs";
 
@@ -42,7 +51,11 @@ async function listSubdirectories(root: string): Promise<string[]> {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (isDemoModeRequest(request)) {
+    return NextResponse.json({ roots: getDemoProjectRoots() });
+  }
+
   const devRoot = path.join(os.homedir(), "Development");
 
   const roots: ProjectRoot[] = await Promise.all(

@@ -1,0 +1,295 @@
+/* AcademyScreen — Lane B3. One-window (LAW 2): the screen is height:100%
+   inside AppShell's bounded content area; the header stays fixed and
+   `.academy-screen__body` is the single scroll region beneath it, so the
+   page itself never scrolls at any size. All colors come from the shared
+   CSS custom properties (globals.css) — no new palette introduced. */
+
+.academy-screen {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.academy-screen__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--core-accent-bright);
+}
+
+.academy-screen__header h1 {
+  font-size: 1.4rem;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.academy-screen__header p {
+  margin: 0.15rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.academy-screen__mascot {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.academy-screen__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.academy-panel {
+  flex-shrink: 0;
+}
+
+/* ── Intro panel ─────────────────────────────────────────────────────── */
+
+.academy-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.academy-intro__badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  color: var(--core-accent-bright);
+  border: 1px solid var(--border-glow);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  background: oklch(23% 0.05 151 / 40%);
+}
+
+.academy-intro__copy {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  max-width: 62ch;
+}
+
+/* ── Course outline: locked module teaser cards ──────────────────────── */
+
+.academy-modules {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.academy-module {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: 14px;
+  border: 1px solid var(--border-glow);
+  background: var(--bg-elevated);
+  padding: 0.9rem 1rem 1rem;
+  overflow: hidden;
+}
+
+.academy-module__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.academy-module__index {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  opacity: 0.75;
+}
+
+.academy-module__lock {
+  color: var(--core-accent-bright);
+  opacity: 0.85;
+}
+
+.academy-module__title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: var(--text-primary);
+  /* Locked content: the title stays legibly readable (it's the teaser) while
+     the blurb below it is the part that's genuinely obscured. */
+}
+
+.academy-module__blurb {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  filter: blur(3px);
+  user-select: none;
+  opacity: 0.75;
+}
+
+.academy-module__tag {
+  align-self: flex-start;
+  margin-top: 0.15rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border: 1px solid oklch(55% 0.05 155 / 35%);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  opacity: 0.85;
+}
+
+.academy-module--locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 55%, oklch(10% 0.02 155 / 55%) 100%);
+}
+
+/* ── Waitlist form ────────────────────────────────────────────────────── */
+
+.academy-waitlist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.academy-waitlist__copy {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.academy-waitlist__row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.academy-waitlist__label-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.academy-waitlist__input-wrap {
+  flex: 1 1 240px;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 10px;
+  border: 1px solid oklch(58% 0.09 155 / 40%);
+  background: oklch(12% 0.02 155 / 80%);
+  padding: 0 0.75rem;
+}
+
+.academy-waitlist__input-icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.academy-waitlist__input {
+  flex: 1;
+  width: 100%;
+  padding: 0.6rem 0;
+  border: none;
+  background: transparent;
+  color: oklch(94% 0.02 150);
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.academy-waitlist__input::placeholder {
+  color: oklch(60% 0.03 150 / 55%);
+}
+
+.academy-waitlist__input:disabled {
+  opacity: 0.6;
+}
+
+.academy-waitlist__submit {
+  flex-shrink: 0;
+  padding: 0.6rem 1.15rem;
+  border-radius: 10px;
+  border: 1px solid oklch(80% 0.19 145 / 55%);
+  background: linear-gradient(180deg, oklch(72% 0.22 145 / 42%), oklch(58% 0.2 145 / 20%));
+  color: var(--core-accent-bright);
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: box-shadow 150ms ease, transform 120ms ease, opacity 150ms ease;
+}
+
+.academy-waitlist__submit:hover:not(:disabled) {
+  box-shadow: 0 0 20px oklch(75% 0.2 145 / 34%);
+}
+
+.academy-waitlist__submit:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.academy-waitlist__submit:disabled {
+  opacity: 0.55;
+  cursor: default;
+  box-shadow: none;
+}
+
+.academy-waitlist__status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.academy-waitlist__status--ok {
+  color: var(--core-accent-bright);
+}
+
+.academy-waitlist__status--error {
+  color: var(--accent-danger);
+}
+
+@media (max-width: 900px) {
+  .academy-screen {
+    padding: 1.1rem;
+    gap: 0.9rem;
+  }
+
+  .academy-screen__mascot {
+    display: none;
+  }
+
+  .academy-modules {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .academy-waitlist__submit {
+    width: 100%;
+  }
+}

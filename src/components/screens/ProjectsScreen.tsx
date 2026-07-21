@@ -63,7 +63,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import FlubberCharacter from '../FlubberCharacter';
-import { Panel, StatChip } from '../ui';
+import { Panel, Skeleton, SkeletonText, StatChip } from '../ui';
 import { useSession } from '../../context/SessionProvider';
 import { humanizeSlug } from '../../lib/humanize';
 import { assignPlates, platePath, type ProjectPlate } from '../../lib/project-plates';
@@ -171,6 +171,52 @@ interface ApiProjectSummary {
 // Project list row — same real facts, list layout.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// "All Projects" grid empty state — real, transient (unlike the honest
+// permanent-disclaimer notes in the right rail below), so it earns the full
+// visual + explanation + action treatment: a real folder-scan turned up
+// nothing, or a search matched nothing, either of which the user can act on
+// right here instead of reading a dead-end sentence.
+// ---------------------------------------------------------------------------
+
+interface ProjectsGridEmptyStateProps {
+  isSearching: boolean;
+  onNewProject: () => void;
+  onClearSearch: () => void;
+}
+
+function ProjectsGridEmptyState({ isSearching, onNewProject, onClearSearch }: ProjectsGridEmptyStateProps) {
+  return (
+    <div className="projects-empty">
+      <span className="projects-empty__icon" aria-hidden="true">
+        <FolderKanban size={20} />
+      </span>
+      <p className="projects-empty__title">
+        {isSearching ? 'No projects match your search' : 'No project folders found'}
+      </p>
+      <p className="projects-empty__hint">
+        {isSearching
+          ? 'Try a different name, or clear the search to see everything.'
+          : 'Check that ACTIVE / HOBBY / general / research exist under Development — or start a new one.'}
+      </p>
+      <button
+        type="button"
+        className="projects-screen__pill-btn"
+        onClick={isSearching ? onClearSearch : onNewProject}
+      >
+        {isSearching ? (
+          'Clear search'
+        ) : (
+          <>
+            <Plus size={13} aria-hidden="true" />
+            New Project
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
 interface ProjectListRowProps {
   project: ProjectView;
   selected: boolean;
@@ -205,6 +251,78 @@ function ProjectListRow({ project, selected, now, onSelect, plate }: ProjectList
       <span className="project-list-row__meta">{facts.created}</span>
       <span className="project-list-row__meta">{facts.lastTouched}</span>
     </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Loading skeleton — shape-matches the real hero + grid + templates layout
+// below (thumb rect, title/desc lines, stat-row line, per real ProjectCard's
+// own DOM shape) so the first paint reads as "your projects are loading",
+// not a generic spinner, and swaps to real content with no layout jump.
+// ---------------------------------------------------------------------------
+
+function ProjectCardSkeleton() {
+  return (
+    <div className="project-card project-card--skeleton" aria-hidden="true">
+      <div className="project-card__portrait">
+        <Skeleton width={64} height={64} radius={12} />
+      </div>
+      <Skeleton height="0.92rem" width="70%" radius={4} />
+      <Skeleton height="0.76rem" width="45%" radius={4} />
+      <div className="project-card__stat-row">
+        <Skeleton height="0.7rem" width="3.5rem" radius={4} />
+        <Skeleton height="0.7rem" width="3rem" radius={4} />
+      </div>
+    </div>
+  );
+}
+
+function ProjectsScreenSkeleton({ classes }: { classes: string }) {
+  return (
+    <div className={classes}>
+      <div className="projects-screen__main">
+        <div className="projects-screen__hero">
+          <div className="projects-screen__hero-main">
+            <div className="projects-screen__hero-title-row">
+              <span className="projects-screen__hero-icon" aria-hidden="true">
+                <FolderKanban size={18} />
+              </span>
+              <div>
+                <h1 className="projects-screen__hero-title">Projects</h1>
+                <p className="projects-screen__hero-sub">Scanning your project folders&hellip;</p>
+              </div>
+            </div>
+            <div className="projects-screen__hero-stats" data-flubber-avoid="true">
+              <Skeleton width={110} height={40} radius={10} />
+              <Skeleton width={130} height={40} radius={10} />
+            </div>
+          </div>
+          <div className="projects-screen__hero-mascot" aria-hidden="true">
+            <FlubberCharacter expression="thinking" size={168} mode="character" showToggle={false} />
+          </div>
+        </div>
+
+        <Panel accent title="All Projects" className="projects-panel">
+          <div className="projects-screen__grid">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <ProjectCardSkeleton key={i} />
+            ))}
+          </div>
+        </Panel>
+      </div>
+
+      <div className="projects-screen__side">
+        <Panel accent title="Project Overview" className="projects-panel" avoidRoam>
+          <SkeletonText lines={4} lastLineWidth="50%" />
+        </Panel>
+        <Panel accent title="Active Agents" className="projects-panel">
+          <SkeletonText lines={2} lastLineWidth="60%" />
+        </Panel>
+        <Panel accent title="Recent Activity" className="projects-panel">
+          <SkeletonText lines={2} lastLineWidth="60%" />
+        </Panel>
+      </div>
+    </div>
   );
 }
 
@@ -702,16 +820,7 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
   const classes = ['projects-screen', className ?? ''].filter(Boolean).join(' ');
 
   if (fetchState === 'loading') {
-    return (
-      <div className={classes}>
-        <Panel accent title="Projects" className="projects-panel">
-          <div className="projects-screen__status-body">
-            <FlubberCharacter expression="thinking" size={72} mode="character" showToggle={false} />
-            <p>Scanning your project folders…</p>
-          </div>
-        </Panel>
-      </div>
-    );
+    return <ProjectsScreenSkeleton classes={classes} />;
   }
 
   if (fetchState === 'error') {
@@ -826,11 +935,11 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
           }
         >
           {visibleProjects.length === 0 ? (
-            <p className="projects-screen__empty-note">
-              {allProjects.length === 0
-                ? 'No project folders found. Check that ACTIVE / HOBBY / general / research exist under Development.'
-                : 'No projects match your search.'}
-            </p>
+            <ProjectsGridEmptyState
+              isSearching={isSearching}
+              onNewProject={() => openNewProject()}
+              onClearSearch={() => setQuery('')}
+            />
           ) : viewMode === 'grid' ? (
             <div className="projects-screen__grid">
               {visibleProjects.map((project) => (

@@ -34,6 +34,7 @@ import {
   MessageCircle,
   Moon,
   PawPrint,
+  RefreshCw,
   Sandwich,
   ShowerHead,
   Sparkles,
@@ -42,7 +43,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import FlubberCharacter, { type FlubberExpression } from '../FlubberCharacter';
-import { Panel, ProgressBar } from '../ui';
+import { Panel, ProgressBar, Skeleton } from '../ui';
 import { useFlubberBrain, useFlubberBrainApi } from '../../hooks/useFlubberBrain';
 import type { FlubberSlotHandle } from '../../lib/flubber3d/host';
 import type { GestureName } from '../../lib/flubber3d/motion';
@@ -198,8 +199,12 @@ function clampPercent(value: number): number {
   return Math.min(100, Math.max(0, value));
 }
 
-/** Honest loading / error state shown until real pet data arrives. */
-function PetStatusNotice({ status }: { status: LoadStatus }) {
+/** Honest loading / error state shown until real pet data arrives. Loading
+ *  pairs the mascot with a shape-matching skeleton of the needs/level rail
+ *  (rather than a bare "loading" line); error adds a real recovery action —
+ *  the 60s poll already retries on its own, but a manual retry gives the
+ *  user something to DO right now instead of just waiting it out. */
+function PetStatusNotice({ status, onRetry }: { status: LoadStatus; onRetry: () => void }) {
   const isError = status === 'error';
   return (
     <Panel accent className="pet-panel pet-notice">
@@ -214,12 +219,75 @@ function PetStatusNotice({ status }: { status: LoadStatus }) {
           <span className="section-label">{isError ? 'Pet unavailable' : 'Waking Blubber'}</span>
           <p>
             {isError
-              ? 'Could not reach the pet service. It will retry automatically.'
+              ? 'Could not reach the pet service. It will keep retrying automatically.'
               : "Loading Blubber's live state…"}
           </p>
+          {isError && (
+            <button type="button" className="pet-notice__retry" onClick={onRetry}>
+              <RefreshCw size={12} aria-hidden="true" />
+              Retry now
+            </button>
+          )}
         </div>
       </div>
+      {!isError && (
+        <div className="pet-notice__skeleton" aria-hidden="true">
+          {NEED_DEFS.map((need) => (
+            <Skeleton key={need.key} height="0.8rem" radius={999} />
+          ))}
+        </div>
+      )}
     </Panel>
+  );
+}
+
+/** Shape-matches a QuestRow (title + xp line, progress track, footer line) —
+ *  used everywhere a quest list is still loading (Care tab strip, Quest
+ *  Board tab) instead of a bare "Loading quests…" line. */
+function QuestRowsSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <div className="pet-quest-skeleton" aria-hidden="true">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="pet-quest-skeleton__row">
+          <Skeleton height="0.75rem" width="55%" radius={4} />
+          <Skeleton height="0.45rem" width="100%" radius={999} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Shape-matches the Level &amp; XP panel (badge + streak line, XP bar, care
+ *  stars row) while /api/quests hasn't resolved yet. */
+function LevelPanelSkeleton() {
+  return (
+    <div className="pet-level-skeleton" aria-hidden="true">
+      <div className="pet-level-skeleton__top">
+        <Skeleton width={52} height={22} radius={999} />
+        <Skeleton width={96} height="0.7rem" radius={4} />
+      </div>
+      <Skeleton height="0.6rem" radius={999} />
+      <Skeleton height="0.7rem" width="70%" radius={4} />
+    </div>
+  );
+}
+
+/** Shape-matches PetStats (pedestal circle + a real stat row list). */
+function PetStatsSkeleton() {
+  return (
+    <div className="pet-stats pet-stats--skeleton" aria-hidden="true">
+      <div className="pet-stats__pedestal">
+        <Skeleton circle width={96} height={96} />
+      </div>
+      <div className="pet-stats__list">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="pet-stats-skeleton__row">
+            <Skeleton height="0.75rem" width="40%" radius={4} />
+            <Skeleton height="0.9rem" width="22%" radius={4} />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -231,6 +299,9 @@ export default function VirtualPetScreen({ className }: VirtualPetScreenProps) {
   const [activeTab, setActiveTab] = useState<PetTab>('care');
   const [pet, setPet] = useState<PetApiState | null>(null);
   const [status, setStatus] = useState<LoadStatus>('loading');
+  // Bumped by PetStatusNotice's manual "Retry now" action to force an
+  // immediate refetch instead of waiting out the rest of the 60s poll.
+  const [petRetryKey, setPetRetryKey] = useState(0);
   const [quest, setQuest] = useState<QuestState | null>(null);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [pulseKey, setPulseKey] = useState(0);
@@ -285,6 +356,8 @@ export default function VirtualPetScreen({ className }: VirtualPetScreenProps) {
   }, []);
 
   // Fetch live pet state on mount + every 60s so real-time decay is visible.
+  // Also refires on a manual Retry (petRetryKey) without waiting for the rest
+  // of the 60s poll interval.
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -308,7 +381,12 @@ export default function VirtualPetScreen({ className }: VirtualPetScreenProps) {
     load();
     const timer = setInterval(load, PET_REFRESH_MS);
     return () => { cancelled = true; clearInterval(timer); };
-  }, [syncBrainPet]);
+  }, [syncBrainPet, petRetryKey]);
+
+  const retryPet = useCallback(() => {
+    setStatus((prev) => (prev === 'error' ? 'loading' : prev));
+    setPetRetryKey((k) => k + 1);
+  }, []);
 
   // Fetch live quest state (real metrics + tiered chains) on mount + every 60s.
   useEffect(() => {
@@ -490,7 +568,7 @@ export default function VirtualPetScreen({ className }: VirtualPetScreenProps) {
           </div>
         </>
       ) : (
-        <p className="pet-level__loading">Loading quest progress…</p>
+        <LevelPanelSkeleton />
       )}
     </Panel>
   );
@@ -595,7 +673,7 @@ export default function VirtualPetScreen({ className }: VirtualPetScreenProps) {
             {quest ? (
               <QuestPanel quests={quest.quests} variant="strip" claimingId={claimingId} onClaim={handleClaim} />
             ) : (
-              <p className="pet-level__loading">Loading quests…</p>
+              <QuestRowsSkeleton count={2} />
             )}
           </Panel>
 
@@ -610,7 +688,7 @@ export default function VirtualPetScreen({ className }: VirtualPetScreenProps) {
       {quest ? (
         <QuestPanel quests={quest.quests} variant="board" claimingId={claimingId} onClaim={handleClaim} />
       ) : (
-        <p className="pet-level__loading">Loading quests…</p>
+        <QuestRowsSkeleton count={5} />
       )}
     </Panel>
   );
@@ -620,7 +698,7 @@ export default function VirtualPetScreen({ className }: VirtualPetScreenProps) {
       {quest ? (
         <PetStats quest={quest} expression={heroExpression} pulseKey={pulseKey + brain.pulseKey} />
       ) : (
-        <p className="pet-level__loading">Loading stats…</p>
+        <PetStatsSkeleton />
       )}
     </Panel>
   );
@@ -640,7 +718,7 @@ export default function VirtualPetScreen({ className }: VirtualPetScreenProps) {
   const renderTab = () => {
     switch (activeTab) {
       case 'care':
-        return pet ? renderCare(pet) : <PetStatusNotice status={status} />;
+        return pet ? renderCare(pet) : <PetStatusNotice status={status} onRetry={retryPet} />;
       case 'quests':
         return renderQuests();
       case 'stats':

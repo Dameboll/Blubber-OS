@@ -1,0 +1,49 @@
+/* Skeleton — shared shimmer primitive. Gradient rides the same brand-green
+   accent tint every screen's one-off skeleton already used (AgentsScreen's
+   .acc-skel, AnalyticsScreen's .analytics-skel) so this reads as "the app's
+   loading state" everywhere, not a foreign component. */
+
+.skeleton {
+  display: inline-block;
+  background: linear-gradient(
+    100deg,
+    var(--bg-elevated) 30%,
+    oklch(87% 0.29 142 / 16%) 50%,
+    var(--bg-elevated) 70%
+  );
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 140% 0; }
+  100% { background-position: -40% 0; }
+}
+
+.skeleton-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.skeleton-row__lines {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

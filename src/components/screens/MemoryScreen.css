@@ -86,6 +86,39 @@
   font-style: italic;
 }
 
+/* Error state — cause + a real recovery action, never a dead-end line. */
+.memory-panel__error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.memory-panel__retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: var(--core-accent-bright);
+  background: oklch(60% 0.14 150 / 12%);
+  border: 1px solid var(--border-glow);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.memory-panel__retry:hover {
+  background: oklch(60% 0.14 150 / 20%);
+}
+
+.memory-panel__retry:focus-visible {
+  outline: 2px solid var(--core-accent-bright);
+  outline-offset: 2px;
+}
+
 .memory-panel__project,
 .memory-panel__project-tag {
   font-family: var(--font-mono);

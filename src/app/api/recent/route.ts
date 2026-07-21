@@ -16,10 +16,17 @@
 //
 // Same plumbing precedent as /api/weekly + /api/top-agents: ensureIndexed()
 // throttled background refresh, then serve the persisted SQLite snapshot.
+//
+// Demo Mode: when the `blubber_demo` cookie is set (see src/lib/demo-mode.ts),
+// this returns a reshaped slice of the bundled demo dataset instead of
+// touching the indexer/SQLite at all -- a demo visitor has no real ~/.claude
+// history to index.
 
 import { NextResponse } from "next/server";
 import { ensureIndexed } from "../../../server/log-indexer";
 import { getRecentEvents } from "../../../server/db";
+import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { getDemoRecentEvents } from "../../../server/demo-dataset";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -29,13 +36,16 @@ const MAX_LIMIT = 40;
 
 export async function GET(request: Request) {
   try {
-    ensureIndexed();
-
     const { searchParams } = new URL(request.url);
     const raw = Number.parseInt(searchParams.get("limit") ?? "", 10);
     const limit = Number.isFinite(raw) ? Math.min(Math.max(raw, 1), MAX_LIMIT) : DEFAULT_LIMIT;
-
     const project = searchParams.get("project")?.trim() || null;
+
+    if (isDemoModeRequest(request)) {
+      return NextResponse.json({ events: getDemoRecentEvents(limit, project) });
+    }
+
+    ensureIndexed();
     const events = getRecentEvents(limit, project);
     return NextResponse.json({ events });
   } catch (err) {

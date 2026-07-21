@@ -112,6 +112,60 @@
   line-height: 1.5;
 }
 
+/* "All Projects" grid empty state — a real, actionable dead-end (no folders
+   found / no search match), so unlike the honest permanent-disclaimer notes
+   above it earns a visual + explanation + action, matching the app-wide
+   EmptyState shape (AnalyticsScreen's .analytics-empty). */
+.projects-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.4rem;
+  min-height: 12rem;
+  padding: 1.5rem 1rem;
+}
+
+.projects-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+  color: var(--core-accent-bright);
+  background: oklch(60% 0.14 150 / 12%);
+  border: 1px solid var(--border-glow);
+  margin-bottom: 0.2rem;
+}
+
+.projects-empty__title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.projects-empty__hint {
+  margin: 0 0 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  max-width: 34ch;
+}
+
+/* Loading skeleton cards — same shape/spacing as a real .project-card so the
+   swap to live data never shifts the grid. */
+.project-card--skeleton {
+  cursor: default;
+}
+
+.project-card--skeleton:hover {
+  transform: none;
+  border-color: oklch(70% 0.19 155 / 16%);
+}
+
 .projects-screen__hint {
   display: block;
   margin-top: 0.25rem;

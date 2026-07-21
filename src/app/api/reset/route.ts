@@ -16,6 +16,9 @@ import { resetQuests } from "../../../server/quest-store";
 import { liveUsageWatcher } from "../../../server/live-usage-watcher";
 import * as spawnedStore from "../../../server/spawned-store";
 import * as brainStore from "../../../server/brain-store";
+import { resetOnboardingState } from "../../../server/onboarding-store";
+import { resetIntroState } from "../../../server/intro-store";
+import { resetKitInstallState } from "../../../server/kit-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +35,12 @@ export async function POST() {
     resetQuests();
     spawnedStore.clear();
     brainStore.reset();
+    // First-run gates + kit-install record — master reset puts the machine
+    // back to "fresh out the box", which includes replaying onboarding/intro
+    // and forgetting the starter-kit install, not just the usage numbers.
+    resetOnboardingState();
+    resetIntroState();
+    resetKitInstallState();
     return NextResponse.json({ ok: true, baseline });
   } catch (err) {
     console.error("[api/reset] reset failed:", err);

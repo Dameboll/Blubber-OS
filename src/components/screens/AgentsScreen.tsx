@@ -1572,6 +1572,27 @@ export default function AgentsScreen({ className }: AgentsScreenProps) {
     );
   }
 
+  // Distinct from rosterState's error above: the spawned-agent fetch failed
+  // while the roster loaded fine. Without this, a failed GET /api/spawned
+  // silently rendered as "zero agents spawned" (spawned stays its initial []
+  // and the screen falls straight through to the idle-pool view) — a real
+  // fetch failure with no error signal at all. Surface it explicitly instead.
+  if (spawnedState === 'error') {
+    return (
+      <div className={classes}>
+        <Panel accent title="Agent Control Center" className="acc-hero-panel">
+          <div className="acc-error">
+            <Flubber3D expression="worried" size={96} tier="mid" />
+            <p>Couldn&rsquo;t load your spawned agents.</p>
+            <button type="button" className="acc-spawn-btn" onClick={() => window.location.reload()}>
+              Retry
+            </button>
+          </div>
+        </Panel>
+      </div>
+    );
+  }
+
   const poolLine =
     dormantCount > 0
       ? `${dormantCount} agent${dormantCount === 1 ? '' : 's'} resting in the pool. Ask Blubber up top to put one to work.`

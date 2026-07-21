@@ -25,9 +25,12 @@
  * context). Per-panel floating slime bubbles stay (CSS-based).
  */
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import AppShell, { type NavId } from '../components/AppShell';
 import AmbientGlow from '../components/AmbientGlow';
+import DemoBadge from '../components/DemoBadge';
+import IntroCinematic from '../components/IntroCinematic';
+import OnboardingOverlay from '../components/onboarding/OnboardingOverlay';
 import { FlubberBrainProvider } from '../components/FlubberBrainProvider';
 import DashboardScreen from '../components/screens/DashboardScreen';
 import AgentsScreen from '../components/screens/AgentsScreen';
@@ -36,6 +39,7 @@ import MemoryScreen from '../components/screens/MemoryScreen';
 import AnalyticsScreen from '../components/screens/AnalyticsScreen';
 import MusicPlayerScreen from '../components/screens/MusicPlayerScreen';
 import VirtualPetScreen from '../components/screens/VirtualPetScreen';
+import AcademyScreen from '../components/screens/AcademyScreen';
 import SettingsScreen from '../components/screens/SettingsScreen';
 import './page.css';
 
@@ -44,6 +48,29 @@ import './page.css';
 
 export default function Home() {
   const [activeNavId, setActiveNavId] = useState<NavId>('dashboard');
+
+  // First-run gate (Lane B1). `null` = still checking (render nothing under
+  // the intro cinematic rather than flashing the real app or the overlay
+  // before we actually know); `false` = show OnboardingOverlay in place of
+  // the app; `true` = render the app normally. Fails open (treats as seen)
+  // on a fetch error so a broken check can never trap a user behind a
+  // permanently blank screen.
+  const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/onboarding')
+      .then((res) => res.json() as Promise<{ seen: boolean }>)
+      .then((data) => {
+        if (!cancelled) setOnboardingSeen(Boolean(data?.seen));
+      })
+      .catch(() => {
+        if (!cancelled) setOnboardingSeen(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // One real screen component per nav id -- see file header. Kept as one
   // map so AppShell's own SCREENS[activeNavId] lookup stays a single line.
@@ -59,27 +86,50 @@ export default function Home() {
       analytics: <AnalyticsScreen />,
       music: <MusicPlayerScreen />,
       pet: <VirtualPetScreen />,
+      academy: <AcademyScreen />,
       settings: <SettingsScreen />,
     }),
     [],
   );
 
-  return (
-    <>
-      {/* Living-green ambient layer: fixed 2D canvas at z-index:-1, painted
-          behind the transparent app-shell. Decorative + pointer-events:none;
-          self-manages its rAF loop (paused when hidden/off-screen) and renders
-          nothing under prefers-reduced-motion. */}
-      <AmbientGlow />
-      {/* One brain wraps the whole app so terminal/music/nav/pet events reach
-          every mood-synced Blubber, cross-screen. (The old click-drag roaming
-          pet was removed — the main Blubber is the star, living in each
-          screen's hero, not a draggable overlay.) */}
-      <FlubberBrainProvider activeNavId={activeNavId}>
-        <AppShell activeNavId={activeNavId} onNavChange={setActiveNavId}>
-          {SCREENS[activeNavId]}
-        </AppShell>
-      </FlubberBrainProvider>
-    </>
-  );
+  let content: ReactNode = null;
+  if (onboardingSeen === false) {
+    // First run on this machine — the overlay replaces the app entirely
+    // until it marks itself seen (server-side) and calls onComplete.
+    content = <OnboardingOverlay onComplete={() => setOnboardingSeen(true)} />;
+  } else if (onboardingSeen === true) {
+    content = (
+      <>
+        {/* Living-green ambient layer: fixed 2D canvas at z-index:-1, painted
+            behind the transparent app-shell. Decorative + pointer-events:none;
+            self-manages its rAF loop (paused when hidden/off-screen) and renders
+            nothing under prefers-reduced-motion. */}
+        <AmbientGlow />
+        {/* Fixed "Demo Mode" badge — self-manages visibility via isDemoModeActive(),
+            renders nothing unless ?demo=1 (or a previously persisted demo choice)
+            is active. See src/lib/demo-mode.ts. */}
+        <DemoBadge />
+        {/* One brain wraps the whole app so terminal/music/nav/pet events reach
+            every mood-synced Blubber, cross-screen. (The old click-drag roaming
+            pet was removed — the main Blubber is the star, living in each
+            screen's hero, not a draggable overlay.) */}
+        <FlubberBrainProvider activeNavId={activeNavId}>
+          <AppShell activeNavId={activeNavId} onNavChange={setActiveNavId}>
+            {SCREENS[activeNavId]}
+          </AppShell>
+        </FlubberBrainProvider>
+      </>
+    );
+  }
+  // onboardingSeen === null: content stays null while the check is in flight —
+  // IntroCinematic below still mounts/paints over it as normal.
+
+  // IntroCinematic wraps everything: it renders `content` immediately underneath
+  // (even while `content` is null / mid-onboarding-check) and only paints its
+  // one-time full-viewport cinematic overlay on top when the intro hasn't
+  // played yet on this machine — see that component's own header for the
+  // exact sequencing. Net order for a brand-new machine: intro cinematic
+  // plays first (on top), then once it clears, OnboardingOverlay takes over
+  // underneath if onboarding hasn't been seen either.
+  return <IntroCinematic>{content}</IntroCinematic>;
 }

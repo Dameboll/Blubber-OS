@@ -1,0 +1,123 @@
+{
+  "demoMode": true,
+  "generatedAt": "2026-07-21T00:00:00.000Z",
+  "projects": [
+    {
+      "id": "demo-proj-01",
+      "name": "personal-blog",
+      "description": "A markdown-based personal blog with a custom static site generator and RSS feed.",
+      "stack": "Next.js",
+      "lastModifiedMinutesAgo": 12,
+      "status": "active"
+    },
+    {
+      "id": "demo-proj-02",
+      "name": "api-experiment",
+      "description": "Sandbox for testing a lightweight REST wrapper around a public weather API.",
+      "stack": "Node.js",
+      "lastModifiedMinutesAgo": 47,
+      "status": "active"
+    },
+    {
+      "id": "demo-proj-03",
+      "name": "todo-app",
+      "description": "A minimal offline-first to-do list with local storage sync and drag-to-reorder.",
+      "stack": "React",
+      "lastModifiedMinutesAgo": 95,
+      "status": "active"
+    },
+    {
+      "id": "demo-proj-04",
+      "name": "recipe-finder",
+      "description": "Search tool that matches pantry ingredients against a recipe dataset.",
+      "stack": "Python",
+      "lastModifiedMinutesAgo": 180,
+      "status": "idle"
+    },
+    {
+      "id": "demo-proj-05",
+      "name": "expense-tracker",
+      "description": "Simple budgeting app with monthly categories and a spending chart.",
+      "stack": "Vue",
+      "lastModifiedMinutesAgo": 340,
+      "status": "idle"
+    },
+    {
+      "id": "demo-proj-06",
+      "name": "cli-toolbox",
+      "description": "A grab-bag of small command-line utilities for file renaming and batch conversion.",
+      "stack": "Go",
+      "lastModifiedMinutesAgo": 620,
+      "status": "idle"
+    },
+    {
+      "id": "demo-proj-07",
+      "name": "chat-widget",
+      "description": "Embeddable chat widget component with typing indicators and message history.",
+      "stack": "TypeScript",
+      "lastModifiedMinutesAgo": 1080,
+      "status": "idle"
+    },
+    {
+      "id": "demo-proj-08",
+      "name": "image-resizer",
+      "description": "Drag-and-drop batch image resizing tool with format conversion.",
+      "stack": "Python",
+      "lastModifiedMinutesAgo": 1620,
+      "status": "archived"
+    },
+    {
+      "id": "demo-proj-09",
+      "name": "habit-tracker",
+      "description": "Daily habit tracker with streak counters and a simple calendar heatmap.",
+      "stack": "React Native",
+      "lastModifiedMinutesAgo": 2200,
+      "status": "archived"
+    },
+    {
+      "id": "demo-proj-10",
+      "name": "link-shortener",
+      "description": "A tiny URL shortener with click analytics and QR code generation.",
+      "stack": "Express",
+      "lastModifiedMinutesAgo": 2950,
+      "status": "archived"
+    }
+  ],
+  "activity": [
+    { "id": "demo-act-01", "agent": "Scout", "action": "reviewed code", "project": "personal-blog", "summary": "Checked the new RSS feed generator for edge cases on empty post lists.", "minutesAgo": 4 },
+    { "id": "demo-act-02", "agent": "Patch", "action": "fixed a bug", "project": "todo-app", "summary": "Resolved a drag-to-reorder glitch that dropped items on fast swipes.", "minutesAgo": 18 },
+    { "id": "demo-act-03", "agent": "Scribe", "action": "wrote tests", "project": "api-experiment", "summary": "Added coverage for the weather API's rate-limit retry logic.", "minutesAgo": 33 },
+    { "id": "demo-act-04", "agent": "Scout", "action": "refactored a module", "project": "cli-toolbox", "summary": "Split the batch-rename utility into smaller, testable functions.", "minutesAgo": 51 },
+    { "id": "demo-act-05", "agent": "Patch", "action": "fixed a bug", "project": "expense-tracker", "summary": "Corrected a rounding error in the monthly spending chart totals.", "minutesAgo": 76 },
+    { "id": "demo-act-06", "agent": "Herald", "action": "updated documentation", "project": "chat-widget", "summary": "Documented the new typing-indicator prop and usage examples.", "minutesAgo": 102 },
+    { "id": "demo-act-07", "agent": "Scribe", "action": "wrote tests", "project": "recipe-finder", "summary": "Added unit tests for ingredient-matching against partial pantry lists.", "minutesAgo": 129 },
+    { "id": "demo-act-08", "agent": "Scout", "action": "reviewed code", "project": "habit-tracker", "summary": "Flagged a potential memory leak in the streak-calendar re-render.", "minutesAgo": 158 },
+    { "id": "demo-act-09", "agent": "Patch", "action": "fixed a bug", "project": "link-shortener", "summary": "Fixed a collision case where two short codes could be generated identically.", "minutesAgo": 191 },
+    { "id": "demo-act-10", "agent": "Herald", "action": "updated documentation", "project": "personal-blog", "summary": "Rewrote the setup guide for the static site generator's config file.", "minutesAgo": 224 },
+    { "id": "demo-act-11", "agent": "Scout", "action": "refactored a module", "project": "image-resizer", "summary": "Consolidated duplicate format-conversion logic into a shared helper.", "minutesAgo": 265 },
+    { "id": "demo-act-12", "agent": "Scribe", "action": "wrote tests", "project": "todo-app", "summary": "Added integration tests for offline sync after reconnecting.", "minutesAgo": 302 },
+    { "id": "demo-act-13", "agent": "Patch", "action": "fixed a bug", "project": "chat-widget", "summary": "Patched a race condition in message history loading on slow networks.", "minutesAgo": 345 },
+    { "id": "demo-act-14", "agent": "Scout", "action": "reviewed code", "project": "expense-tracker", "summary": "Suggested extracting the category color logic into a shared constant.", "minutesAgo": 388 },
+    { "id": "demo-act-15", "agent": "Herald", "action": "updated documentation", "project": "cli-toolbox", "summary": "Added usage examples for the new batch-conversion flag.", "minutesAgo": 430 },
+    { "id": "demo-act-16", "agent": "Scribe", "action": "wrote tests", "project": "habit-tracker", "summary": "Covered streak-reset behavior when a day is skipped.", "minutesAgo": 475 },
+    { "id": "demo-act-17", "agent": "Patch", "action": "fixed a bug", "project": "recipe-finder", "summary": "Fixed incorrect ingredient substitution suggestions for dairy-free searches.", "minutesAgo": 520 },
+    { "id": "demo-act-18", "agent": "Scout", "action": "refactored a module", "project": "link-shortener", "summary": "Simplified the click-analytics aggregation query.", "minutesAgo": 566 },
+    { "id": "demo-act-19", "agent": "Herald", "action": "updated documentation", "project": "api-experiment", "summary": "Added a quickstart section for the weather API wrapper.", "minutesAgo": 612 },
+    { "id": "demo-act-20", "agent": "Scribe", "action": "wrote tests", "project": "image-resizer", "summary": "Added tests for corrupted-file handling during batch resize.", "minutesAgo": 658 }
+  ],
+  "topAgents": [
+    { "id": "demo-agent-01", "name": "Scout", "taskCount": 41, "specialty": "Code review & refactoring" },
+    { "id": "demo-agent-02", "name": "Patch", "taskCount": 36, "specialty": "Bug fixing" },
+    { "id": "demo-agent-03", "name": "Scribe", "taskCount": 29, "specialty": "Test writing" },
+    { "id": "demo-agent-04", "name": "Herald", "taskCount": 22, "specialty": "Documentation" },
+    { "id": "demo-agent-05", "name": "Wren", "taskCount": 14, "specialty": "Research & exploration" },
+    { "id": "demo-agent-06", "name": "Ledger", "taskCount": 9, "specialty": "Data & analytics" }
+  ],
+  "stats": {
+    "sessionsThisWeek": 23,
+    "tasksCompletedThisWeek": 87,
+    "currentStreakDays": 6,
+    "tokenUsagePercent": 34
+  },
+  "weeklyRecap": "Good week. You logged 23 sessions and closed out 87 tasks across 10 projects, with the todo-app and personal-blog getting the most love. Six days running now, keep the streak alive."
+}

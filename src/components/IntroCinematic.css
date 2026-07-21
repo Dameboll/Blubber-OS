@@ -1,0 +1,91 @@
+/**
+ * IntroCinematic.css — the one-time forming-up cinematic overlay.
+ *
+ * Fixed, full-viewport, pinned above everything else in the app (including
+ * HandoffOverlay's 200 — see that file's own header comment on why 200 was
+ * "well above every pill/panel/modal"). The intro plays at cold boot before
+ * any of that exists on screen anyway, but is pinned this high so a later
+ * addition elsewhere in the app can never accidentally bury it.
+ */
+
+.intro-cinematic {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.intro-cinematic__bloom {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(
+    circle at 50% 46%,
+    oklch(74% 0.2 151 / 32%) 0%,
+    oklch(74% 0.2 151 / 10%) 32%,
+    transparent 68%
+  );
+  pointer-events: none;
+}
+
+.intro-cinematic__center {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1rem, 3vw, 2rem);
+}
+
+.intro-cinematic__stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 48px oklch(74% 0.2 151 / 35%));
+}
+
+.intro-cinematic__wordmark {
+  width: min(56vw, 320px);
+  height: auto;
+  display: block;
+}
+
+.intro-cinematic__skip {
+  position: absolute;
+  z-index: 1;
+  bottom: clamp(1.25rem, 4vh, 2.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: none;
+  border: 1px solid oklch(87% 0.29 142 / 25%);
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.intro-cinematic__skip:hover,
+.intro-cinematic__skip:focus-visible {
+  color: var(--core-accent-bright);
+  border-color: oklch(87% 0.29 142 / 55%);
+}
+
+/* Belt-and-suspenders: the component itself never renders this overlay for
+   reduced-motion visitors (see IntroCinematic.tsx), but if it somehow did,
+   the global reduced-motion rule in globals.css already kills the GSAP
+   tweens' durations — this just also removes the overlay from the layout
+   so it can never sit stuck at opacity:1 over the app. */
+@media (prefers-reduced-motion: reduce) {
+  .intro-cinematic {
+    display: none;
+  }
+}

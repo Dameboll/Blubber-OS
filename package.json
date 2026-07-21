@@ -2,12 +2,18 @@
   "name": "blubber-os",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "node server.js",
     "start": "cross-env NODE_ENV=production NEXT_DIST_DIR=.next-build node server.js",
     "build": "cross-env NEXT_DIST_DIR=.next-build next build",
     "typecheck": "tsc --noEmit",
-    "verify:assets": "node scripts/verify-assets.mjs"
+    "verify:assets": "node scripts/verify-assets.mjs",
+    "postinstall": "node scripts/electron-rebuild.mjs",
+    "rebuild:electron": "node scripts/electron-rebuild.mjs",
+    "rebuild:system-node": "npm rebuild better-sqlite3 node-pty",
+    "electron:dev": "electron .",
+    "electron:build": "electron-builder build --win"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
@@ -25,6 +31,7 @@
     "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^22.9.0",
     "@types/react": "^18.3.12",
@@ -32,6 +39,8 @@
     "@types/three": "^0.169.0",
     "@types/ws": "^8.5.13",
     "cross-env": "^7.0.3",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
     "playwright": "^1.61.1",
     "typescript": "^5.6.3"
   }

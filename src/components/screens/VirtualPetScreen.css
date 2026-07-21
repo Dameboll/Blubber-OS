@@ -513,6 +513,87 @@
   max-width: 26rem;
 }
 
+/* Manual recovery action on the error state — the 60s poll already retries
+   on its own, but this gives the user something to do right now. */
+.pet-notice__retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: flex-start;
+  margin-top: 0.2rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-glow);
+  background: oklch(60% 0.14 150 / 12%);
+  color: var(--core-accent-bright);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+
+.pet-notice__retry:hover {
+  background: oklch(60% 0.14 150 / 20%);
+}
+
+.pet-notice__retry:focus-visible {
+  outline: 2px solid var(--core-accent-bright);
+  outline-offset: 2px;
+}
+
+/* Loading skeleton — a row of shimmer bars standing in for the Needs meters
+   (see NEED_DEFS.length in VirtualPetScreen.tsx) so the notice reads as "your
+   needs rail is coming", not a dead mascot-and-text box. */
+.pet-notice__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+  max-width: 14rem;
+  margin-top: 0.5rem;
+}
+
+/* ================================================================== */
+/* Quest / Level / Stats loading skeletons                             */
+/* ================================================================== */
+
+.pet-quest-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.pet-quest-skeleton__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pet-level-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.pet-level-skeleton__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.pet-stats-skeleton__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 11px;
+  background: var(--bg-elevated);
+  border: 1px solid oklch(70% 0.19 155 / 12%);
+}
+
 /* ------------------------------------------------------------------ */
 /* Responsive                                                          */
 /* ------------------------------------------------------------------ */

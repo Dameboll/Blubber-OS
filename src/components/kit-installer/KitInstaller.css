@@ -1,0 +1,235 @@
+/* KitInstaller — Starter Kit importer (Lane B8). Tokens only, matches the
+   shared design system in src/app/globals.css (same convention every other
+   panel/screen in this codebase follows — see SettingsScreen.css's own
+   header note). Renders inside its own <Panel> (see KitInstaller.tsx), so no
+   grid-placement classes are needed here — the integrator just drops
+   <KitInstaller /> wherever a settings-grid column already expects a Panel
+   child. */
+
+.kit-installer-panel .panel__body {
+  min-width: 0;
+}
+
+.kit-installer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.kit-installer__intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.kit-installer__intro svg {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: var(--core-accent-bright);
+}
+
+.kit-installer__already {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  background: oklch(74% 0.2 151 / 8%);
+  border: 1px solid var(--border-glow);
+  font-family: var(--font-ui);
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.kit-installer__already svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: var(--core-accent-bright);
+}
+
+/* ------------------------------------------------------------------ */
+/* Form row — path input + Install button                              */
+/* ------------------------------------------------------------------ */
+
+.kit-installer__form {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.kit-installer__input-wrap {
+  position: relative;
+  flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.kit-installer__input-icon {
+  position: absolute;
+  left: 0.65rem;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.kit-installer__input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0.4rem 0.7rem 0.4rem 2rem;
+  border-radius: 10px;
+  border: 1px solid oklch(65% 0 0 / 30%);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.kit-installer__input::placeholder {
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+}
+
+.kit-installer__input:focus-visible {
+  outline: none;
+  border-color: var(--core-accent-bright);
+  box-shadow: 0 0 0 2px oklch(87% 0.29 142 / 20%);
+}
+
+.kit-installer__input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.kit-installer__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  min-height: 34px;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--core-accent-bright);
+  background: oklch(87% 0.29 142 / 12%);
+  color: var(--core-accent-bright);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 150ms ease-out, transform 150ms ease-out;
+}
+
+.kit-installer__btn:hover:not(:disabled) {
+  background: oklch(87% 0.29 142 / 22%);
+  transform: translateY(-1px);
+}
+
+.kit-installer__btn:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
+.kit-installer__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.kit-installer__spinner {
+  animation: kit-installer-spin 900ms linear infinite;
+}
+
+@keyframes kit-installer-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Step list — real, per-step results echoed back from the server      */
+/* ------------------------------------------------------------------ */
+
+.kit-installer__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kit-installer__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  font-family: var(--font-ui);
+  font-size: 0.76rem;
+  line-height: 1.4;
+  background: var(--bg-elevated);
+  animation: kit-installer-step-in 320ms ease-out both;
+}
+
+.kit-installer__step svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.kit-installer__step--ok {
+  color: var(--text-primary);
+}
+
+.kit-installer__step--ok svg {
+  color: var(--core-accent-bright);
+}
+
+.kit-installer__step--complete {
+  color: var(--core-accent-bright);
+  font-weight: 600;
+  border: 1px solid var(--border-glow);
+}
+
+.kit-installer__step--complete svg {
+  color: var(--core-accent-bright);
+}
+
+.kit-installer__step--fail {
+  color: var(--accent-danger);
+  border: 1px solid oklch(60% 0.22 28 / 35%);
+  background: oklch(60% 0.22 28 / 8%);
+}
+
+.kit-installer__step--fail svg {
+  color: var(--accent-danger);
+}
+
+@keyframes kit-installer-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kit-installer__spinner,
+  .kit-installer__step {
+    animation-duration: 0.01ms !important;
+  }
+}

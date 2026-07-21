@@ -26,6 +26,7 @@ import {
   Database,
   FlaskConical,
   FolderKanban,
+  GraduationCap,
   Home,
   LayoutDashboard,
   Music,
@@ -45,7 +46,17 @@ import { wsClient } from '../lib/ws-client';
 import './AppShell.css';
 import '../styles/pill-room.css';
 
-export type NavId = 'dashboard' | 'terminal' | 'agents' | 'projects' | 'memory' | 'analytics' | 'music' | 'pet' | 'settings';
+export type NavId =
+  | 'dashboard'
+  | 'terminal'
+  | 'agents'
+  | 'projects'
+  | 'memory'
+  | 'analytics'
+  | 'music'
+  | 'pet'
+  | 'academy'
+  | 'settings';
 
 interface NavItemConfig {
   id: NavId;
@@ -65,6 +76,7 @@ const NAV_ITEMS: NavItemConfig[] = [
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'music', label: 'Music Player', icon: Music },
   { id: 'pet', label: 'Virtual Pet', icon: PawPrint },
+  { id: 'academy', label: 'Academy', icon: GraduationCap },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
@@ -76,6 +88,7 @@ const ROOM_BY_NAV: Partial<Record<NavId, string>> = {
   projects: 'projects',
   memory: 'memory',
   analytics: 'analytics',
+  academy: 'engine',
   settings: 'engine',
 };
 

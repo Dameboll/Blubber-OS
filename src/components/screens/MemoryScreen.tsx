@@ -26,9 +26,9 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Database } from 'lucide-react';
+import { Database, RefreshCw } from 'lucide-react';
 import FlubberCharacter from '../FlubberCharacter';
-import { Panel } from '../ui';
+import { Panel, SkeletonText } from '../ui';
 import { useSession } from '../../context/SessionProvider';
 import './MemoryScreen.css';
 
@@ -93,6 +93,9 @@ export default function MemoryScreen() {
 
   const [data, setData] = useState<MemoryResponse | null>(null);
   const [state, setState] = useState<LoadState>('loading');
+  // Bumped by the error state's manual Retry action (see bubbles below) to
+  // force the fetch effect to refire without waiting on a project switch.
+  const [retryKey, setRetryKey] = useState(0);
   // Keep the last good identity on screen through a project-switch refetch
   // so the always-on bubble doesn't flicker back to "loading".
   const lastGoodRef = useRef<MemoryResponse | null>(null);
@@ -108,7 +111,8 @@ export default function MemoryScreen() {
     const params = active ? `?root=${encodeURIComponent(active.root)}&name=${encodeURIComponent(active.name)}` : '';
 
     // Only show the full loading state on the very first load; later refetches
-    // (a project opening/switching) keep the last good data visible.
+    // (a project opening/switching, or a manual Retry) keep the last good data
+    // visible instead of flashing back to the skeleton.
     if (!lastGoodRef.current) setState('loading');
 
     fetch(`/api/memory${params}`, { signal: controller.signal })
@@ -127,7 +131,9 @@ export default function MemoryScreen() {
       });
 
     return () => controller.abort();
-  }, [projectKey]);
+  }, [projectKey, retryKey]);
+
+  const retry = () => setRetryKey((k) => k + 1);
 
   const identity = data?.identity ?? null;
   const project = data?.project ?? null;
@@ -153,6 +159,7 @@ export default function MemoryScreen() {
             value={project?.context ?? null}
             source={project?.contextSource ?? null}
             missingDoc="ai-context.md"
+            onRetry={retry}
           />
         </Panel>
 
@@ -163,11 +170,12 @@ export default function MemoryScreen() {
             value={project?.knowledge ?? null}
             source={project?.knowledgeSource ?? null}
             missingDoc="CLAUDE.md or README"
+            onRetry={retry}
           />
         </Panel>
 
         <Panel accent title="Operator &middot; OS Identity" className="memory-panel">
-          <IdentityBubble state={state} identity={identity} />
+          <IdentityBubble state={state} identity={identity} onRetry={retry} />
         </Panel>
       </div>
     </div>
@@ -180,17 +188,22 @@ interface ProjectBubbleProps {
   value: string | null;
   source: MemoryProject['contextSource'];
   missingDoc: string;
+  onRetry: () => void;
 }
 
-function ProjectBubble({ state, project, value, source, missingDoc }: ProjectBubbleProps) {
+function ProjectBubble({ state, project, value, source, missingDoc, onRetry }: ProjectBubbleProps) {
   if (state === 'loading') {
-    return <p className="memory-panel__empty">Loading&hellip;</p>;
+    return <SkeletonText lines={4} lastLineWidth="45%" />;
   }
   if (state === 'error' && !project) {
     return (
-      <p className="memory-panel__empty">
-        Couldn&rsquo;t load memory &mdash; is the dev server running? It&rsquo;ll retry on the next project switch.
-      </p>
+      <div className="memory-panel__error">
+        <p className="memory-panel__empty">Couldn&rsquo;t load memory &mdash; is the dev server running?</p>
+        <button type="button" className="memory-panel__retry" onClick={onRetry}>
+          <RefreshCw size={12} aria-hidden="true" />
+          Retry
+        </button>
+      </div>
     );
   }
   if (!project) {
@@ -219,17 +232,26 @@ function ProjectBubble({ state, project, value, source, missingDoc }: ProjectBub
 interface IdentityBubbleProps {
   state: LoadState;
   identity: OwnerIdentity | null;
+  onRetry: () => void;
 }
 
 /** The owner's own creed — his USER.md identity fields, PERSONA.md beliefs and
  * the SOUL.md mantra. Every value is verbatim from those files; an absent file
  * simply drops its section. Honestly empty only when all three are missing. */
-function IdentityBubble({ state, identity }: IdentityBubbleProps) {
+function IdentityBubble({ state, identity, onRetry }: IdentityBubbleProps) {
   if (state === 'loading' && !identity) {
-    return <p className="memory-panel__empty">Loading&hellip;</p>;
+    return <SkeletonText lines={5} lastLineWidth="50%" />;
   }
   if (state === 'error' && !identity) {
-    return <p className="memory-panel__empty">Couldn&rsquo;t load identity &mdash; check the dev server.</p>;
+    return (
+      <div className="memory-panel__error">
+        <p className="memory-panel__empty">Couldn&rsquo;t load identity &mdash; check the dev server.</p>
+        <button type="button" className="memory-panel__retry" onClick={onRetry}>
+          <RefreshCw size={12} aria-hidden="true" />
+          Retry
+        </button>
+      </div>
+    );
   }
   const fields = identity?.fields ?? [];
   const beliefs = identity?.beliefs ?? [];

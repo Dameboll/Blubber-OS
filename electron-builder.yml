@@ -1,0 +1,36 @@
+# electron-builder.yml
+#
+# SCAFFOLD PASS -- Windows NSIS installer only. Mac/Linux targets, code
+# signing, and auto-update are explicitly out of scope for this stage; see
+# electron/main.js and scripts/electron-rebuild.mjs for the native-module
+# ABI notes that a real production installer build will need to account for.
+#
+# File selection is left to electron-builder's default (production
+# `dependencies` from package.json + project files, devDependencies
+# excluded) rather than a hand-maintained `files` allowlist -- less to get
+# wrong in a scaffold. asarUnpack below is the one override that matters:
+# better-sqlite3 and node-pty ship native .node binaries that cannot be
+# loaded from inside app.asar, so they're kept as real files on disk.
+
+appId: com.dameos.blubber
+productName: Blubber
+
+directories:
+  output: dist-electron
+  buildResources: build
+
+asarUnpack:
+  - node_modules/better-sqlite3/**/*
+  - node_modules/node-pty/**/*
+
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true

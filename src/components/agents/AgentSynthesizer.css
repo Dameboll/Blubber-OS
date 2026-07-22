@@ -58,6 +58,18 @@
   outline-offset: 2px;
 }
 
+/* Plain-English explainer — teaches what an agent/skill is before the box */
+.synth__explainer {
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glow, oklch(87% 0.29 142 / 18%));
+  background: color-mix(in oklab, var(--core-accent, oklch(74% 0.2 151)) 8%, transparent);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-secondary, oklch(72% 0 0));
+}
+
 /* Description input */
 .synth__input {
   width: 100%;
@@ -81,6 +93,54 @@
   outline: none;
   border-color: var(--core-accent, oklch(74% 0.2 151));
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--core-accent, oklch(74% 0.2 151)) 20%, transparent);
+}
+
+/* One-tap starter ideas — no blank-box paralysis for a first-timer */
+.synth__starters {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.synth__starters-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-secondary, oklch(65% 0 0));
+}
+
+.synth__starters-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.synth__chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-glow, oklch(87% 0.29 142 / 22%));
+  background: var(--bg-primary, oklch(7% 0 0));
+  color: var(--text-secondary, oklch(72% 0 0));
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.synth__chip:hover {
+  color: var(--core-accent-bright, oklch(87% 0.29 142));
+  border-color: color-mix(in oklab, var(--core-accent, oklch(74% 0.2 151)) 55%, transparent);
+  background: color-mix(in oklab, var(--core-accent, oklch(74% 0.2 151)) 12%, transparent);
+}
+
+.synth__chip:focus-visible {
+  outline: 2px solid var(--core-accent, oklch(74% 0.2 151));
+  outline-offset: 2px;
 }
 
 /* Synthesize action */
@@ -135,6 +195,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .synth__toggle-btn,
+  .synth__chip,
   .synth__btn {
     transition-duration: 0.01ms;
   }

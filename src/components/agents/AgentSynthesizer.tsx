@@ -12,13 +12,18 @@
  * skills}, and the Agents roster (GET /api/agents) picks it up on its next
  * refetch.
  *
+ * Built for BEGINNERS — the kit buyer is someone climbing the same learning
+ * curve Dame did. So the panel teaches instead of assuming: a plain-English
+ * explainer of what an agent/skill even IS, one-tap starter ideas so a new
+ * user never faces a blank box, and a narration that says what just happened.
+ *
  * Wraps Panel with className="acc-log-panel" so it inherits the exact same
  * /bg/syslog.webp "green-beam UFO" plate the Activity Feed sits on — the free
  * build keeps that panel unchanged; the kit build swaps only the contents.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bot, Puzzle, Wand2 } from 'lucide-react';
+import { Bot, Puzzle, Wand2, Lightbulb } from 'lucide-react';
 import { Panel } from '../ui';
 import { useSession } from '../../context/SessionProvider';
 import { CLAUDE_DIR } from '../../lib/claude-dir';
@@ -28,7 +33,32 @@ import './AgentSynthesizer.css';
 type SynthKind = 'agent' | 'skill';
 
 // How long the "on its way" confirmation line stays up after a submit.
-const SENT_NOTICE_MS = 6000;
+const SENT_NOTICE_MS = 7000;
+
+/** Plain-English "what is this, and why would I want one" — the first thing a
+ *  beginner needs before a text box makes any sense. Swaps with the toggle. */
+const EXPLAINER: Record<SynthKind, string> = {
+  agent:
+    'An agent is a specialist Claude you summon for one job — it shows up already knowing how to do that one thing well.',
+  skill:
+    'A skill is a saved how-to that Claude follows step by step, so you never have to re-explain the same task twice.',
+};
+
+/** One-tap starter ideas so a new user never stares at a blank box. Clicking
+ *  one drops it into the input; they can send as-is or tweak it first. Phrased
+ *  as everyday needs, not jargon. */
+const STARTERS: Record<SynthKind, string[]> = {
+  agent: [
+    'review my code for bugs before I commit',
+    'explain any error message in plain English',
+    'write clear git commit messages for me',
+  ],
+  skill: [
+    'turn my rough notes into a clean changelog',
+    'set up a new project the way I like it',
+    'draft a README from what a project does',
+  ],
+};
 
 /** Builds the one-line scaffold prompt typed into the fresh `claude` session.
  *  Kept to a SINGLE line (the PTY submits on the first \r) — the caller
@@ -44,7 +74,8 @@ function buildScaffoldPrompt(kind: SynthKind, description: string): string {
       `file with YAML frontmatter (name, description, and an appropriate tools list) ` +
       `to ~/.claude/agents/<name>.md, following the standard Claude Code subagent ` +
       `format. Make the system prompt focused, specific, and production-ready. ` +
-      `When you're done, tell me the exact file path you created.`
+      `When you're done, tell me the exact file path you created and one sentence ` +
+      `on how I use it.`
     );
   }
   return (
@@ -53,7 +84,8 @@ function buildScaffoldPrompt(kind: SynthKind, description: string): string {
     `~/.claude/skills/<name>/ and write SKILL.md inside it with YAML frontmatter ` +
     `(name, description) and clear step-by-step instructions, following the ` +
     `standard Claude Code skill format. Make it focused and production-ready. ` +
-    `When you're done, tell me the exact file path you created.`
+    `When you're done, tell me the exact file path you created and one sentence ` +
+    `on how I use it.`
   );
 }
 
@@ -90,7 +122,10 @@ export default function AgentSynthesizer({ className, avoidRoam }: AgentSynthesi
     });
     narrate(kind === 'agent' ? 'Cooking up your agent…' : 'Cooking up your skill…', { mood: 'focused' });
 
-    setSentNotice(`Opening a Claude session to build your ${kind}. Watch it work in the Terminal.`);
+    setSentNotice(
+      `On it — I opened a Claude session in the Terminal. It'll pick a name, write your ${kind}, ` +
+        `and tell you how to use it. Watch it work.`,
+    );
     setDescription('');
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
     noticeTimerRef.current = setTimeout(() => setSentNotice(null), SENT_NOTICE_MS);
@@ -105,7 +140,10 @@ export default function AgentSynthesizer({ className, avoidRoam }: AgentSynthesi
       className={['synth-panel', className ?? ''].filter(Boolean).join(' ')}
       avoidRoam={avoidRoam}
     >
-      <p className="synth__lead">Describe an agent or skill and Blubber will build it for you.</p>
+      <p className="synth__lead">
+        Tell me what you keep doing by hand and I&apos;ll build it for you. No setup, no file formats
+        to learn — just describe it.
+      </p>
 
       <div className="synth__toggle" role="group" aria-label="Create an agent or a skill">
         <button
@@ -128,6 +166,8 @@ export default function AgentSynthesizer({ className, avoidRoam }: AgentSynthesi
         </button>
       </div>
 
+      <p className="synth__explainer">{EXPLAINER[kind]}</p>
+
       <textarea
         className="synth__input"
         placeholder={
@@ -139,6 +179,25 @@ export default function AgentSynthesizer({ className, avoidRoam }: AgentSynthesi
         onChange={(e) => setDescription(e.target.value)}
         rows={3}
       />
+
+      <div className="synth__starters">
+        <span className="synth__starters-label">
+          <Lightbulb size={13} aria-hidden="true" />
+          Not sure? Tap one:
+        </span>
+        <div className="synth__starters-chips">
+          {STARTERS[kind].map((idea) => (
+            <button
+              key={idea}
+              type="button"
+              className="synth__chip"
+              onClick={() => setDescription(idea)}
+            >
+              {idea}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="synth__actions">
         <button type="button" className="synth__btn" onClick={handleSynthesize} disabled={!canSynthesize}>

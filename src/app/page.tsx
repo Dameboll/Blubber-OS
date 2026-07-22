@@ -26,25 +26,79 @@
  */
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import AppShell, { type NavId } from '../components/AppShell';
 import AmbientGlow from '../components/AmbientGlow';
 import IntroCinematic from '../components/IntroCinematic';
-import OnboardingOverlay from '../components/onboarding/OnboardingOverlay';
-import DashboardTour from '../components/tour/DashboardTour';
-import SoulInterview from '../components/soul/SoulInterview';
 import { consumeTourPending, TOUR_EVENT } from '../lib/tour';
 import { consumeSoulPending, SOUL_EVENT } from '../lib/soul';
 import { FlubberBrainProvider } from '../components/FlubberBrainProvider';
+// Dashboard is the always-first screen, so it stays a static import — it must
+// be in the initial chunk for the fastest possible first paint.
 import DashboardScreen from '../components/screens/DashboardScreen';
-import AgentsScreen from '../components/screens/AgentsScreen';
-import ProjectsScreen from '../components/screens/ProjectsScreen';
-import MemoryScreen from '../components/screens/MemoryScreen';
-import AnalyticsScreen from '../components/screens/AnalyticsScreen';
-import MusicPlayerScreen from '../components/screens/MusicPlayerScreen';
-import VirtualPetScreen from '../components/screens/VirtualPetScreen';
-import AcademyScreen from '../components/screens/AcademyScreen';
-import SettingsScreen from '../components/screens/SettingsScreen';
 import './page.css';
+
+// The other 8 screens each mount only when their nav item is selected, and
+// exactly one screen is ever mounted at a time. Statically importing them all
+// pulled every screen's code (charts, xterm-adjacent bits, the whole music
+// library, settings, etc.) into the initial page chunk, parsed on every boot
+// regardless of which screen shows first. next/dynamic splits each into its
+// own chunk that loads on first visit — from local disk in the packaged app,
+// so the load is instant with no visible penalty. Same ssr:false + on-brand
+// boot placeholder the app already uses for TerminalScreen
+// (PersistentTerminalHost.tsx). Placeholder styles live in page.css (.screen-boot).
+const screenLoader = (label: string) =>
+  function ScreenBoot() {
+    return (
+      <div className="screen-boot" aria-busy="true" aria-live="polite">
+        <span className="screen-boot__ring" aria-hidden="true" />
+        <span className="screen-boot__label">{label}</span>
+      </div>
+    );
+  };
+
+const AgentsScreen = dynamic(() => import('../components/screens/AgentsScreen'), {
+  ssr: false,
+  loading: screenLoader('Loading agents…'),
+});
+const ProjectsScreen = dynamic(() => import('../components/screens/ProjectsScreen'), {
+  ssr: false,
+  loading: screenLoader('Loading projects…'),
+});
+const MemoryScreen = dynamic(() => import('../components/screens/MemoryScreen'), {
+  ssr: false,
+  loading: screenLoader('Loading memory…'),
+});
+const AnalyticsScreen = dynamic(() => import('../components/screens/AnalyticsScreen'), {
+  ssr: false,
+  loading: screenLoader('Loading analytics…'),
+});
+const MusicPlayerScreen = dynamic(() => import('../components/screens/MusicPlayerScreen'), {
+  ssr: false,
+  loading: screenLoader('Loading music…'),
+});
+const VirtualPetScreen = dynamic(() => import('../components/screens/VirtualPetScreen'), {
+  ssr: false,
+  loading: screenLoader('Loading pet…'),
+});
+const AcademyScreen = dynamic(() => import('../components/screens/AcademyScreen'), {
+  ssr: false,
+  loading: screenLoader('Loading academy…'),
+});
+const SettingsScreen = dynamic(() => import('../components/screens/SettingsScreen'), {
+  ssr: false,
+  loading: screenLoader('Loading settings…'),
+});
+
+// First-run / kit-gated overlays: none render on a normal boot (onboarding is
+// first-machine-only; tour + interview are kit-gated), so they don't belong in
+// the initial chunk either. IntroCinematic stays static — it paints on every
+// single launch.
+const OnboardingOverlay = dynamic(() => import('../components/onboarding/OnboardingOverlay'), {
+  ssr: false,
+});
+const DashboardTour = dynamic(() => import('../components/tour/DashboardTour'), { ssr: false });
+const SoulInterview = dynamic(() => import('../components/soul/SoulInterview'), { ssr: false });
 
 // BackgroundField removed (LANE 7: fullscreen shader + 14k particles = main lag source).
 // Static CSS gradient replaces it in globals.css; per-panel slime bubbles preserved.

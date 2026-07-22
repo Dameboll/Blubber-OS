@@ -146,7 +146,6 @@ const TABS: TabConfig[] = [
 ];
 
 const HINT_DURATION_MS = 3200;
-const VITALS_INTERVAL_MS = 3200;
 
 // Starts blank — the first real /api/system reading fills it in.
 const VITALS_SEED: SystemVitals = {
@@ -245,41 +244,12 @@ function useSpawnedAgents(pollMs: number): { agents: SpawnedAgent[]; state: Fetc
   return { agents, state };
 }
 
-function trendOf(prev: number, next: number): StatChipTrend {
-  return next > prev ? 'up' : next < prev ? 'down' : 'neutral';
-}
-
-/** Real machine vitals from GET /api/system (node os/process): CPU busy %,
- *  system MEM used %, and this dashboard process's memory footprint %. Polls
- *  on a fixed tick; starts at 0 until the first real reading lands. */
-function useSystemVitals(): SystemVitals {
-  const [vitals, setVitals] = useState<SystemVitals>(VITALS_SEED);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = () => {
-      fetch('/api/system')
-        .then((res) => (res.ok ? (res.json() as Promise<{ cpu: number; mem: number; proc: number }>) : null))
-        .then((json) => {
-          if (cancelled || !json) return;
-          setVitals((prev) => ({
-            cpu: { value: json.cpu, trend: trendOf(prev.cpu.value, json.cpu) },
-            mem: { value: json.mem, trend: trendOf(prev.mem.value, json.mem) },
-            proc: { value: json.proc, trend: trendOf(prev.proc.value, json.proc) },
-          }));
-        })
-        .catch(() => {});
-    };
-    load();
-    const id = setInterval(load, VITALS_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
-
-  return vitals;
-}
+// NOTE: this screen no longer polls /api/system itself. SessionProvider already
+// polls it app-wide (regardless of which screen is showing) and exposes the
+// reading as `session.vitals` — this screen derives its StatChip shape from
+// that instead of running a second, redundant poll on its own clock (they hit
+// the same endpoint on staggered timers while Dashboard was open). See
+// deriveVitals() in the component below.
 
 // ---------------------------------------------------------------------------
 // Component
@@ -291,8 +261,24 @@ export interface DashboardScreenProps {
 
 export default function DashboardScreen({ className }: DashboardScreenProps) {
   const liveUsage = useLiveUsage();
-  const vitals = useSystemVitals();
+  // SESSION CONTRACT: real work clock, one-click actions, AND the app-wide
+  // /api/system vitals poll (see the note above where the local poll used to live).
+  const session = useSession();
   const { data: weeklyData, state: weeklyState } = useWeeklyData();
+
+  // Derive the StatChip-shaped vitals from SessionProvider's already-polled
+  // reading. session.vitals.values is null until the first poll lands — fall
+  // back to the blank seed so the chips read 0% rather than flicker undefined.
+  const vitals = useMemo<SystemVitals>(() => {
+    const v = session.vitals.values;
+    if (!v) return VITALS_SEED;
+    const t = session.vitals.trend;
+    return {
+      cpu: { value: v.cpu, trend: t.cpu },
+      mem: { value: v.mem, trend: t.mem },
+      proc: { value: v.proc, trend: t.proc },
+    };
+  }, [session.vitals]);
 
   const brain = useFlubberBrain();
   const [hint, setHint] = useState<string | null>(null);
@@ -304,8 +290,6 @@ export default function DashboardScreen({ className }: DashboardScreenProps) {
   // measures this ref's real rect and portals the SAME live terminal instance
   // on top of it while this tab is active — see that file's header).
   const terminalAnchorRef = useDashboardTerminalAnchor(activeTab === 'terminal');
-  // SESSION CONTRACT: real work clock + one-click actions (new terminal tab).
-  const session = useSession();
 
   useEffect(
     () => () => {

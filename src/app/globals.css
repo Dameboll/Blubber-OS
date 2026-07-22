@@ -1,4 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+/* Self-hosted brand fonts (Syncopate / DM Sans / DM Mono). Was a remote
+ * @import from fonts.googleapis.com — replaced so this desktop app renders
+ * its real fonts fully offline and never blocks a cold launch on a CDN
+ * round-trip. woff2 files live in public/fonts/; see src/app/fonts.css. */
+@import './fonts.css';
 
 :root {
   /* Ground truth: literal color-palette swatch strip in "flubber sprite 1.png"

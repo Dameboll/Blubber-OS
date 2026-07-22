@@ -10,7 +10,7 @@
  * here pretends otherwise: every module is rendered as an honest locked
  * teaser, never a fake "preview".
  *
- * Layout: fixed header row, then the key art (public/bg/academy-hero.png)
+ * Layout: fixed header row, then the key art (public/bg/academy-hero.webp)
  * takes over the ENTIRE rest of the tab — full-bleed, no side panels, no
  * module outline. A compact "Coming soon" + waitlist strip floats over the
  * bottom of the art. The waitlist form is wired to the one real endpoint
@@ -86,8 +86,10 @@ export default function AcademyScreen() {
         {/* eslint-disable-next-line @next/next/no-img-element -- static /public asset, app-wide convention */}
         <img
           className="academy-hero__img"
-          src="/bg/academy-hero.png"
+          src="/bg/academy-hero.webp"
           alt="Blubber Academy — access coming soon"
+          width={1672}
+          height={941}
         />
 
         <div className="academy-overlay">

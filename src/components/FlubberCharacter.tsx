@@ -25,7 +25,6 @@
  */
 
 import dynamic from 'next/dynamic';
-import type { Core3DProps } from './Core3D';
 import Flubber3D from './Flubber3D';
 import type { FlubberTier } from '../lib/flubber3d/instance';
 import './FlubberCharacter.css';
@@ -76,8 +75,9 @@ export interface FlubberCharacterProps {
   intensity?: number;
   /** Legacy orb-era prop — ignored. */
   audioEnergy?: number;
-  /** Legacy orb-era prop — ignored. */
-  onBootEvent?: Core3DProps['onBootEvent'];
+  /** Legacy orb-era prop — ignored. Type inlined (was Core3DProps['onBootEvent'])
+   * when the retired Core3D orb was deleted; kept so old call sites still type-check. */
+  onBootEvent?: (phase: 'chaos-start' | 'flash' | 'reveal' | 'docked') => void;
   /** Legacy orb-era prop — ignored. */
   showToggle?: boolean;
   /** Worn accessory forwarded to the shared-host 3D slot (e.g. DJ headphones). */

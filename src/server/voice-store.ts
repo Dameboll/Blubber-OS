@@ -29,7 +29,10 @@ const DEFAULTS: VoiceConfig = {
   pitch: 55,
   speed: 60,
   volume: 70,
-  muted: false,
+  // Ships MUTED by default — the synth reads as "little robot noises" until a
+  // user decides they want it, so the voice is opt-in from the Voice rail
+  // (Settings), never a surprise on first boot.
+  muted: true,
 };
 
 function ensureDataDir(): void {

@@ -61,7 +61,9 @@ export type QuestMetric =
   | 'earlyBird'
   | 'weekendActivity'
   | 'deepWeekDays'
-  | 'marathonDays';
+  | 'marathonDays'
+  | 'daysActive'
+  | 'petLevel';
 
 /** The real, honestly-derived numbers every quest and the Stats board read. */
 export interface QuestMetrics {
@@ -246,6 +248,28 @@ const CHAINS: QuestChainDef[] = [
     metric: 'marathonDays',
     tiers: [
       { title: 'Marathon', description: 'Log 2+ hours of real activity in a single day.', target: 1, xp: 90 },
+    ],
+  },
+  {
+    // Real whole-days-since-baseline (metrics.daysActive) — the long game.
+    chain: 'veteran',
+    label: 'Veteran',
+    metric: 'daysActive',
+    tiers: [
+      { title: 'Regular', description: 'Show up for 3 days with Blubber.', target: 3, xp: 60 },
+      { title: 'Resident', description: '10 days on the deck. This is home now.', target: 10, xp: 160 },
+      { title: 'Veteran', description: '30 days in. Blubber salutes you.', target: 30, xp: 400 },
+    ],
+  },
+  {
+    // Real pet level from pet-store (metrics.petLevel) — grow the little guy.
+    chain: 'bond',
+    label: 'Blubber Bond',
+    metric: 'petLevel',
+    tiers: [
+      { title: 'Buddies', description: 'Raise your Blubber to level 3.', target: 3, xp: 70 },
+      { title: 'Partners', description: 'Level 7 Blubber. He brags about you.', target: 7, xp: 180 },
+      { title: 'Inseparable', description: 'Level 12. You two are a package deal.', target: 12, xp: 420 },
     ],
   },
 ];

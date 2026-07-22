@@ -64,7 +64,9 @@ const DEFAULT_CONFIG: VoiceConfig = {
   pitch: 55,
   speed: 60,
   volume: 70,
-  muted: false,
+  // Muted by default (matches voice-store's shipped default) — opt-in from
+  // Settings' Voice rail, never a surprise on first boot.
+  muted: true,
 };
 
 /** Per-style synthesis character. basePitchHz + wobbleCents is what makes

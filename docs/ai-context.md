@@ -21,6 +21,11 @@ Launch-shaped. HEAD e5ce295 — E2E SUITE GREEN 17/17 (full clean pass, prod bui
 - Academy: full-bleed key art (bg/academy-hero.png) + coming-soon waitlist strip.
 - Electron: setWindowOpenHandler → external browser; before-quit taskkill /T (orphan-server fix); NEXT_DIST_DIR=.next-build packaged; electron-builder files excludes + npmRebuild:false. Installer built once OK.
 
+## Launch decisions (locked)
+- Free shell stays SILENT about the Starter Kit — no in-app upsell, ever. The landing page
+  (blubber-site) is the funnel; all downloads route through it, so the kit pitch already
+  happened before the app is ever opened. (Dame, 2026-07-22)
+
 ## Known open items (pre-launch)
 1. ~~E2E suite~~ DONE 2026-07-22: 17/17 green. Fixes were all spec-side: 05 clicks Advanced tab
    (Replay Setup moved there), 01+07 arm waitForResponse on the intro's fire-and-forget

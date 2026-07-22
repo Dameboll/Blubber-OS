@@ -3,11 +3,28 @@
 /**
  * SettingsScreen — the "settings" nav screen (see AppShell.tsx's NAV_ITEMS /
  * page.tsx's SCREENS map, keyed "settings"). Matches
- * "flubber inspo pics/flubber 7.png": a tab strip (General/Appearance/
- * Blubber/Agents/AI & Model/Notifications/Shortcuts/Advanced) over a
- * two-column main content area plus an independent right-hand rail
- * (Preview/Voice/Privacy) — only "General" has real content in this pass,
- * every other tab renders a small "coming soon" panel.
+ * "flubber inspo pics/flubber 7.png": a tab strip over a two-column main
+ * content area plus an independent right-hand rail (Preview/Voice/Privacy,
+ * General tab only).
+ *
+ * TAB STATUS (this pass): General, Appearance, Blubber, Notifications,
+ * Shortcuts, and Advanced are all real — every control on them persists
+ * somewhere real (server JSON store, app_meta row, or localStorage) and does
+ * what it says. "AI & Model" was CUT entirely (see the old TABS array in
+ * git history) rather than shipped as fake dropdowns backing nothing real —
+ * it returns once there's an actual model-selection/provider layer to wire
+ * it to. "Agents" still renders ComingSoonPanel; nothing real backs it yet.
+ *
+ * WHERE THINGS LIVE NOW: Interface Settings (glow/animation speed/sound fx/
+ * theme + accent color) and the Reduce Effects toggle moved to Appearance.
+ * Blubber Personality moved to its own Blubber tab. Notifications is new
+ * (3 toggles, app_meta-backed). Shortcuts is a static, code-verified keymap
+ * (no invented rows). Advanced now owns the master Reset Dashboard button
+ * and OnboardingSettingsSection (Replay Setup + its own Reduce Effects
+ * toggle) — both relocated from General, same handlers, not duplicated.
+ * General keeps genuinely general prefs: General Preferences, Token & Usage
+ * (minus the reset button), System Integration, Kit Installer, Recommended
+ * Plugins, Retake Soul Interview, and the whole right rail.
  *
  * LAYOUT NOTE: the main content area (`.settings-grid__main`) and the rail
  * (`.settings-grid__rail`) are separate flex/grid containers rather than one
@@ -52,17 +69,21 @@ import {
   Download,
   Eye,
   Footprints,
+  FolderOpen,
   Gauge,
   Globe,
+  HardDrive,
   Hash,
   Heart,
   Keyboard,
   Laugh,
+  Lightbulb,
   Mic,
   MessageCircle,
   Minimize2,
   Music2,
   Palette,
+  Play,
   Power,
   Rocket,
   RotateCcw,
@@ -70,9 +91,14 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Smile,
+  Sparkles,
   Sun,
+  Tag,
   Trash2,
+  Trophy,
+  TrendingUp,
   Volume2,
+  VolumeX,
   Zap,
 } from 'lucide-react';
 import { Panel } from '../ui';
@@ -81,6 +107,14 @@ import OnboardingSettingsSection from '../settings/OnboardingSettingsSection';
 import KitInstaller from '../kit-installer/KitInstaller';
 import RecommendedPlugins from '../settings/RecommendedPlugins';
 import RetakeSoulInterview from '../settings/RetakeSoulInterview';
+import { useReduceEffects } from '../../lib/reduce-effects';
+// Voice rail contract (Lane V). This module is owned by another lane and may
+// not exist on disk yet — see the file header's LANE S brief. The import +
+// every call below are written against the documented contract exactly
+// (speak(), getVoiceConfig(), setVoiceConfig(partial), config shape
+// { voiceStyle, pitch, speed, volume, muted }); integration is verified once
+// both lanes land.
+import { speak, getVoiceConfig, setVoiceConfig } from '../../lib/blubber-voice';
 import './SettingsScreen.css';
 import '../../styles/fit-sweep.css';
 
@@ -89,22 +123,15 @@ import '../../styles/fit-sweep.css';
 // since lucide-react (0.462.0) doesn't export a standalone `LucideIcon` type.
 type IconType = typeof SettingsIcon;
 
-type TabId =
-  | 'general'
-  | 'appearance'
-  | 'flubber'
-  | 'agents'
-  | 'ai-model'
-  | 'notifications'
-  | 'shortcuts'
-  | 'advanced';
+// 'ai-model' was cut on purpose — see the file header. Do not re-add it
+// without something real (an actual model/provider layer) behind it.
+type TabId = 'general' | 'appearance' | 'flubber' | 'agents' | 'notifications' | 'shortcuts' | 'advanced';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'general', label: 'General' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'flubber', label: 'Blubber' },
   { id: 'agents', label: 'Agents' },
-  { id: 'ai-model', label: 'AI & Model' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'shortcuts', label: 'Shortcuts' },
   { id: 'advanced', label: 'Advanced' },
@@ -175,11 +202,58 @@ interface InterfaceSettings {
   soundEffects: boolean;
 }
 
+// Appearance's server-backed shape — mirrors src/server/prefs-store.ts's
+// UiPrefs exactly (see the GET/POST /api/prefs contract below). Kept as a
+// separate local type from InterfaceSettings/NotificationSettings so the two
+// local state groups can stay independently updatable while both still
+// round-trip through the one prefs blob.
+type AnimationSpeed = 'Slow' | 'Normal' | 'Fast';
+
+interface UiPrefsPayload {
+  glowIntensity: number;
+  animationSpeed: AnimationSpeed;
+  soundEffects: boolean;
+  themeColor: string;
+  accentColor: string;
+  notifyQuestCompletions: boolean;
+  notifyMilestoneCrossings: boolean;
+  notifyBlubberTips: boolean;
+}
+
+interface NotificationSettings {
+  notifyQuestCompletions: boolean;
+  notifyMilestoneCrossings: boolean;
+  notifyBlubberTips: boolean;
+}
+
+// The 4 real voice styles src/server/voice-store.ts's VoiceConfig accepts —
+// the UI shows friendlier labels but every one maps 1:1 onto a real
+// voiceStyle value, never an invented one.
+type VoiceStyleValue = 'bubbly' | 'deep' | 'squeaky' | 'robo';
+
+const VOICE_STYLE_OPTIONS: { label: string; value: VoiceStyleValue }[] = [
+  { label: 'Bubbly', value: 'bubbly' },
+  { label: 'Deep', value: 'deep' },
+  { label: 'Squeaky', value: 'squeaky' },
+  { label: 'Robotic', value: 'robo' },
+];
+
+function voiceLabelToStyle(label: string): VoiceStyleValue {
+  return VOICE_STYLE_OPTIONS.find((opt) => opt.label === label)?.value ?? 'bubbly';
+}
+
+function voiceStyleToLabel(value: VoiceStyleValue): string {
+  return VOICE_STYLE_OPTIONS.find((opt) => opt.value === value)?.label ?? 'Bubbly';
+}
+
 interface VoiceSettings {
   voice: string;
   pitch: number;
   masterVolume: number;
+  /** Not part of the voice-lib contract — purely local, drives how much the
+   *  idle Flubber Preview reacts to the music player's current track. */
   musicReactivity: number;
+  muted: boolean;
 }
 
 interface PrivacySettings {
@@ -221,6 +295,9 @@ const DEFAULT_PERSONALITY: PersonalitySettings = {
   emoteFrequency: 70,
 };
 
+// Mirrors src/server/prefs-store.ts's UiPrefs defaults exactly (same reason
+// as DEFAULT_PERSONALITY above — no flash of a different value on first
+// fetch).
 const DEFAULT_INTERFACE: InterfaceSettings = {
   themeColor: 'green',
   accentColor: '#39FF14',
@@ -229,11 +306,22 @@ const DEFAULT_INTERFACE: InterfaceSettings = {
   soundEffects: true,
 };
 
+const DEFAULT_NOTIFICATIONS: NotificationSettings = {
+  notifyQuestCompletions: true,
+  notifyMilestoneCrossings: true,
+  notifyBlubberTips: true,
+};
+
+// Mirrors src/server/voice-store.ts's VoiceConfig defaults exactly
+// (bubbly / 55 / — / 70 / unmuted). masterVolume maps to the contract's
+// `volume` field; musicReactivity has no contract equivalent (see
+// VoiceSettings above) and keeps its own pre-existing default.
 const DEFAULT_VOICE: VoiceSettings = {
   voice: 'Bubbly',
   pitch: 55,
   masterVolume: 70,
   musicReactivity: 80,
+  muted: false,
 };
 
 const DEFAULT_PRIVACY: PrivacySettings = { localDataOnly: true };
@@ -243,8 +331,30 @@ const LANGUAGE_OPTIONS = ['English', 'Spanish', 'French', 'German', 'Portuguese'
 const TIME_FORMAT_OPTIONS = ['12-Hour (AM/PM)', '24-Hour'];
 const CURRENCY_OPTIONS = ['Tokens', 'USD ($)', 'Requests'];
 const PERSONALITY_MODE_OPTIONS = ['Playful', 'Professional', 'Chill', 'Hype', 'Sarcastic'];
-const ANIMATION_SPEED_OPTIONS = ['Slow', 'Normal', 'Fast'];
-const VOICE_OPTIONS = ['Bubbly', 'Calm', 'Robotic', 'Deep', 'Chipmunk'];
+const ANIMATION_SPEED_OPTIONS: AnimationSpeed[] = ['Slow', 'Normal', 'Fast'];
+const VOICE_OPTIONS = VOICE_STYLE_OPTIONS.map((opt) => opt.label);
+
+// Advanced tab's read-only /api/meta payload shape.
+interface AppMeta {
+  version: string;
+  dataDir: string;
+  claudeProjectsDir: string;
+}
+
+// Shortcuts tab — every row here was found by grepping the codebase for real
+// `keydown` handlers (see the file header's LANE S brief). Deliberately
+// excludes the per-game key maps (SnakeGame/PongGame/etc. under
+// components/games/) since those are scoped to one mini-game screen each,
+// not app-wide shortcuts, and per-field Enter-to-submit handlers (music
+// player playlist rename/create inputs) since those aren't really
+// "shortcuts" either — just standard form submit-on-Enter. Nothing here is
+// aspirational; every row points at a real onKeyDown in the code.
+const SHORTCUT_ROWS: { keys: string; action: string; context: string }[] = [
+  { keys: 'Esc / Enter', action: 'Skip', context: 'Boot-up intro cinematic' },
+  { keys: 'Esc', action: 'Close tour', context: 'Dashboard walkthrough tour' },
+  { keys: '→ / Enter', action: 'Next step', context: 'Dashboard walkthrough tour' },
+  { keys: '←', action: 'Previous step', context: 'Dashboard walkthrough tour' },
+];
 
 // Actual selectable color values — real data, not styling, so literal hex is
 // correct here (not a token substitute). Matches globals.css's own literal
@@ -494,8 +604,11 @@ export default function SettingsScreen() {
   const [integration, updateIntegration] = useSettingsGroup(DEFAULT_INTEGRATION);
   const [personality, updatePersonality] = useSettingsGroup(DEFAULT_PERSONALITY);
   const [ui, updateUi] = useSettingsGroup(DEFAULT_INTERFACE);
+  const [notifications, updateNotifications] = useSettingsGroup(DEFAULT_NOTIFICATIONS);
   const [voice, updateVoice] = useSettingsGroup(DEFAULT_VOICE);
   const [privacy, updatePrivacy] = useSettingsGroup(DEFAULT_PRIVACY);
+  const { reduceEffects, setReduceEffects } = useReduceEffects();
+  const [meta, setMeta] = useState<AppMeta | null>(null);
 
   // -------------------------------------------------------------------------
   // Real FlubberBrain wiring — GET /api/brain seeds mode/energy/movement/talk,
@@ -576,6 +689,185 @@ export default function SettingsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only the 4 server-backed fields; sarcasm/emoteFrequency are local-only and must not trigger a save
   }, [personality.mode, personality.energyLevel, personality.movementAmount, personality.talkativeness]);
 
+  // -------------------------------------------------------------------------
+  // Real Appearance + Notifications wiring — GET /api/prefs seeds both local
+  // groups (`ui` + `notifications`), POST /api/prefs (debounced) pushes
+  // whichever one just changed back as a merged blob. Same
+  // load-once/skip-the-echo/debounce-save shape as the brain wiring above.
+  // -------------------------------------------------------------------------
+  const [prefsSync, setPrefsSync] = useState<BrainSyncState>('loading');
+  const skipNextPrefsPostRef = useRef(true);
+  const prefsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setPrefsSync('loading');
+    skipNextPrefsPostRef.current = true;
+    fetch('/api/prefs')
+      .then((res) => {
+        if (!res.ok) throw new Error(`prefs fetch failed: ${res.status}`);
+        return res.json() as Promise<{ prefs: UiPrefsPayload }>;
+      })
+      .then(({ prefs }) => {
+        updateUi({
+          glowIntensity: prefs.glowIntensity,
+          animationSpeed: prefs.animationSpeed,
+          soundEffects: prefs.soundEffects,
+          themeColor: prefs.themeColor,
+          accentColor: prefs.accentColor,
+        });
+        updateNotifications({
+          notifyQuestCompletions: prefs.notifyQuestCompletions,
+          notifyMilestoneCrossings: prefs.notifyMilestoneCrossings,
+          notifyBlubberTips: prefs.notifyBlubberTips,
+        });
+        setPrefsSync('synced');
+      })
+      .catch((err) => {
+        console.error('[settings] failed to load prefs:', err);
+        skipNextPrefsPostRef.current = false;
+        setPrefsSync('error');
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only seed
+  }, []);
+
+  useEffect(() => {
+    if (skipNextPrefsPostRef.current) {
+      skipNextPrefsPostRef.current = false;
+      return;
+    }
+    setPrefsSync('saving');
+    if (prefsDebounceRef.current) clearTimeout(prefsDebounceRef.current);
+    prefsDebounceRef.current = setTimeout(() => {
+      const body: { prefs: Partial<UiPrefsPayload> } = {
+        prefs: {
+          glowIntensity: ui.glowIntensity,
+          animationSpeed: ui.animationSpeed as AnimationSpeed,
+          soundEffects: ui.soundEffects,
+          themeColor: ui.themeColor,
+          accentColor: ui.accentColor,
+          notifyQuestCompletions: notifications.notifyQuestCompletions,
+          notifyMilestoneCrossings: notifications.notifyMilestoneCrossings,
+          notifyBlubberTips: notifications.notifyBlubberTips,
+        },
+      };
+      fetch('/api/prefs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`prefs save failed: ${res.status}`);
+          setPrefsSync('synced');
+        })
+        .catch((err) => {
+          console.error('[settings] failed to save prefs:', err);
+          setPrefsSync('error');
+        });
+    }, 500);
+    return () => {
+      if (prefsDebounceRef.current) clearTimeout(prefsDebounceRef.current);
+    };
+  }, [
+    ui.glowIntensity,
+    ui.animationSpeed,
+    ui.soundEffects,
+    ui.themeColor,
+    ui.accentColor,
+    notifications.notifyQuestCompletions,
+    notifications.notifyMilestoneCrossings,
+    notifications.notifyBlubberTips,
+  ]);
+
+  // Real (if minimal) Accent Color hook: an inline style property on
+  // <html> beats the :root rule in globals.css by specificity, so this
+  // actually re-themes every `--core-accent-bright`/`--core-accent` consumer
+  // app-wide — not just this screen's own preview. globals.css itself is
+  // shared/frozen (see SettingsScreen.css's own header note), so the override
+  // lives here as a runtime style property instead of a class swap.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.style.setProperty('--core-accent-bright', ui.accentColor);
+    document.documentElement.style.setProperty('--core-accent', ui.accentColor);
+  }, [ui.accentColor]);
+
+  // -------------------------------------------------------------------------
+  // Real Voice rail wiring (Lane V contract) — see the import comment at the
+  // top of this file. getVoiceConfig()/setVoiceConfig() are wrapped in
+  // Promise.resolve() since the contract doesn't specify sync vs async and
+  // this file can't inspect the real signature until that module lands.
+  // -------------------------------------------------------------------------
+  const [voiceSync, setVoiceSync] = useState<BrainSyncState>('loading');
+  const skipNextVoicePostRef = useRef(true);
+  const voiceDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setVoiceSync('loading');
+    skipNextVoicePostRef.current = true;
+    Promise.resolve(getVoiceConfig())
+      .then((config) => {
+        updateVoice({
+          voice: voiceStyleToLabel(config.voiceStyle),
+          pitch: config.pitch,
+          masterVolume: config.volume,
+          muted: config.muted,
+        });
+        setVoiceSync('synced');
+      })
+      .catch((err) => {
+        console.error('[settings] failed to load voice config:', err);
+        skipNextVoicePostRef.current = false;
+        setVoiceSync('error');
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only seed
+  }, []);
+
+  useEffect(() => {
+    if (skipNextVoicePostRef.current) {
+      skipNextVoicePostRef.current = false;
+      return;
+    }
+    setVoiceSync('saving');
+    if (voiceDebounceRef.current) clearTimeout(voiceDebounceRef.current);
+    voiceDebounceRef.current = setTimeout(() => {
+      Promise.resolve(
+        setVoiceConfig({
+          voiceStyle: voiceLabelToStyle(voice.voice),
+          pitch: voice.pitch,
+          volume: voice.masterVolume,
+          muted: voice.muted,
+        }),
+      )
+        .then(() => setVoiceSync('synced'))
+        .catch((err) => {
+          console.error('[settings] failed to save voice config:', err);
+          setVoiceSync('error');
+        });
+    }, 500);
+    return () => {
+      if (voiceDebounceRef.current) clearTimeout(voiceDebounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only the 4 contract fields; musicReactivity is local-only and must not trigger a save
+  }, [voice.voice, voice.pitch, voice.masterVolume, voice.muted]);
+
+  const handleVoicePreview = useCallback(() => {
+    Promise.resolve(speak('Hey! This is how I sound.')).catch((err) => {
+      console.error('[settings] voice preview failed:', err);
+    });
+  }, []);
+
+  // Advanced tab's read-only app info — fetched once, not gated to the tab
+  // being active (cheap, and avoids a loading flash every time you switch
+  // back to Advanced).
+  useEffect(() => {
+    fetch('/api/meta')
+      .then((res) => {
+        if (!res.ok) throw new Error(`meta fetch failed: ${res.status}`);
+        return res.json() as Promise<AppMeta>;
+      })
+      .then(setMeta)
+      .catch((err) => console.error('[settings] failed to load app meta:', err));
+  }, []);
+
   // Master reset — the real one. Zeros every real dashboard number back to 0
   // "fresh out the box" (POST /api/reset moves the stats baseline to now +
   // resets the pet), also clears this screen's local control defaults, then
@@ -599,19 +891,31 @@ export default function SettingsScreen() {
       updateIntegration(DEFAULT_INTEGRATION);
       updatePersonality(DEFAULT_PERSONALITY);
       updateUi(DEFAULT_INTERFACE);
+      updateNotifications(DEFAULT_NOTIFICATIONS);
       updateVoice(DEFAULT_VOICE);
       updatePrivacy(DEFAULT_PRIVACY);
       // The server has already reset brain-config.json to defaults as part of
       // /api/reset. window.location.reload() below remounts this screen,
       // which re-runs the seed effect and re-fetches /api/brain — the Blubber
       // Personality panel comes back showing the real reset values, not
-      // stale in-memory state.
+      // stale in-memory state. Same is true for prefs (Appearance/
+      // Notifications) and voice config — /api/reset also clears those two
+      // stores server-side (see src/app/api/reset/route.ts).
       if (typeof window !== 'undefined') window.location.reload();
     } catch {
       if (typeof window !== 'undefined') window.alert('Reset failed — is the dev server running? Check its logs.');
       setIsResetting(false);
     }
-  }, [updateGeneral, updateUsage, updateIntegration, updatePersonality, updateUi, updateVoice, updatePrivacy]);
+  }, [
+    updateGeneral,
+    updateUsage,
+    updateIntegration,
+    updatePersonality,
+    updateUi,
+    updateNotifications,
+    updateVoice,
+    updatePrivacy,
+  ]);
 
   const handleDeleteAllData = useCallback(() => {
     if (typeof window !== 'undefined' && !window.confirm('Reset every Blubber OS setting on this screen back to its default? This cannot be undone.')) {
@@ -622,9 +926,10 @@ export default function SettingsScreen() {
     updateIntegration(DEFAULT_INTEGRATION);
     updatePersonality(DEFAULT_PERSONALITY);
     updateUi(DEFAULT_INTERFACE);
+    updateNotifications(DEFAULT_NOTIFICATIONS);
     updateVoice(DEFAULT_VOICE);
     updatePrivacy(DEFAULT_PRIVACY);
-  }, [updateGeneral, updateUsage, updateIntegration, updatePersonality, updateUi, updateVoice, updatePrivacy]);
+  }, [updateGeneral, updateUsage, updateIntegration, updatePersonality, updateUi, updateNotifications, updateVoice, updatePrivacy]);
 
   // Export Data + Clear Cache have nothing real to do yet (no backend/export
   // pipeline wired up) — left as visible, enabled, genuinely inert buttons
@@ -662,7 +967,7 @@ export default function SettingsScreen() {
         ))}
       </nav>
 
-      {activeTab === 'general' ? (
+      {activeTab === 'general' && (
         <div className="settings-grid">
           <div className="settings-grid__main">
             <Panel title="General Preferences" className="settings-panel settings-panel--general">
@@ -704,76 +1009,10 @@ export default function SettingsScreen() {
               </div>
             </Panel>
 
-            <Panel
-              title="Blubber Personality"
-              className="settings-panel settings-panel--personality"
-              action={<BrainSyncPill state={brainSync} />}
-            >
-              <div className="settings-panel__rows">
-                <SettingRow icon={Smile} label="Personality Mode" description="Set Blubber's default personality.">
-                  <SelectField
-                    value={personality.mode}
-                    onChange={(v) => updatePersonality({ mode: v })}
-                    options={PERSONALITY_MODE_OPTIONS}
-                    ariaLabel="Personality mode"
-                  />
-                </SettingRow>
-                <SliderRow
-                  icon={Zap}
-                  label="Energy Level"
-                  description="Overall hyperactivity and bounce level."
-                  value={personality.energyLevel}
-                  onChange={(v) => updatePersonality({ energyLevel: v })}
-                />
-                <SliderRow
-                  icon={Footprints}
-                  label="Movement Amount"
-                  description="How much Blubber wanders and moves around on its own."
-                  value={personality.movementAmount}
-                  onChange={(v) => updatePersonality({ movementAmount: v })}
-                />
-                <SliderRow
-                  icon={MessageCircle}
-                  label="Talkativeness"
-                  description="How much Blubber chats and reacts."
-                  value={personality.talkativeness}
-                  onChange={(v) => updatePersonality({ talkativeness: v })}
-                />
-                <SliderRow
-                  icon={Laugh}
-                  label="Sarcasm"
-                  description="How sassy is Blubber feeling?"
-                  value={personality.sarcasm}
-                  onChange={(v) => updatePersonality({ sarcasm: v })}
-                />
-                <SliderRow
-                  icon={Heart}
-                  label="Emote Frequency"
-                  description="How often Blubber shows random emotes."
-                  value={personality.emoteFrequency}
-                  onChange={(v) => updatePersonality({ emoteFrequency: v })}
-                />
-              </div>
-            </Panel>
-
             <Panel title="Token & Usage Settings" className="settings-panel settings-panel--usage">
               <div className="settings-panel__rows">
                 <SettingRow icon={Activity} label="Usage Tracking" description="Track token usage and generate analytics.">
                   <Toggle checked={usage.usageTracking} onChange={(v) => updateUsage({ usageTracking: v })} label="Usage tracking" />
-                </SettingRow>
-                <SettingRow
-                  icon={RotateCcw}
-                  label="Reset Dashboard"
-                  description="Master reset — put every real number (tokens, agent & skill runs, activity, the pet) back to zero and start fresh from now."
-                >
-                  <button
-                    type="button"
-                    className="settings-btn settings-btn--danger"
-                    onClick={handleMasterReset}
-                    disabled={isResetting}
-                  >
-                    {isResetting ? 'Resetting…' : 'Reset to Zero'}
-                  </button>
                 </SettingRow>
                 <SettingRow icon={Bell} label="Usage Alerts" description="Get notified when approaching daily/weekly limits.">
                   <Toggle checked={usage.usageAlerts} onChange={(v) => updateUsage({ usageAlerts: v })} label="Usage alerts" />
@@ -797,58 +1036,6 @@ export default function SettingsScreen() {
                     options={CURRENCY_OPTIONS}
                     ariaLabel="Currency"
                   />
-                </SettingRow>
-              </div>
-            </Panel>
-
-            <Panel title="Interface Settings" className="settings-panel settings-panel--interface">
-              <div className="settings-panel__rows">
-                <SettingRow icon={Palette} label="Theme" description="Choose your favorite color theme.">
-                  <div className="swatch-row">
-                    {THEME_SWATCHES.map((swatch) => (
-                      <button
-                        key={swatch.id}
-                        type="button"
-                        className={`swatch-dot${ui.themeColor === swatch.id ? ' swatch-dot--active' : ''}`}
-                        style={{ backgroundColor: swatch.hex }}
-                        onClick={() => updateUi({ themeColor: swatch.id, accentColor: swatch.hex })}
-                        aria-label={`${swatch.name} theme`}
-                        aria-pressed={ui.themeColor === swatch.id}
-                      />
-                    ))}
-                  </div>
-                </SettingRow>
-                <SettingRow icon={Hash} label="Accent Color" description="Customize the primary accent color.">
-                  <div className="accent-input">
-                    <span className="accent-input__swatch" style={{ backgroundColor: ui.accentColor }} aria-hidden="true" />
-                    <input
-                      type="text"
-                      value={ui.accentColor}
-                      onChange={(e) => updateUi({ accentColor: e.target.value })}
-                      className="accent-input__text"
-                      aria-label="Accent color hex value"
-                      spellCheck={false}
-                      maxLength={9}
-                    />
-                  </div>
-                </SettingRow>
-                <SliderRow
-                  icon={Sun}
-                  label="Glow Intensity"
-                  description="Adjust the overall neon glow."
-                  value={ui.glowIntensity}
-                  onChange={(v) => updateUi({ glowIntensity: v })}
-                />
-                <SettingRow icon={Gauge} label="Animation Speed" description="Control the speed of UI animations.">
-                  <SelectField
-                    value={ui.animationSpeed}
-                    onChange={(v) => updateUi({ animationSpeed: v })}
-                    options={ANIMATION_SPEED_OPTIONS}
-                    ariaLabel="Animation speed"
-                  />
-                </SettingRow>
-                <SettingRow icon={Volume2} label="Sound Effects" description="Enable UI sounds and Blubber reactions.">
-                  <Toggle checked={ui.soundEffects} onChange={(v) => updateUi({ soundEffects: v })} label="Sound effects" />
                 </SettingRow>
               </div>
             </Panel>
@@ -896,8 +1083,6 @@ export default function SettingsScreen() {
               </div>
             </Panel>
 
-            <OnboardingSettingsSection />
-
             <KitInstaller />
 
             <RecommendedPlugins />
@@ -940,7 +1125,11 @@ export default function SettingsScreen() {
               </div>
             </Panel>
 
-            <Panel title="Voice & Audio" className="settings-panel settings-panel--voice">
+            <Panel
+              title="Voice & Audio"
+              className="settings-panel settings-panel--voice"
+              action={<BrainSyncPill state={voiceSync} />}
+            >
               <div className="settings-panel__rows">
                 <SettingRow icon={Mic} label="Blubber Voice" description="Choose Blubber's voice style.">
                   <SelectField
@@ -971,6 +1160,14 @@ export default function SettingsScreen() {
                   value={voice.musicReactivity}
                   onChange={(v) => updateVoice({ musicReactivity: v })}
                 />
+                <SettingRow icon={VolumeX} label="Mute" description="Silence Blubber's voice entirely.">
+                  <Toggle checked={voice.muted} onChange={(v) => updateVoice({ muted: v })} label="Mute Blubber voice" />
+                </SettingRow>
+                <SettingRow icon={Play} label="Preview" description="Hear Blubber say a line with these settings.">
+                  <button type="button" className="settings-btn" onClick={handleVoicePreview} disabled={voice.muted}>
+                    Preview
+                  </button>
+                </SettingRow>
               </div>
             </Panel>
 
@@ -996,7 +1193,7 @@ export default function SettingsScreen() {
                 <SettingRow
                   icon={AlertTriangle}
                   label="Reset All Settings"
-                  description="Reset every setting on this screen (general, usage, personality, interface, voice, privacy) back to its default. Does not touch your data — use Reset Dashboard for that."
+                  description="Reset every setting on this screen (general, usage, personality, appearance, notifications, voice, privacy) back to its default. Does not touch your data — use Reset Dashboard for that."
                   danger
                 >
                   <button type="button" className="settings-btn settings-btn--danger" onClick={handleDeleteAllData}>
@@ -1007,8 +1204,229 @@ export default function SettingsScreen() {
             </Panel>
           </div>
         </div>
-      ) : (
-        <ComingSoonPanel label={TABS.find((tab) => tab.id === activeTab)?.label ?? activeTab} />
+      )}
+
+      {activeTab === 'appearance' && (
+        <div className="settings-tab-content">
+          <Panel title="Appearance" className="settings-panel settings-panel--interface settings-panel--wide">
+            <div className="settings-panel__rows">
+              <SettingRow icon={Palette} label="Theme" description="Choose your favorite color theme.">
+                <div className="swatch-row">
+                  {THEME_SWATCHES.map((swatch) => (
+                    <button
+                      key={swatch.id}
+                      type="button"
+                      className={`swatch-dot${ui.themeColor === swatch.id ? ' swatch-dot--active' : ''}`}
+                      style={{ backgroundColor: swatch.hex }}
+                      onClick={() => updateUi({ themeColor: swatch.id, accentColor: swatch.hex })}
+                      aria-label={`${swatch.name} theme`}
+                      aria-pressed={ui.themeColor === swatch.id}
+                    />
+                  ))}
+                </div>
+              </SettingRow>
+              <SettingRow icon={Hash} label="Accent Color" description="Customize the primary accent color — applies app-wide immediately.">
+                <div className="accent-input">
+                  <span className="accent-input__swatch" style={{ backgroundColor: ui.accentColor }} aria-hidden="true" />
+                  <input
+                    type="text"
+                    value={ui.accentColor}
+                    onChange={(e) => updateUi({ accentColor: e.target.value })}
+                    className="accent-input__text"
+                    aria-label="Accent color hex value"
+                    spellCheck={false}
+                    maxLength={9}
+                  />
+                </div>
+              </SettingRow>
+              <SliderRow
+                icon={Sun}
+                label="Glow Intensity"
+                description="Adjust the overall neon glow."
+                value={ui.glowIntensity}
+                onChange={(v) => updateUi({ glowIntensity: v })}
+              />
+              <SettingRow icon={Gauge} label="Animation Speed" description="Control the speed of UI animations.">
+                <SelectField
+                  value={ui.animationSpeed}
+                  onChange={(v) => updateUi({ animationSpeed: v })}
+                  options={ANIMATION_SPEED_OPTIONS}
+                  ariaLabel="Animation speed"
+                />
+              </SettingRow>
+              <SettingRow icon={Volume2} label="Sound Effects" description="Enable UI sounds and Blubber reactions.">
+                <Toggle checked={ui.soundEffects} onChange={(v) => updateUi({ soundEffects: v })} label="Sound effects" />
+              </SettingRow>
+              <SettingRow
+                icon={Sparkles}
+                label="Reduce Motion & Effects"
+                description="Tone down glow, blur, and background motion across the dashboard for a calmer, lighter feel."
+              >
+                <Toggle checked={reduceEffects} onChange={setReduceEffects} label="Reduce motion & effects" />
+              </SettingRow>
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {activeTab === 'flubber' && (
+        <div className="settings-tab-content">
+          <Panel
+            title="Blubber Personality"
+            className="settings-panel settings-panel--personality settings-panel--wide"
+            action={<BrainSyncPill state={brainSync} />}
+          >
+            <div className="settings-panel__rows">
+              <SettingRow icon={Smile} label="Personality Mode" description="Set Blubber's default personality.">
+                <SelectField
+                  value={personality.mode}
+                  onChange={(v) => updatePersonality({ mode: v })}
+                  options={PERSONALITY_MODE_OPTIONS}
+                  ariaLabel="Personality mode"
+                />
+              </SettingRow>
+              <SliderRow
+                icon={Zap}
+                label="Energy Level"
+                description="Overall hyperactivity and bounce level."
+                value={personality.energyLevel}
+                onChange={(v) => updatePersonality({ energyLevel: v })}
+              />
+              <SliderRow
+                icon={Footprints}
+                label="Movement Amount"
+                description="How much Blubber wanders and moves around on its own."
+                value={personality.movementAmount}
+                onChange={(v) => updatePersonality({ movementAmount: v })}
+              />
+              <SliderRow
+                icon={MessageCircle}
+                label="Talkativeness"
+                description="How much Blubber chats and reacts."
+                value={personality.talkativeness}
+                onChange={(v) => updatePersonality({ talkativeness: v })}
+              />
+              <SliderRow
+                icon={Laugh}
+                label="Sarcasm"
+                description="How sassy is Blubber feeling?"
+                value={personality.sarcasm}
+                onChange={(v) => updatePersonality({ sarcasm: v })}
+              />
+              <SliderRow
+                icon={Heart}
+                label="Emote Frequency"
+                description="How often Blubber shows random emotes."
+                value={personality.emoteFrequency}
+                onChange={(v) => updatePersonality({ emoteFrequency: v })}
+              />
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {activeTab === 'agents' && <ComingSoonPanel label="Agents" />}
+
+      {activeTab === 'notifications' && (
+        <div className="settings-tab-content">
+          <Panel title="Notifications" className="settings-panel settings-panel--wide" action={<BrainSyncPill state={prefsSync} />}>
+            <div className="settings-panel__rows">
+              <SettingRow icon={Trophy} label="Quest Completions" description="Notify when a quest is completed.">
+                <Toggle
+                  checked={notifications.notifyQuestCompletions}
+                  onChange={(v) => updateNotifications({ notifyQuestCompletions: v })}
+                  label="Quest completions"
+                />
+              </SettingRow>
+              <SettingRow icon={TrendingUp} label="Milestone Crossings" description="Notify when a usage or activity milestone is crossed.">
+                <Toggle
+                  checked={notifications.notifyMilestoneCrossings}
+                  onChange={(v) => updateNotifications({ notifyMilestoneCrossings: v })}
+                  label="Milestone crossings"
+                />
+              </SettingRow>
+              {/* Persisted and real, but not yet wired to actually hide
+                  AppShell.tsx's rotating "Blubber Tip" sidebar card — that
+                  component lives outside this screen's ownership. See the
+                  file header + task limitations for the gap. */}
+              <SettingRow icon={Lightbulb} label="Blubber Tips" description="Show the rotating Blubber Tip card in the sidebar.">
+                <Toggle
+                  checked={notifications.notifyBlubberTips}
+                  onChange={(v) => updateNotifications({ notifyBlubberTips: v })}
+                  label="Blubber tips"
+                />
+              </SettingRow>
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {activeTab === 'shortcuts' && (
+        <div className="settings-tab-content">
+          <Panel title="Keyboard Shortcuts" className="settings-panel settings-panel--wide">
+            <p className="shortcuts-intro">
+              Every shortcut below is real — pulled directly from this build&rsquo;s keyboard handlers, not a wishlist.
+            </p>
+            <div className="shortcuts-table" role="table" aria-label="Keyboard shortcuts">
+              <div className="shortcuts-table__row shortcuts-table__row--head" role="row">
+                <span role="columnheader">Keys</span>
+                <span role="columnheader">Action</span>
+                <span role="columnheader">Where</span>
+              </div>
+              {SHORTCUT_ROWS.map((row) => (
+                <div key={row.action + row.context} className="shortcuts-table__row" role="row">
+                  <span role="cell" className="shortcuts-table__keys">
+                    {row.keys}
+                  </span>
+                  <span role="cell">{row.action}</span>
+                  <span role="cell" className="shortcuts-table__context">
+                    {row.context}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {activeTab === 'advanced' && (
+        <div className="settings-tab-content">
+          <Panel title="App Info" className="settings-panel settings-panel--wide">
+            <div className="settings-panel__rows">
+              <SettingRow icon={Tag} label="Version" description="The installed Blubber OS build.">
+                <span className="settings-meta-value">{meta ? meta.version : 'Loading…'}</span>
+              </SettingRow>
+              <SettingRow icon={HardDrive} label="Data Directory" description="Where local stores (usage.db, brain-config.json, voice-config.json) live.">
+                <span className="settings-meta-value settings-meta-value--path">{meta ? meta.dataDir : 'Loading…'}</span>
+              </SettingRow>
+              <SettingRow icon={FolderOpen} label="Claude Projects Directory" description="Where session transcripts are read from.">
+                <span className="settings-meta-value settings-meta-value--path">{meta ? meta.claudeProjectsDir : 'Loading…'}</span>
+              </SettingRow>
+            </div>
+          </Panel>
+
+          <Panel title="Danger Zone" className="settings-panel settings-panel--wide">
+            <div className="settings-panel__rows">
+              <SettingRow
+                icon={RotateCcw}
+                label="Reset Dashboard"
+                description="Master reset — put every real number (tokens, agent & skill runs, activity, the pet) back to zero and start fresh from now."
+                danger
+              >
+                <button
+                  type="button"
+                  className="settings-btn settings-btn--danger"
+                  onClick={handleMasterReset}
+                  disabled={isResetting}
+                >
+                  {isResetting ? 'Resetting…' : 'Reset to Zero'}
+                </button>
+              </SettingRow>
+            </div>
+          </Panel>
+
+          <OnboardingSettingsSection />
+        </div>
       )}
     </div>
   );

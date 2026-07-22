@@ -1,12 +1,14 @@
-/* SettingsScreen — tab strip (General/Appearance/Flubber/Agents/AI & Model/
+/* SettingsScreen — tab strip (General/Appearance/Blubber/Agents/
    Notifications/Shortcuts/Advanced) over a 2-col main content area + an
-   independently-sized right rail (see `.settings-grid` below). Only
-   "General" ships real content this pass (see SettingsScreen.tsx header) —
-   every other tab renders ComingSoonPanel. Tokens only, matches the frozen
-   design system in globals.css (same convention as AgentsScreen.css /
-   VirtualPetScreen.css), plus one local screen-scoped accent
-   (`--settings-icon-warm`) for the warm gold/amber row icons the reference
-   art uses that globals.css's green-only palette doesn't cover. */
+   independently-sized right rail (see `.settings-grid` below, General tab
+   only — every other tab uses the simpler stacked `.settings-tab-content`).
+   "AI & Model" was cut entirely (see SettingsScreen.tsx header); "Agents"
+   still renders ComingSoonPanel, everything else ships real content this
+   pass. Tokens only, matches the frozen design system in globals.css (same
+   convention as AgentsScreen.css / VirtualPetScreen.css), plus one local
+   screen-scoped accent (`--settings-icon-warm`) for the warm gold/amber row
+   icons the reference art uses that globals.css's green-only palette
+   doesn't cover. */
 
 .settings-screen {
   display: flex;
@@ -626,6 +628,97 @@
 }
 .settings-sync-pill--error .settings-sync-pill__dot {
   background: oklch(70% 0.2 30);
+}
+
+/* ------------------------------------------------------------------ */
+/* Single-panel tabs (Appearance / Blubber / Notifications / Shortcuts /
+   Advanced) — unlike General, these don't need the 2-col main + rail split,
+   just a simple stacked column of full-width panels. */
+/* ------------------------------------------------------------------ */
+
+.settings-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* Advanced tab — read-only meta rows (version, data paths)            */
+/* ------------------------------------------------------------------ */
+
+.settings-meta-value {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.settings-meta-value--path {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+/* ------------------------------------------------------------------ */
+/* Shortcuts tab — static keymap table                                 */
+/* ------------------------------------------------------------------ */
+
+.shortcuts-intro {
+  margin: 0 0 0.9rem;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.shortcuts-table {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid oklch(65% 0 0 / 16%);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.shortcuts-table__row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid oklch(65% 0 0 / 10%);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+}
+
+.shortcuts-table__row:last-child {
+  border-bottom: none;
+}
+
+.shortcuts-table__row--head {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.shortcuts-table__keys {
+  font-family: var(--font-mono);
+  color: var(--core-accent-bright);
+}
+
+.shortcuts-table__context {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 560px) {
+  .shortcuts-table__row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .shortcuts-table__context {
+    grid-column: 1 / -1;
+  }
 }
 
 /* ------------------------------------------------------------------ */

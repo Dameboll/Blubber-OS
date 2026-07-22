@@ -16,6 +16,8 @@ import { resetQuests } from "../../../server/quest-store";
 import { liveUsageWatcher } from "../../../server/live-usage-watcher";
 import * as spawnedStore from "../../../server/spawned-store";
 import * as brainStore from "../../../server/brain-store";
+import * as prefsStore from "../../../server/prefs-store";
+import * as voiceStore from "../../../server/voice-store";
 import { resetOnboardingState } from "../../../server/onboarding-store";
 import { resetIntroState } from "../../../server/intro-store";
 import { resetKitInstallState } from "../../../server/kit-store";
@@ -36,6 +38,11 @@ export async function POST() {
     resetQuests();
     spawnedStore.clear();
     brainStore.reset();
+    // Settings' Appearance/Notifications prefs blob + the voice-lib config —
+    // master reset means EVERY Settings store goes back to documented
+    // defaults, not just the brain config.
+    prefsStore.reset();
+    voiceStore.reset();
     // First-run gates + kit-install record — master reset puts the machine
     // back to "fresh out the box", which includes replaying onboarding/intro
     // and forgetting the starter-kit install, not just the usage numbers.

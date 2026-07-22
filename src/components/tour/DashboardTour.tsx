@@ -33,6 +33,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import type { NavId } from '../AppShell';
 import { requestSoulInterview } from '../../lib/soul';
+import { speak } from '../../lib/blubber-voice';
 import './DashboardTour.css';
 
 interface TourStep {
@@ -99,6 +100,13 @@ export default function DashboardTour({ onNavChange, onClose }: DashboardTourPro
   useEffect(() => {
     onNavChange(step.navId);
   }, [step.navId, onNavChange]);
+
+  // Blubber "says" this step's caption out loud (blubber-speak, not TTS —
+  // see src/lib/blubber-voice.ts). Fire-and-forget: speak() never throws, so
+  // no try/catch needed at the call site.
+  useEffect(() => {
+    speak(step.caption);
+  }, [step.caption]);
 
   // Read the live position of the target nav button. Runs after the nav change
   // paints, and re-runs on resize so the spotlight never drifts off the button.

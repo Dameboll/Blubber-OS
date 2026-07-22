@@ -53,6 +53,7 @@ import CarePayoffs, { type CarePayoffsHandle } from '../pet/CarePayoffs';
 import QuestPanel from '../pet/QuestPanel';
 import PetStats from '../pet/PetStats';
 import { GamesHub } from '../games/GamesHub';
+import { playCelebration } from '../../lib/blubber-voice';
 import './VirtualPetScreen.css';
 
 type PetTab = 'care' | 'quests' | 'play' | 'stats';
@@ -463,7 +464,16 @@ export default function VirtualPetScreen({ className }: VirtualPetScreenProps) {
       body: JSON.stringify({ action }),
     })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: PetApiState | null) => { if (data) { setPet(data); syncBrainPet(data); } })
+      .then((data: PetApiState | null) => {
+        if (data) {
+          setPet(data);
+          syncBrainPet(data);
+          // A little wordless celebratory riff (blubber-speak, no text — see
+          // src/lib/blubber-voice.ts) on a confirmed feed, same spirit as the
+          // 'celebrating' brain react a claimed quest gets below.
+          if (action === 'feed') playCelebration();
+        }
+      })
       .catch(() => { /* keep optimistic state on failure */ });
   }, [brainApi, syncBrainPet, runPayoff]);
 
@@ -529,6 +539,7 @@ export default function VirtualPetScreen({ className }: VirtualPetScreenProps) {
         if (data?.state) {
           setQuest(data.state);
           brainApi.react('celebrating', { priority: 3, holdMs: 1800, pulse: true });
+          playCelebration();
         }
       })
       .catch(() => { /* leave state; the panel stays claimable */ })

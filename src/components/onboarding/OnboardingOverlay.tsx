@@ -54,11 +54,12 @@
  * AND the manual reduce-effects toggle — see shouldSkipMotion() below.
  */
 
-import { useCallback, useLayoutEffect, useRef, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type DragEvent } from 'react';
 import { gsap } from 'gsap';
 import { isReduceEffectsActive } from '../../lib/reduce-effects';
 import { requestTour } from '../../lib/tour';
 import { requestSoulInterview } from '../../lib/soul';
+import { speak } from '../../lib/blubber-voice';
 import './OnboardingOverlay.css';
 
 // Community Edition onboarding is barebones by design: welcome, detect, done.
@@ -82,6 +83,21 @@ export interface OnboardingOverlayProps {
 }
 
 const MIN_DETECT_DISPLAY_MS = 550;
+
+// Blubber "narrates" a handful of steps out loud in blubber-speak (see
+// src/lib/blubber-voice.ts) — the same body copy shown on screen, chopped
+// into blips rather than read as TTS. Only the steps with real narration
+// copy get an entry; 'detecting' and 'starterKit' are intentionally left out
+// (detecting is a transient beat, starterKit already has its own two-button
+// decision to make and doesn't need Blubber talking over it).
+const STEP_NARRATION: Partial<Record<Step, string>> = {
+  welcome:
+    "A live shell over the Claude Code sessions already running on this machine — sessions, agents, token burn, real. No account, no setup wizard, no tutorial. You already know how this works.",
+  found:
+    "There's real Claude Code history on this machine already. Blubber can index it right now — sessions, agents, token usage — so the dashboard opens with your actual work instead of an empty room.",
+  notfound: 'Blubber is a shell over Claude Code. Set it up, then come back and scan again.',
+  summary: 'Real numbers, off this machine, right now.',
+};
 
 // Checked once per step transition (see the useLayoutEffect below, which
 // reruns on every `step` change) — so this doubles as a live-enough read of
@@ -108,6 +124,13 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
     const node = cardRef.current;
     if (!node || shouldSkipMotion()) return;
     gsap.fromTo(node, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out' });
+  }, [step]);
+
+  // Narrate the steps that have narration copy (see STEP_NARRATION above),
+  // once per step change. Fire-and-forget — speak() never throws.
+  useEffect(() => {
+    const line = STEP_NARRATION[step];
+    if (line) speak(line);
   }, [step]);
 
   const runDetect = useCallback(async () => {

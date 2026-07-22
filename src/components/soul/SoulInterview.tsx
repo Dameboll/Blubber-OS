@@ -37,8 +37,9 @@
  * OWNERSHIP: this file + SoulInterview.css only.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { SOUL_QUESTIONS } from '../../lib/soul-questions';
+import { speak } from '../../lib/blubber-voice';
 import './SoulInterview.css';
 
 type Phase = 'intro' | 'question' | 'done';
@@ -60,6 +61,13 @@ export default function SoulInterview({ onClose }: SoulInterviewProps) {
   const question = SOUL_QUESTIONS[index];
   const isLastQuestion = index === SOUL_QUESTIONS.length - 1;
   const answeredCount = Object.keys(answers).length;
+
+  // Blubber "asks" each question out loud as its card comes up (blubber-speak,
+  // not TTS — see src/lib/blubber-voice.ts). Only while a question is on
+  // screen; the intro/done cards stay silent.
+  useEffect(() => {
+    if (phase === 'question') speak(question.prompt);
+  }, [phase, question]);
 
   // The one and only network call this component ever makes — fired once,
   // with whatever's been collected so far, whenever the flow reaches an end

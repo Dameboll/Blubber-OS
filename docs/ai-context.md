@@ -39,6 +39,23 @@ Verified against a PRODUCTION build + real prod server, not dev (dev doesn't cod
 - /api/system was double-polled (SessionProvider app-wide + DashboardScreen's own
   useSystemVitals). Dropped the local poll; Dashboard derives vitals from session.vitals.
 
+## Activity-feed clear bug + Agents perf (2026-07-22)
+- BUG FIXED (HEAD 8631dd4): the Activity Feed "Clear" button did nothing on a not-connected
+  machine — i.e. the DEFAULT state for every new user. Clear writes a `recent_cleared_at`
+  baseline, but GET /api/recent's not-connected branch returned the placeholder demo feed and
+  never applied it; demo events are timestamped `now - minutesAgo` per request, so a timestamp
+  filter could never hold them cleared. Fix: not-connected AND cleared → return []. Real feed
+  (genuine baseline) takes over on connect. A fresh machine that never cleared still shows the
+  demo feed.
+- AGENTS SCREEN PERF: measured, HEALTHY — no problem. "suspect the check first" case:
+  headless probe said 1fps (software-GL garbage, thrown out); headed-GPU avg 28fps (skewed by
+  a one-time ~1.7s mount spike); CONTROLLED MEDIAN = 16.7ms/frame ≈ 60fps, identical to every
+  other screen. One shared WebGL context (invariant holds), no steady-state JS jank. Only costs:
+  the one mount spike (dynamic chunk + 3D warmup) and 3 poll loops (agents-live 2.5s heaviest —
+  could back off when idle, not needed). Perf-measure how-to: headed chromium with
+  --use-gl=angle, compare MEDIAN frame ms across screens (avg is noise), never trust headless fps
+  for this 3D app.
+
 ## Launch decisions (locked)
 - Free shell stays SILENT about the Starter Kit — no in-app upsell, ever. The landing page
   (blubber-site) is the funnel; all downloads route through it, so the kit pitch already

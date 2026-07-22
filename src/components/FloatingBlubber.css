@@ -1,0 +1,79 @@
+/* FloatingBlubber — see FloatingBlubber.tsx header. Transform/opacity only. */
+
+.floaty {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+/* Soft radial green glow puddle behind + around the character — grounds it,
+   makes it feel lit. Breathes with the float. Uses the app's accent green so
+   it matches Blubber OS's palette (not the site's raw rgba). */
+.floaty__glow {
+  position: absolute;
+  inset: -22%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 60% 60% at 50% 58%,
+    oklch(74% 0.2 151 / 0.34),
+    transparent 70%
+  );
+  filter: blur(16px);
+  animation: floaty-breathe 6.5s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.floaty__img {
+  width: 100%;
+  height: auto;
+  display: block;
+  user-select: none;
+  /* Pivot near the base so squash reads as weight settling into the ground,
+     not scaling from the center. */
+  transform-origin: 50% 90%;
+  /* Two stacked glows = the neon halo, in the app's greens. */
+  filter:
+    drop-shadow(0 0 30px oklch(80% 0.22 150 / 0.5))
+    drop-shadow(0 0 62px oklch(87% 0.29 142 / 0.25));
+  animation: floaty-bob 6.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Bob + tilt + squash-and-stretch. Slow (6.5s) = calm/alive; rise stretches
+   tall, land squashes wide; tilt barely there to break the stiffness. */
+@keyframes floaty-bob {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1) rotate(0deg);
+  }
+  40% {
+    transform: translateY(-9px) scale(0.97, 1.05) rotate(-1.2deg);
+  }
+  60% {
+    transform: translateY(-10px) scale(1, 1) rotate(-1.5deg);
+  }
+  80% {
+    transform: translateY(-2px) scale(1.04, 0.96) rotate(-0.6deg);
+  }
+}
+
+/* Glow swells at the top of the float. */
+@keyframes floaty-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floaty__img,
+  .floaty__glow {
+    animation: none;
+  }
+}

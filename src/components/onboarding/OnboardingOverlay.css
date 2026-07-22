@@ -80,31 +80,10 @@
    landscape). Rounded-rect at the art's own aspect so his arms and the
    floating bubbles stay in frame (a circle crop was amputating him), floating
    on a slow bob. transform-only animation, reduced-motion safe. */
+/* Now a <FloatingBlubber> (glossy transparent Blubber, owns its own float +
+   glow + squash-stretch). This class only supplies the layout spacing. */
 .onb__badge {
-  width: 176px;
-  height: 107px;
-  border-radius: 18px;
-  object-fit: cover;
-  border: 1px solid var(--border-glow);
-  box-shadow: var(--glow-shadow);
-  margin-bottom: 6px;
-  animation: onb-float 3.4s ease-in-out infinite;
-}
-
-@keyframes onb-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-7px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .onb__badge {
-    animation: none;
-  }
+  margin-bottom: 8px;
 }
 
 .onb__title {

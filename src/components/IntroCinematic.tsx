@@ -189,10 +189,12 @@ export default function IntroCinematic({ children }: { children: ReactNode }) {
 
           <div className="intro-cinematic__center">
             <div ref={stageRef} className="intro-cinematic__stage">
-              {/* Static reference-photo Blubber — the 3D is held for in-app only. */}
+              {/* Glossy static Blubber (transparent) — the 3D is held for in-app
+                  only. GSAP owns the stage transform (forms-up + squash); no CSS
+                  float here or it would fight the timeline. */}
               {/* eslint-disable-next-line @next/next/no-img-element -- static /public asset, no next/image usage elsewhere in this app */}
               <img
-                src="/blubber-hero.png"
+                src="/blubber-glossy.png"
                 alt="Blubber"
                 width={STAGE_SIZE}
                 height={STAGE_SIZE}

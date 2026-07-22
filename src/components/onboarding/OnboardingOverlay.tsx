@@ -60,6 +60,7 @@ import { isReduceEffectsActive } from '../../lib/reduce-effects';
 import { requestTour } from '../../lib/tour';
 import { requestSoulInterview } from '../../lib/soul';
 import { speak } from '../../lib/blubber-voice';
+import FloatingBlubber from '../FloatingBlubber';
 import './OnboardingOverlay.css';
 
 // Community Edition onboarding is barebones by design: welcome, detect, done.
@@ -254,11 +255,10 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
       <div className="onb__card" ref={cardRef}>
         {step === 'welcome' && (
           <>
-            {/* Static reference-photo Blubber (the render, NOT the live 3D). The
-                3D Blubber is deliberately held back until the user is booted
-                inside the app — see IntroCinematic + page.tsx. */}
-            {/* eslint-disable-next-line @next/next/no-img-element -- static /public asset, app-wide convention */}
-            <img className="onb__badge" src="/blubber-hero.png" alt="Blubber" width={96} height={96} />
+            {/* Glossy static Blubber, floating (NOT the live 3D — that's held
+                back until the user is booted inside the app; see IntroCinematic
+                + page.tsx). */}
+            <FloatingBlubber size={188} className="onb__badge" alt="Blubber" />
             <h1 className="onb__title">Meet Blubber</h1>
             <p className="onb__body">
               A live shell over the Claude Code sessions already running on this machine — sessions, agents, token
@@ -372,8 +372,7 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
 
         {step === 'starterKit' && (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element -- static /public asset, app-wide convention */}
-            <img className="onb__badge" src="/blubber-hero.png" alt="Blubber" width={96} height={96} />
+            <FloatingBlubber size={188} className="onb__badge" alt="Blubber" />
             <h2 className="onb__title onb__title--sm">Starter Kit detected</h2>
             <p className="onb__body">
               Nice — your Starter Kit is installed. Your CLAUDE.md, agents, skills, and commands are all in place.

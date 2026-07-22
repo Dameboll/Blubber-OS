@@ -68,28 +68,10 @@
   }
 }
 
-/* The official static Blubber at the art's own landscape aspect (arms + his
-   bubbles in frame, no circle amputation), floating on a slow bob — he escorts
-   the user tab to tab. */
+/* The glossy static Blubber (a <FloatingBlubber> — owns its own float + glow +
+   squash-stretch), escorting the user tab to tab beside the chat bubble. */
 .tour__blubber {
-  width: 148px;
-  height: 90px;
   flex-shrink: 0;
-  border-radius: 16px;
-  object-fit: cover;
-  border: 1px solid var(--border-glow, oklch(30% 0.02 160));
-  box-shadow: 0 0 32px oklch(74% 0.2 151 / 0.35);
-  animation: tour-bob 3.2s ease-in-out infinite;
-}
-
-@keyframes tour-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
 }
 
 /* The chat bubble IS the advance button — click it to continue, like stepping

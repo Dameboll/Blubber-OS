@@ -34,6 +34,7 @@ import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import type { NavId } from '../AppShell';
 import { requestSoulInterview } from '../../lib/soul';
 import { speak } from '../../lib/blubber-voice';
+import FloatingBlubber from '../FloatingBlubber';
 import './DashboardTour.css';
 
 interface TourStep {
@@ -209,8 +210,7 @@ export default function DashboardTour({ onNavChange, onClose }: DashboardTourPro
 
       {/* Blubber + chat bubble. The bubble is the click-through control. */}
       <div className="tour__escort" style={escortStyle}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- static /public asset, app-wide convention */}
-        <img className="tour__blubber" src="/blubber-hero.png" alt="" aria-hidden="true" />
+        <FloatingBlubber size={132} className="tour__blubber" />
         <button
           type="button"
           className="tour__bubble"

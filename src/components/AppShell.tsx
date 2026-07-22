@@ -36,10 +36,13 @@ import {
   Smile,
   Terminal,
 } from 'lucide-react';
+import gsap from 'gsap';
 import Flubber3D from './Flubber3D';
 import AgentAvatar from './AgentAvatar';
 import PersistentTerminalHost from './PersistentTerminalHost';
 import { humanizeSlug } from '../lib/humanize';
+import { setUse24h } from '../lib/time-format';
+import { setSoundEffectsEnabled } from '../lib/blubber-voice';
 import { SessionProvider, useSession } from '../context/SessionProvider';
 import { subscribeNarration, type NarrationMessage } from '../lib/flubber3d/narration';
 import { wsClient } from '../lib/ws-client';
@@ -593,33 +596,68 @@ export default function AppShell({
   const tip = useRotating(TIPS, 10000);
   const quote = useRotating(QUOTES, 14000);
 
-  // Settings > Notifications > "Blubber Tips" controls whether the rotating
-  // tip card renders at all. Seeded from the same persisted /api/prefs blob
-  // SettingsScreen writes, then kept live via the 'blubber:tips-pref'
-  // CustomEvent SettingsScreen dispatches on toggle (no shared store needed
-  // for one boolean). Defaults to visible, matching prefs-store's DEFAULTS.
+  // APP-WIDE PREFS APPLIER. Every ui pref that has a real global effect is
+  // applied here, from /api/prefs on load and from the 'blubber:prefs'
+  // CustomEvent SettingsScreen dispatches on change — so a setting takes effect
+  // app-wide immediately AND on a fresh launch even if the user never opens
+  // Settings (previously accent/glow only applied while the Settings screen was
+  // mounted, a latent bug). "Blubber Tips" is the one that also gates React
+  // render (the sidebar tip card below), so it stays in component state.
   const [tipsEnabled, setTipsEnabled] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+
+    const apply = (prefs: {
+      accentColor?: string;
+      glowIntensity?: number;
+      animationSpeed?: string;
+      timeFormat?: string;
+      soundEffects?: boolean;
+      notifyBlubberTips?: boolean;
+    }) => {
+      const root = document.documentElement;
+      // Accent (app-wide re-theme — every --core-accent* consumer).
+      if (typeof prefs.accentColor === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(prefs.accentColor)) {
+        root.style.setProperty('--core-accent', prefs.accentColor);
+        root.style.setProperty('--core-accent-bright', prefs.accentColor);
+      }
+      // Glow: 0..100 slider → --blubber-glow multiplier (80 = 1.0, the default
+      // look), consumed by every --glow-shadow across the app (globals.css).
+      if (typeof prefs.glowIntensity === 'number') {
+        const mult = Math.max(0, Math.min(1.6, prefs.glowIntensity / 80));
+        root.style.setProperty('--blubber-glow', mult.toFixed(3));
+      }
+      // Animation Speed: one lever over every GSAP animation in the app.
+      if (prefs.animationSpeed === 'Slow' || prefs.animationSpeed === 'Normal' || prefs.animationSpeed === 'Fast') {
+        const scale = prefs.animationSpeed === 'Slow' ? 0.7 : prefs.animationSpeed === 'Fast' ? 1.4 : 1;
+        gsap.globalTimeline.timeScale(scale);
+        root.dataset.motionSpeed = prefs.animationSpeed.toLowerCase();
+      }
+      // Time Format (12h/24h) and Sound Effects gate — module-level setters.
+      if (prefs.timeFormat === '12h' || prefs.timeFormat === '24h') setUse24h(prefs.timeFormat === '24h');
+      if (typeof prefs.soundEffects === 'boolean') setSoundEffectsEnabled(prefs.soundEffects);
+      // Sidebar tip card visibility (React-rendered).
+      if (typeof prefs.notifyBlubberTips === 'boolean') setTipsEnabled(prefs.notifyBlubberTips);
+    };
+
     fetch('/api/prefs')
-      .then((res) => (res.ok ? (res.json() as Promise<{ prefs?: { notifyBlubberTips?: boolean } }>) : null))
+      .then((res) => (res.ok ? (res.json() as Promise<{ prefs?: Parameters<typeof apply>[0] }>) : null))
       .then((data) => {
-        if (!cancelled && typeof data?.prefs?.notifyBlubberTips === 'boolean') {
-          setTipsEnabled(data.prefs.notifyBlubberTips);
-        }
+        if (!cancelled && data?.prefs) apply(data.prefs);
       })
       .catch(() => {
-        // Pref fetch failing just leaves the card visible (the default).
+        // Pref fetch failing just leaves every default in place.
       });
-    const onTipsPref = (e: Event) => {
-      const detail = (e as CustomEvent<{ enabled?: boolean }>).detail;
-      if (typeof detail?.enabled === 'boolean') setTipsEnabled(detail.enabled);
+
+    const onPrefs = (e: Event) => {
+      const detail = (e as CustomEvent<{ prefs?: Parameters<typeof apply>[0] }>).detail;
+      if (detail?.prefs) apply(detail.prefs);
     };
-    window.addEventListener('blubber:tips-pref', onTipsPref);
+    window.addEventListener('blubber:prefs', onPrefs);
     return () => {
       cancelled = true;
-      window.removeEventListener('blubber:tips-pref', onTipsPref);
+      window.removeEventListener('blubber:prefs', onPrefs);
     };
   }, []);
 

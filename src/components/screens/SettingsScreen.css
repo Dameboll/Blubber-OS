@@ -1,14 +1,11 @@
-/* SettingsScreen — tab strip (General/Appearance/Blubber/Agents/
-   Notifications/Shortcuts/Advanced) over a 2-col main content area + an
-   independently-sized right rail (see `.settings-grid` below, General tab
-   only — every other tab uses the simpler stacked `.settings-tab-content`).
-   "AI & Model" was cut entirely (see SettingsScreen.tsx header); "Agents"
-   still renders ComingSoonPanel, everything else ships real content this
-   pass. Tokens only, matches the frozen design system in globals.css (same
-   convention as AgentsScreen.css / VirtualPetScreen.css), plus one local
-   screen-scoped accent (`--settings-icon-warm`) for the warm gold/amber row
-   icons the reference art uses that globals.css's green-only palette
-   doesn't cover. */
+/* SettingsScreen — tab strip (General/Appearance/Blubber/Shortcuts/Advanced)
+   over a 2-col main content area + an independently-sized right rail
+   (Blubber Preview, General tab only — every other tab uses the simpler
+   stacked `.settings-tab-content`). All 5 tabs ship real content. Tokens only,
+   matches the frozen design system in globals.css (same convention as
+   AgentsScreen.css / VirtualPetScreen.css), plus one local screen-scoped
+   accent (`--settings-icon-warm`) for the warm gold/amber row icons the
+   reference art uses that globals.css's green-only palette doesn't cover. */
 
 .settings-screen {
   display: flex;

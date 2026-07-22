@@ -104,6 +104,7 @@ import { wsClient } from '../lib/ws-client';
 import { classifyOutput, stripAnsi } from '../lib/terminal-signals';
 import { narrate } from '../lib/flubber3d/narration';
 import { DEV_ROOT } from '../lib/dev-root';
+import { formatClockTime } from '../lib/time-format';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -340,9 +341,9 @@ function formatUptime(seconds: number): string {
   return `${hours}h ${String(minutes).padStart(2, '0')}m`;
 }
 
-function formatClockTime(date: Date): string {
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-}
+// formatClockTime moved to src/lib/time-format.ts so the "Time Format" (12h/24h)
+// setting governs it — imported above. The live clock re-renders every second,
+// so a setting change is reflected within a tick.
 
 // ---------------------------------------------------------------------------
 // Provider

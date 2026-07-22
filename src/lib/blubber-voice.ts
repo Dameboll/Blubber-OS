@@ -467,6 +467,17 @@ export function stopSpeaking(): void {
   }
 }
 
+// Settings > Appearance > "Sound Effects" gate for the non-voice riff. Distinct
+// from the voice `muted` config (which silences speech): this switch governs
+// the celebratory UI sound only. Default true; set by the app-wide prefs
+// applier (AppShell) from ui prefs `soundEffects`.
+let sfxEnabled = true;
+
+/** Enable/disable the celebration riff (the "Sound Effects" setting). */
+export function setSoundEffectsEnabled(value: boolean): void {
+  sfxEnabled = value;
+}
+
 /** A short, wordless celebratory riff (three ascending blips) — the same
  * synth engine as speak(), just with no text and a fixed happy little
  * up-shape. Used for one-liner moments (quest claim, pet feed) that deserve
@@ -474,6 +485,7 @@ export function stopSpeaking(): void {
 export function playCelebration(): void {
   try {
     if (typeof window === 'undefined') return;
+    if (!sfxEnabled) return;
     const config = getVoiceConfig();
     if (config.muted || config.volume <= 0) return;
 

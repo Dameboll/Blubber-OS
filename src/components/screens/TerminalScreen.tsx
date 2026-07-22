@@ -83,6 +83,7 @@ import {
 } from '../ui';
 import { useSession } from '../../context/SessionProvider';
 import { wsClient } from '../../lib/ws-client';
+import { formatShortTime } from '../../lib/time-format';
 import './TerminalScreen.css';
 
 // ---------------------------------------------------------------------------
@@ -165,10 +166,7 @@ export default function TerminalScreen({ className, compact }: TerminalScreenPro
     registerTabControl,
   } = useSession();
 
-  const sessionStartLabel = useMemo(
-    () => new Date(sessionStartTs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
-    [sessionStartTs],
-  );
+  const sessionStartLabel = useMemo(() => formatShortTime(new Date(sessionStartTs)), [sessionStartTs]);
 
   const terminalCardRef = useRef<HTMLDivElement | null>(null);
   const liveOutputRef = useRef<HTMLDivElement | null>(null);

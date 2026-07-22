@@ -24,9 +24,14 @@
 
   --radius-panel: 20px; /* rounded card corners on every panel in the mockups */
   --border-glow: oklch(87% 0.29 142 / 28%); /* thin 1px semi-transparent neon border around panels */
+  /* --blubber-glow is a 0..~1.6 multiplier set app-wide from the Settings
+     "Glow Intensity" slider (AppShell applies it on <html>). Fallback 1 = the
+     original look, so this is a no-op until the setting drives it. Every
+     --glow-shadow consumer app-wide then scales with the slider. */
+  --blubber-glow: 1;
   --glow-shadow:
-    0 0 20px oklch(74% 0.2 151 / 35%),
-    0 0 48px oklch(87% 0.29 142 / 18%); /* soft green glow behind icons/badges/hero character */
+    0 0 calc(20px * var(--blubber-glow)) oklch(74% 0.2 151 / calc(35% * var(--blubber-glow))),
+    0 0 calc(48px * var(--blubber-glow)) oklch(87% 0.29 142 / calc(18% * var(--blubber-glow))); /* soft green glow behind icons/badges/hero character */
 }
 
 * {

@@ -17,8 +17,11 @@ import { db } from './db';
 const PREFS_KEY = 'ui_prefs_v1';
 
 export type AnimationSpeed = 'Slow' | 'Normal' | 'Fast';
+export type TimeFormat = '12h' | '24h';
 
 export interface UiPrefs {
+  // General
+  timeFormat: TimeFormat;
   // Appearance
   glowIntensity: number;
   animationSpeed: AnimationSpeed;
@@ -26,24 +29,22 @@ export interface UiPrefs {
   themeColor: string;
   accentColor: string;
   // Notifications
-  notifyQuestCompletions: boolean;
-  notifyMilestoneCrossings: boolean;
   notifyBlubberTips: boolean;
 }
 
 const ANIMATION_SPEEDS: AnimationSpeed[] = ['Slow', 'Normal', 'Fast'];
+const TIME_FORMATS: TimeFormat[] = ['12h', '24h'];
 
 // Mirrors SettingsScreen.tsx's pre-existing DEFAULT_INTERFACE values exactly,
 // so the UI never flashes a different value than what the store will return
 // on first fetch (same reasoning as brain-store.ts's header comment).
 const DEFAULTS: UiPrefs = {
+  timeFormat: '12h',
   glowIntensity: 80,
   animationSpeed: 'Normal',
   soundEffects: true,
   themeColor: 'green',
   accentColor: '#39FF14',
-  notifyQuestCompletions: true,
-  notifyMilestoneCrossings: true,
   notifyBlubberTips: true,
 };
 
@@ -76,6 +77,9 @@ function writeMeta(value: string): void {
 function sanitize(parsed: Partial<UiPrefs> | null): UiPrefs {
   if (!parsed || typeof parsed !== 'object') return { ...DEFAULTS };
   return {
+    timeFormat: TIME_FORMATS.includes(parsed.timeFormat as TimeFormat)
+      ? (parsed.timeFormat as TimeFormat)
+      : DEFAULTS.timeFormat,
     glowIntensity: typeof parsed.glowIntensity === 'number' ? clampPct(parsed.glowIntensity) : DEFAULTS.glowIntensity,
     animationSpeed: ANIMATION_SPEEDS.includes(parsed.animationSpeed as AnimationSpeed)
       ? (parsed.animationSpeed as AnimationSpeed)
@@ -83,12 +87,6 @@ function sanitize(parsed: Partial<UiPrefs> | null): UiPrefs {
     soundEffects: typeof parsed.soundEffects === 'boolean' ? parsed.soundEffects : DEFAULTS.soundEffects,
     themeColor: typeof parsed.themeColor === 'string' && parsed.themeColor ? parsed.themeColor : DEFAULTS.themeColor,
     accentColor: isHexColor(parsed.accentColor) ? parsed.accentColor : DEFAULTS.accentColor,
-    notifyQuestCompletions:
-      typeof parsed.notifyQuestCompletions === 'boolean' ? parsed.notifyQuestCompletions : DEFAULTS.notifyQuestCompletions,
-    notifyMilestoneCrossings:
-      typeof parsed.notifyMilestoneCrossings === 'boolean'
-        ? parsed.notifyMilestoneCrossings
-        : DEFAULTS.notifyMilestoneCrossings,
     notifyBlubberTips:
       typeof parsed.notifyBlubberTips === 'boolean' ? parsed.notifyBlubberTips : DEFAULTS.notifyBlubberTips,
   };

@@ -7,51 +7,29 @@
  * content area plus an independent right-hand rail (Preview/Voice/Privacy,
  * General tab only).
  *
- * TAB STATUS (this pass): General, Appearance, Blubber, Notifications,
- * Shortcuts, and Advanced are all real — every control on them persists
- * somewhere real (server JSON store, app_meta row, or localStorage) and does
- * what it says. "AI & Model" was CUT entirely (see the old TABS array in
- * git history) rather than shipped as fake dropdowns backing nothing real —
- * it returns once there's an actual model-selection/provider layer to wire
- * it to. "Agents" still renders ComingSoonPanel; nothing real backs it yet.
+ * TAB STATUS (this pass): All 5 tabs (General/Appearance/Blubber/Shortcuts/
+ * Advanced) are real — every control persists to a real backend (server JSON
+ * store, app_meta row, or voice-store) and does what it says. Dead tabs
+ * (Agents, Notifications, ComingSoonPanel) and dead panels (General Preferences
+ * except Time Format, Token & Usage, System Integration, Data & Privacy except
+ * Reset) have been removed entirely. Blubber Tips notification now lives in
+ * General. Voice & Audio moved to Blubber tab. Music Reactivity removed.
  *
- * WHERE THINGS LIVE NOW: Interface Settings (glow/animation speed/sound fx/
- * theme + accent color) and the Reduce Effects toggle moved to Appearance.
- * Blubber Personality moved to its own Blubber tab. Notifications is new
- * (3 toggles, app_meta-backed). Shortcuts is a static, code-verified keymap
- * (no invented rows). Advanced now owns the master Reset Dashboard button
- * and OnboardingSettingsSection (Replay Setup + its own Reduce Effects
- * toggle) — both relocated from General, same handlers, not duplicated.
- * General keeps genuinely general prefs: General Preferences, Token & Usage
- * (minus the reset button), System Integration, Kit Installer, Recommended
- * Plugins, Retake Soul Interview, and the whole right rail.
+ * WIRING: Time Format added to InterfaceSettings/ui group (values: '12h'/'24h').
+ * prefs dispatch now sends unified 'blubber:prefs' event with full UiPrefsPayload
+ * on change + on save, replacing the old 'blubber:tips-pref' dispatch. AppShell
+ * applies prefs app-wide and owns the accent color CSS (removed local useEffect).
  *
- * LAYOUT NOTE: the main content area (`.settings-grid__main`) and the rail
- * (`.settings-grid__rail`) are separate flex/grid containers rather than one
- * shared 3-column/3-row grid. A single shared grid would force every row's
- * track height to match its tallest cell across all three columns — since
- * Blubber Preview (rail) reads much taller than General Preferences (main),
- * that coupling would leave dead space under the shorter main-column panels.
- * Splitting them into two independently-sized flex children removes that
- * coupling entirely and also lets the rail run wider than a single main
- * column, matching the reference screenshot's proportions.
+ * LAYOUT NOTE: General tab uses `.settings-grid` (main + rail separate containers)
+ * for independent sizing. Other tabs use `.settings-tab-content` (simple flex column).
  *
  * OWNERSHIP: this file + SettingsScreen.css only. Reuses Panel + FlubberCharacter
- * from the frozen foundation (see file header in the project's screen-builder brief);
- * everything else here (toggle switch, slider, select, integration tile, theme
- * swatch, danger button) is a small local control built for this screen because
- * the shared ui/ kit has no interactive form controls yet (ProgressBar is
- * display-only — no onChange — so it couldn't be reused for the draggable
- * sliders here; the slider's track/fill visual language still matches it).
+ * from the frozen foundation; everything else (toggle switch, slider, select,
+ * theme swatch, danger button) is local control built for this screen.
  *
- * PROPS: none required. Every control is local component state seeded with
- * sensible defaults — nothing here persists to disk/DB yet (see inline
- * comments on the two fully-inert buttons: Export Data + Clear Cache).
- * "Reset Dashboard" is the real master reset: it POSTs /api/reset, which moves
- * the stats baseline to now (zeroing every real dashboard number "fresh out
- * the box") and resets the pet, then reloads. "Delete All Data" resets this
- * screen's own control state back to defaults. Both do a real, verifiable
- * reset rather than pretending to work.
+ * PROPS: none required. All state is local, seeded with sensible defaults.
+ * "Reset All Settings" resets screen state. "Reset Dashboard" (Advanced tab)
+ * POSTs /api/reset, moving stats baseline to now and reloading.
  */
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -123,16 +101,12 @@ import '../../styles/fit-sweep.css';
 // since lucide-react (0.462.0) doesn't export a standalone `LucideIcon` type.
 type IconType = typeof SettingsIcon;
 
-// 'ai-model' was cut on purpose — see the file header. Do not re-add it
-// without something real (an actual model/provider layer) behind it.
-type TabId = 'general' | 'appearance' | 'flubber' | 'agents' | 'notifications' | 'shortcuts' | 'advanced';
+type TabId = 'general' | 'appearance' | 'flubber' | 'shortcuts' | 'advanced';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'general', label: 'General' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'flubber', label: 'Blubber' },
-  { id: 'agents', label: 'Agents' },
-  { id: 'notifications', label: 'Notifications' },
   { id: 'shortcuts', label: 'Shortcuts' },
   { id: 'advanced', label: 'Advanced' },
 ];
@@ -141,36 +115,11 @@ const TABS: { id: TabId; label: string }[] = [
 // Settings state shapes + defaults
 // ---------------------------------------------------------------------------
 
-interface GeneralPrefs {
-  startupBehavior: string;
-  autoLaunch: boolean;
-  minimizeToTray: boolean;
-  language: string;
-  timeFormat: string;
-}
-
-interface UsageSettings {
-  usageTracking: boolean;
-  usageAlerts: boolean;
-  dailyLimitWarning: number;
-  weeklyLimitWarning: number;
-  currency: string;
-}
-
-interface IntegrationSettings {
-  systemTrayIcon: boolean;
-  globalHotkey: boolean;
-  clipboardListening: boolean;
-  fileWatcher: boolean;
-}
-
 interface PersonalitySettings {
   mode: string;
   energyLevel: number;
   movementAmount: number;
   talkativeness: number;
-  sarcasm: number;
-  emoteFrequency: number;
 }
 
 // The real, server-backed slice of PersonalitySettings — mirrors
@@ -200,13 +149,12 @@ interface InterfaceSettings {
   glowIntensity: number;
   animationSpeed: string;
   soundEffects: boolean;
+  timeFormat: string;
+  notifyBlubberTips: boolean;
 }
 
 // Appearance's server-backed shape — mirrors src/server/prefs-store.ts's
-// UiPrefs exactly (see the GET/POST /api/prefs contract below). Kept as a
-// separate local type from InterfaceSettings/NotificationSettings so the two
-// local state groups can stay independently updatable while both still
-// round-trip through the one prefs blob.
+// UiPrefs exactly (see the GET/POST /api/prefs contract below).
 type AnimationSpeed = 'Slow' | 'Normal' | 'Fast';
 
 interface UiPrefsPayload {
@@ -215,14 +163,7 @@ interface UiPrefsPayload {
   soundEffects: boolean;
   themeColor: string;
   accentColor: string;
-  notifyQuestCompletions: boolean;
-  notifyMilestoneCrossings: boolean;
-  notifyBlubberTips: boolean;
-}
-
-interface NotificationSettings {
-  notifyQuestCompletions: boolean;
-  notifyMilestoneCrossings: boolean;
+  timeFormat: string;
   notifyBlubberTips: boolean;
 }
 
@@ -250,38 +191,8 @@ interface VoiceSettings {
   voice: string;
   pitch: number;
   masterVolume: number;
-  /** Not part of the voice-lib contract — purely local, drives how much the
-   *  idle Flubber Preview reacts to the music player's current track. */
-  musicReactivity: number;
   muted: boolean;
 }
-
-interface PrivacySettings {
-  localDataOnly: boolean;
-}
-
-const DEFAULT_GENERAL: GeneralPrefs = {
-  startupBehavior: 'Open Dashboard',
-  autoLaunch: true,
-  minimizeToTray: true,
-  language: 'English',
-  timeFormat: '12-Hour (AM/PM)',
-};
-
-const DEFAULT_USAGE: UsageSettings = {
-  usageTracking: true,
-  usageAlerts: true,
-  dailyLimitWarning: 80,
-  weeklyLimitWarning: 90,
-  currency: 'Tokens',
-};
-
-const DEFAULT_INTEGRATION: IntegrationSettings = {
-  systemTrayIcon: true,
-  globalHotkey: true,
-  clipboardListening: true,
-  fileWatcher: true,
-};
 
 // Defaults mirror src/server/brain-store.ts's BRAIN defaults exactly
 // (playful / 75 / 70 / 60) so the UI never flashes a different value than
@@ -291,45 +202,30 @@ const DEFAULT_PERSONALITY: PersonalitySettings = {
   energyLevel: 75,
   movementAmount: 70,
   talkativeness: 60,
-  sarcasm: 40,
-  emoteFrequency: 70,
 };
 
 // Mirrors src/server/prefs-store.ts's UiPrefs defaults exactly (same reason
-// as DEFAULT_PERSONALITY above — no flash of a different value on first
-// fetch).
+// as DEFAULT_PERSONALITY above — no flash of a different value on first fetch).
+// timeFormat default: '12h' per spec. notifyBlubberTips: true by default.
 const DEFAULT_INTERFACE: InterfaceSettings = {
   themeColor: 'green',
   accentColor: '#39FF14',
   glowIntensity: 80,
   animationSpeed: 'Normal',
   soundEffects: true,
-};
-
-const DEFAULT_NOTIFICATIONS: NotificationSettings = {
-  notifyQuestCompletions: true,
-  notifyMilestoneCrossings: true,
+  timeFormat: '12h',
   notifyBlubberTips: true,
 };
 
 // Mirrors src/server/voice-store.ts's VoiceConfig defaults exactly
-// (bubbly / 55 / — / 70 / unmuted). masterVolume maps to the contract's
-// `volume` field; musicReactivity has no contract equivalent (see
-// VoiceSettings above) and keeps its own pre-existing default.
+// (bubbly / 55 / 70 / unmuted). masterVolume maps to the contract's `volume` field.
 const DEFAULT_VOICE: VoiceSettings = {
   voice: 'Bubbly',
   pitch: 55,
   masterVolume: 70,
-  musicReactivity: 80,
   muted: false,
 };
 
-const DEFAULT_PRIVACY: PrivacySettings = { localDataOnly: true };
-
-const STARTUP_OPTIONS = ['Open Dashboard', 'Open Terminal', 'Open Last Screen', 'Minimized to Tray'];
-const LANGUAGE_OPTIONS = ['English', 'Spanish', 'French', 'German', 'Portuguese'];
-const TIME_FORMAT_OPTIONS = ['12-Hour (AM/PM)', '24-Hour'];
-const CURRENCY_OPTIONS = ['Tokens', 'USD ($)', 'Requests'];
 const PERSONALITY_MODE_OPTIONS = ['Playful', 'Professional', 'Chill', 'Hype', 'Sarcastic'];
 const ANIMATION_SPEED_OPTIONS: AnimationSpeed[] = ['Slow', 'Normal', 'Fast'];
 const VOICE_OPTIONS = VOICE_STYLE_OPTIONS.map((opt) => opt.label);
@@ -577,20 +473,6 @@ function BrainSyncPill({ state }: { state: BrainSyncState }) {
   );
 }
 
-function ComingSoonPanel({ label }: { label: string }) {
-  return (
-    <Panel accent title={label} className="settings-panel settings-panel--wide">
-      <div className="settings-coming-soon">
-        <FlubberCharacter expression="thinking" size={64} mode="character" showToggle={false} />
-        <p>
-          The {label} tab hasn&rsquo;t been wired up yet — General is the only fully-built tab in this pass.
-          Check back once the next settings pass lands.
-        </p>
-      </div>
-    </Panel>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Default export
 // ---------------------------------------------------------------------------
@@ -599,14 +481,9 @@ export default function SettingsScreen() {
   const [activeTab, setActiveTab] = useState<TabId>('general');
   const [isResetting, setIsResetting] = useState(false);
 
-  const [general, updateGeneral] = useSettingsGroup(DEFAULT_GENERAL);
-  const [usage, updateUsage] = useSettingsGroup(DEFAULT_USAGE);
-  const [integration, updateIntegration] = useSettingsGroup(DEFAULT_INTEGRATION);
   const [personality, updatePersonality] = useSettingsGroup(DEFAULT_PERSONALITY);
   const [ui, updateUi] = useSettingsGroup(DEFAULT_INTERFACE);
-  const [notifications, updateNotifications] = useSettingsGroup(DEFAULT_NOTIFICATIONS);
   const [voice, updateVoice] = useSettingsGroup(DEFAULT_VOICE);
-  const [privacy, updatePrivacy] = useSettingsGroup(DEFAULT_PRIVACY);
   const { reduceEffects, setReduceEffects } = useReduceEffects();
   const [meta, setMeta] = useState<AppMeta | null>(null);
 
@@ -714,10 +591,7 @@ export default function SettingsScreen() {
           soundEffects: prefs.soundEffects,
           themeColor: prefs.themeColor,
           accentColor: prefs.accentColor,
-        });
-        updateNotifications({
-          notifyQuestCompletions: prefs.notifyQuestCompletions,
-          notifyMilestoneCrossings: prefs.notifyMilestoneCrossings,
+          timeFormat: prefs.timeFormat,
           notifyBlubberTips: prefs.notifyBlubberTips,
         });
         setPrefsSync('synced');
@@ -738,18 +612,16 @@ export default function SettingsScreen() {
     setPrefsSync('saving');
     if (prefsDebounceRef.current) clearTimeout(prefsDebounceRef.current);
     prefsDebounceRef.current = setTimeout(() => {
-      const body: { prefs: Partial<UiPrefsPayload> } = {
-        prefs: {
-          glowIntensity: ui.glowIntensity,
-          animationSpeed: ui.animationSpeed as AnimationSpeed,
-          soundEffects: ui.soundEffects,
-          themeColor: ui.themeColor,
-          accentColor: ui.accentColor,
-          notifyQuestCompletions: notifications.notifyQuestCompletions,
-          notifyMilestoneCrossings: notifications.notifyMilestoneCrossings,
-          notifyBlubberTips: notifications.notifyBlubberTips,
-        },
+      const payload: UiPrefsPayload = {
+        glowIntensity: ui.glowIntensity,
+        animationSpeed: ui.animationSpeed as AnimationSpeed,
+        soundEffects: ui.soundEffects,
+        themeColor: ui.themeColor,
+        accentColor: ui.accentColor,
+        timeFormat: ui.timeFormat,
+        notifyBlubberTips: ui.notifyBlubberTips,
       };
+      const body = { prefs: payload };
       fetch('/api/prefs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -758,6 +630,10 @@ export default function SettingsScreen() {
         .then((res) => {
           if (!res.ok) throw new Error(`prefs save failed: ${res.status}`);
           setPrefsSync('synced');
+          // Dispatch unified prefs event for AppShell to apply app-wide
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('blubber:prefs', { detail: { prefs: payload } }));
+          }
         })
         .catch((err) => {
           console.error('[settings] failed to save prefs:', err);
@@ -767,40 +643,22 @@ export default function SettingsScreen() {
     return () => {
       if (prefsDebounceRef.current) clearTimeout(prefsDebounceRef.current);
     };
-  }, [
-    ui.glowIntensity,
-    ui.animationSpeed,
-    ui.soundEffects,
-    ui.themeColor,
-    ui.accentColor,
-    notifications.notifyQuestCompletions,
-    notifications.notifyMilestoneCrossings,
-    notifications.notifyBlubberTips,
-  ]);
+  }, [ui.glowIntensity, ui.animationSpeed, ui.soundEffects, ui.themeColor, ui.accentColor, ui.timeFormat, ui.notifyBlubberTips]);
 
-  // Real (if minimal) Accent Color hook: an inline style property on
-  // <html> beats the :root rule in globals.css by specificity, so this
-  // actually re-themes every `--core-accent-bright`/`--core-accent` consumer
-  // app-wide — not just this screen's own preview. globals.css itself is
-  // shared/frozen (see SettingsScreen.css's own header note), so the override
-  // lives here as a runtime style property instead of a class swap.
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    document.documentElement.style.setProperty('--core-accent-bright', ui.accentColor);
-    document.documentElement.style.setProperty('--core-accent', ui.accentColor);
-  }, [ui.accentColor]);
-
-  // Live-sync the sidebar "Blubber Tip" card: AppShell seeds its own copy of
-  // this pref from /api/prefs on boot, but while both components are mounted
-  // the toggle should take effect immediately — this event bridges the two
-  // without a shared store. Guarded on prefsSync so the mount-time default
-  // (true) never fires before the persisted value has loaded.
+  // Dispatch unified prefs event on change (before save completes) for optimistic UI updates
   useEffect(() => {
     if (typeof window === 'undefined' || prefsSync === 'loading') return;
-    window.dispatchEvent(
-      new CustomEvent('blubber:tips-pref', { detail: { enabled: notifications.notifyBlubberTips } }),
-    );
-  }, [notifications.notifyBlubberTips, prefsSync]);
+    const payload: UiPrefsPayload = {
+      glowIntensity: ui.glowIntensity,
+      animationSpeed: ui.animationSpeed as AnimationSpeed,
+      soundEffects: ui.soundEffects,
+      themeColor: ui.themeColor,
+      accentColor: ui.accentColor,
+      timeFormat: ui.timeFormat,
+      notifyBlubberTips: ui.notifyBlubberTips,
+    };
+    window.dispatchEvent(new CustomEvent('blubber:prefs', { detail: { prefs: payload } }));
+  }, [ui.glowIntensity, ui.animationSpeed, ui.soundEffects, ui.themeColor, ui.accentColor, ui.timeFormat, ui.notifyBlubberTips, prefsSync]);
 
   // -------------------------------------------------------------------------
   // Real Voice rail wiring (Lane V contract) — see the import comment at the
@@ -882,9 +740,7 @@ export default function SettingsScreen() {
 
   // Master reset — the real one. Zeros every real dashboard number back to 0
   // "fresh out the box" (POST /api/reset moves the stats baseline to now +
-  // resets the pet), also clears this screen's local control defaults, then
-  // reloads so every screen refetches and shows zero. Does NOT delete the
-  // underlying ~/.claude history — it just draws a new "count from here" line.
+  // resets the pet), then reloads so every screen refetches and shows zero.
   const handleMasterReset = useCallback(async () => {
     if (
       typeof window !== 'undefined' &&
@@ -898,55 +754,27 @@ export default function SettingsScreen() {
     try {
       const res = await fetch('/api/reset', { method: 'POST' });
       if (!res.ok) throw new Error(`reset failed: ${res.status}`);
-      updateGeneral(DEFAULT_GENERAL);
-      updateUsage(DEFAULT_USAGE);
-      updateIntegration(DEFAULT_INTEGRATION);
       updatePersonality(DEFAULT_PERSONALITY);
       updateUi(DEFAULT_INTERFACE);
-      updateNotifications(DEFAULT_NOTIFICATIONS);
       updateVoice(DEFAULT_VOICE);
-      updatePrivacy(DEFAULT_PRIVACY);
-      // The server has already reset brain-config.json to defaults as part of
-      // /api/reset. window.location.reload() below remounts this screen,
-      // which re-runs the seed effect and re-fetches /api/brain — the Blubber
-      // Personality panel comes back showing the real reset values, not
-      // stale in-memory state. Same is true for prefs (Appearance/
-      // Notifications) and voice config — /api/reset also clears those two
-      // stores server-side (see src/app/api/reset/route.ts).
+      // The server has already reset brain-config.json, prefs, and voice config to
+      // defaults as part of /api/reset. window.location.reload() below remounts
+      // this screen, which re-runs the seed effects and re-fetches all configs.
       if (typeof window !== 'undefined') window.location.reload();
     } catch {
       if (typeof window !== 'undefined') window.alert('Reset failed — is the dev server running? Check its logs.');
       setIsResetting(false);
     }
-  }, [
-    updateGeneral,
-    updateUsage,
-    updateIntegration,
-    updatePersonality,
-    updateUi,
-    updateNotifications,
-    updateVoice,
-    updatePrivacy,
-  ]);
+  }, [updatePersonality, updateUi, updateVoice]);
 
   const handleDeleteAllData = useCallback(() => {
     if (typeof window !== 'undefined' && !window.confirm('Reset every Blubber OS setting on this screen back to its default? This cannot be undone.')) {
       return;
     }
-    updateGeneral(DEFAULT_GENERAL);
-    updateUsage(DEFAULT_USAGE);
-    updateIntegration(DEFAULT_INTEGRATION);
     updatePersonality(DEFAULT_PERSONALITY);
     updateUi(DEFAULT_INTERFACE);
-    updateNotifications(DEFAULT_NOTIFICATIONS);
     updateVoice(DEFAULT_VOICE);
-    updatePrivacy(DEFAULT_PRIVACY);
-  }, [updateGeneral, updateUsage, updateIntegration, updatePersonality, updateUi, updateNotifications, updateVoice, updatePrivacy]);
-
-  // Export Data + Clear Cache have nothing real to do yet (no backend/export
-  // pipeline wired up) — left as visible, enabled, genuinely inert buttons
-  // rather than faking a success state. See file header.
-  const handleNotImplemented = useCallback(() => {}, []);
+  }, [updatePersonality, updateUi, updateVoice]);
 
   const previewStyle = {
     '--preview-glow': ui.accentColor,
@@ -982,116 +810,23 @@ export default function SettingsScreen() {
       {activeTab === 'general' && (
         <div className="settings-grid">
           <div className="settings-grid__main">
-            <Panel title="General Preferences" className="settings-panel settings-panel--general">
+            <Panel title="Preferences" className="settings-panel settings-panel--general">
               <div className="settings-panel__rows">
-                <SettingRow icon={Power} label="Startup Behavior" description="Choose what happens when Blubber OS launches.">
-                  <SelectField
-                    value={general.startupBehavior}
-                    onChange={(v) => updateGeneral({ startupBehavior: v })}
-                    options={STARTUP_OPTIONS}
-                    ariaLabel="Startup behavior"
-                  />
-                </SettingRow>
-                <SettingRow icon={Rocket} label="Auto-Launch" description="Launch Blubber OS at system startup.">
-                  <Toggle checked={general.autoLaunch} onChange={(v) => updateGeneral({ autoLaunch: v })} label="Auto-launch" />
-                </SettingRow>
-                <SettingRow icon={Minimize2} label="Minimize to Tray" description="Minimize Blubber OS to system tray instead of taskbar.">
-                  <Toggle
-                    checked={general.minimizeToTray}
-                    onChange={(v) => updateGeneral({ minimizeToTray: v })}
-                    label="Minimize to tray"
-                  />
-                </SettingRow>
-                <SettingRow icon={Globe} label="Language" description="Select your preferred language.">
-                  <SelectField
-                    value={general.language}
-                    onChange={(v) => updateGeneral({ language: v })}
-                    options={LANGUAGE_OPTIONS}
-                    ariaLabel="Language"
-                  />
-                </SettingRow>
                 <SettingRow icon={Clock} label="Time Format" description="Choose 12-hour or 24-hour time format.">
                   <SelectField
-                    value={general.timeFormat}
-                    onChange={(v) => updateGeneral({ timeFormat: v })}
-                    options={TIME_FORMAT_OPTIONS}
+                    value={ui.timeFormat}
+                    onChange={(v) => updateUi({ timeFormat: v })}
+                    options={['12h', '24h']}
                     ariaLabel="Time format"
                   />
                 </SettingRow>
-              </div>
-            </Panel>
-
-            <Panel title="Token & Usage Settings" className="settings-panel settings-panel--usage">
-              <div className="settings-panel__rows">
-                <SettingRow icon={Activity} label="Usage Tracking" description="Track token usage and generate analytics.">
-                  <Toggle checked={usage.usageTracking} onChange={(v) => updateUsage({ usageTracking: v })} label="Usage tracking" />
-                </SettingRow>
-                <SettingRow icon={Bell} label="Usage Alerts" description="Get notified when approaching daily/weekly limits.">
-                  <Toggle checked={usage.usageAlerts} onChange={(v) => updateUsage({ usageAlerts: v })} label="Usage alerts" />
-                </SettingRow>
-                <SliderRow
-                  icon={AlertCircle}
-                  label="Daily Limit Warning"
-                  value={usage.dailyLimitWarning}
-                  onChange={(v) => updateUsage({ dailyLimitWarning: v })}
-                />
-                <SliderRow
-                  icon={AlertTriangle}
-                  label="Weekly Limit Warning"
-                  value={usage.weeklyLimitWarning}
-                  onChange={(v) => updateUsage({ weeklyLimitWarning: v })}
-                />
-                <SettingRow icon={Coins} label="Currency" description="Choose how token usage is displayed.">
-                  <SelectField
-                    value={usage.currency}
-                    onChange={(v) => updateUsage({ currency: v })}
-                    options={CURRENCY_OPTIONS}
-                    ariaLabel="Currency"
+                <SettingRow icon={Lightbulb} label="Blubber Tips" description="Show the rotating Blubber Tip card in the sidebar.">
+                  <Toggle
+                    checked={ui.notifyBlubberTips}
+                    onChange={(v) => updateUi({ notifyBlubberTips: v })}
+                    label="Blubber tips"
                   />
                 </SettingRow>
-              </div>
-            </Panel>
-
-            <Panel title="System Integration" className="settings-panel settings-panel--integration">
-              <div className="integration-grid">
-                <IntegrationTile
-                  icon={AppWindow}
-                  label="System Tray Icon"
-                  description="Show Blubber in the system tray."
-                  checked={integration.systemTrayIcon}
-                  onChange={(v) => updateIntegration({ systemTrayIcon: v })}
-                />
-                <IntegrationTile
-                  icon={Keyboard}
-                  label="Global Hotkey"
-                  description="Toggle Blubber OS with a hotkey combo."
-                  checked={integration.globalHotkey}
-                  onChange={(v) => updateIntegration({ globalHotkey: v })}
-                  meta="Ctrl + Alt + F"
-                  showToggle={false}
-                />
-                <IntegrationTile
-                  icon={ClipboardList}
-                  label="Clipboard Listening"
-                  description="Let Blubber monitor clipboard content."
-                  checked={integration.clipboardListening}
-                  onChange={(v) => updateIntegration({ clipboardListening: v })}
-                />
-                <IntegrationTile
-                  icon={Eye}
-                  label="File Watcher"
-                  description="Watch for file changes in projects folder."
-                  checked={integration.fileWatcher}
-                  onChange={(v) => updateIntegration({ fileWatcher: v })}
-                />
-                <IntegrationTile
-                  icon={Code2}
-                  label="Dev Mode"
-                  description="Unlock experimental features."
-                  checked={false}
-                  onChange={() => {}}
-                  disabled
-                />
               </div>
             </Panel>
 
@@ -1100,6 +835,21 @@ export default function SettingsScreen() {
             <RecommendedPlugins />
 
             <RetakeSoulInterview />
+
+            <Panel title="Data & Privacy" className="settings-panel settings-panel--privacy">
+              <div className="settings-panel__rows">
+                <SettingRow
+                  icon={AlertTriangle}
+                  label="Reset All Settings"
+                  description="Reset every setting on this screen back to its default. Does not touch your data — use Reset Dashboard (Advanced tab) for that."
+                  danger
+                >
+                  <button type="button" className="settings-btn settings-btn--danger" onClick={handleDeleteAllData}>
+                    Reset Settings
+                  </button>
+                </SettingRow>
+              </div>
+            </Panel>
           </div>
 
           <div className="settings-grid__rail">
@@ -1119,9 +869,6 @@ export default function SettingsScreen() {
                     ))}
                   </div>
                   <span className="flubber-preview__ring" aria-hidden="true" />
-                  {/* Lane 3 one-window fit: 172 -> 120 so the rail (Preview +
-                      Voice & Audio + Data & Privacy) fits within the same
-                      budget as the main column (fit-sweep.css). */}
                   <FlubberCharacter expression="happy" size={120} mode="character" showToggle={false} />
                   <div className="flubber-preview__eq flubber-preview__eq--right" aria-hidden="true">
                     {EQ_BAR_SCALES.map((scale, i) => (
@@ -1134,84 +881,6 @@ export default function SettingsScreen() {
                   </div>
                 </div>
                 <p className="flubber-preview__caption">Looking good! Ready to roll. 💚</p>
-              </div>
-            </Panel>
-
-            <Panel
-              title="Voice & Audio"
-              className="settings-panel settings-panel--voice"
-              action={<BrainSyncPill state={voiceSync} />}
-            >
-              <div className="settings-panel__rows">
-                <SettingRow icon={Mic} label="Blubber Voice" description="Choose Blubber's voice style.">
-                  <SelectField
-                    value={voice.voice}
-                    onChange={(v) => updateVoice({ voice: v })}
-                    options={VOICE_OPTIONS}
-                    ariaLabel="Blubber voice"
-                  />
-                </SettingRow>
-                <SliderRow
-                  icon={SlidersHorizontal}
-                  label="Voice Pitch"
-                  description="Adjust Blubber's voice pitch."
-                  value={voice.pitch}
-                  onChange={(v) => updateVoice({ pitch: v })}
-                />
-                <SliderRow
-                  icon={Volume2}
-                  label="Master Volume"
-                  description="Overall volume for Blubber and UI."
-                  value={voice.masterVolume}
-                  onChange={(v) => updateVoice({ masterVolume: v })}
-                />
-                <SliderRow
-                  icon={Music2}
-                  label="Music Reactivity"
-                  description="How much Blubber reacts to music."
-                  value={voice.musicReactivity}
-                  onChange={(v) => updateVoice({ musicReactivity: v })}
-                />
-                <SettingRow icon={VolumeX} label="Mute" description="Silence Blubber's voice entirely.">
-                  <Toggle checked={voice.muted} onChange={(v) => updateVoice({ muted: v })} label="Mute Blubber voice" />
-                </SettingRow>
-                <SettingRow icon={Play} label="Preview" description="Hear Blubber say a line with these settings.">
-                  <button type="button" className="settings-btn" onClick={handleVoicePreview} disabled={voice.muted}>
-                    Preview
-                  </button>
-                </SettingRow>
-              </div>
-            </Panel>
-
-            <Panel title="Data & Privacy" className="settings-panel settings-panel--privacy">
-              <div className="settings-panel__rows">
-                <SettingRow icon={ShieldCheck} label="Local Data Only" description="Keep all data on this device.">
-                  <Toggle
-                    checked={privacy.localDataOnly}
-                    onChange={(v) => updatePrivacy({ localDataOnly: v })}
-                    label="Local data only"
-                  />
-                </SettingRow>
-                <SettingRow icon={Download} label="Export Data" description="Export your settings and data.">
-                  <button type="button" className="settings-btn" onClick={handleNotImplemented}>
-                    Export
-                  </button>
-                </SettingRow>
-                <SettingRow icon={Trash2} label="Clear Cache" description="Clear stored cache and temp files.">
-                  <button type="button" className="settings-btn" onClick={handleNotImplemented}>
-                    Clear
-                  </button>
-                </SettingRow>
-                <SettingRow
-                  icon={AlertTriangle}
-                  label="Reset All Settings"
-                  description="Reset every setting on this screen (general, usage, personality, appearance, notifications, voice, privacy) back to its default. Does not touch your data — use Reset Dashboard for that."
-                  danger
-                >
-                  <button type="button" className="settings-btn settings-btn--danger" onClick={handleDeleteAllData}>
-                    Reset Settings
-                  </button>
-                </SettingRow>
               </div>
             </Panel>
           </div>
@@ -1318,51 +987,44 @@ export default function SettingsScreen() {
                 value={personality.talkativeness}
                 onChange={(v) => updatePersonality({ talkativeness: v })}
               />
-              <SliderRow
-                icon={Laugh}
-                label="Sarcasm"
-                description="How sassy is Blubber feeling?"
-                value={personality.sarcasm}
-                onChange={(v) => updatePersonality({ sarcasm: v })}
-              />
-              <SliderRow
-                icon={Heart}
-                label="Emote Frequency"
-                description="How often Blubber shows random emotes."
-                value={personality.emoteFrequency}
-                onChange={(v) => updatePersonality({ emoteFrequency: v })}
-              />
             </div>
           </Panel>
-        </div>
-      )}
 
-      {activeTab === 'agents' && <ComingSoonPanel label="Agents" />}
-
-      {activeTab === 'notifications' && (
-        <div className="settings-tab-content">
-          <Panel title="Notifications" className="settings-panel settings-panel--wide" action={<BrainSyncPill state={prefsSync} />}>
+          <Panel
+            title="Voice & Audio"
+            className="settings-panel settings-panel--voice settings-panel--wide"
+            action={<BrainSyncPill state={voiceSync} />}
+          >
             <div className="settings-panel__rows">
-              <SettingRow icon={Trophy} label="Quest Completions" description="Notify when a quest is completed.">
-                <Toggle
-                  checked={notifications.notifyQuestCompletions}
-                  onChange={(v) => updateNotifications({ notifyQuestCompletions: v })}
-                  label="Quest completions"
+              <SettingRow icon={Mic} label="Blubber Voice" description="Choose Blubber's voice style.">
+                <SelectField
+                  value={voice.voice}
+                  onChange={(v) => updateVoice({ voice: v })}
+                  options={VOICE_OPTIONS}
+                  ariaLabel="Blubber voice"
                 />
               </SettingRow>
-              <SettingRow icon={TrendingUp} label="Milestone Crossings" description="Notify when a usage or activity milestone is crossed.">
-                <Toggle
-                  checked={notifications.notifyMilestoneCrossings}
-                  onChange={(v) => updateNotifications({ notifyMilestoneCrossings: v })}
-                  label="Milestone crossings"
-                />
+              <SliderRow
+                icon={SlidersHorizontal}
+                label="Voice Pitch"
+                description="Adjust Blubber's voice pitch."
+                value={voice.pitch}
+                onChange={(v) => updateVoice({ pitch: v })}
+              />
+              <SliderRow
+                icon={Volume2}
+                label="Master Volume"
+                description="Overall volume for Blubber and UI."
+                value={voice.masterVolume}
+                onChange={(v) => updateVoice({ masterVolume: v })}
+              />
+              <SettingRow icon={VolumeX} label="Mute" description="Silence Blubber's voice entirely.">
+                <Toggle checked={voice.muted} onChange={(v) => updateVoice({ muted: v })} label="Mute Blubber voice" />
               </SettingRow>
-              <SettingRow icon={Lightbulb} label="Blubber Tips" description="Show the rotating Blubber Tip card in the sidebar.">
-                <Toggle
-                  checked={notifications.notifyBlubberTips}
-                  onChange={(v) => updateNotifications({ notifyBlubberTips: v })}
-                  label="Blubber tips"
-                />
+              <SettingRow icon={Play} label="Preview" description="Hear Blubber say a line with these settings.">
+                <button type="button" className="settings-btn" onClick={handleVoicePreview} disabled={voice.muted}>
+                  Preview
+                </button>
               </SettingRow>
             </div>
           </Panel>

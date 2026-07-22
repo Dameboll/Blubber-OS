@@ -89,3 +89,18 @@
     display: none;
   }
 }
+
+/* Static reference-photo Blubber shown during the intro (3D is in-app only).
+   Circle-cropped so terminal-flubber.png's dark square backdrop reads as a
+   clean framed mascot against the bloom, matching the onboarding welcome badge. */
+.intro-cinematic__blubber {
+  /* Full landscape art at its own aspect — arms and bubbles in frame. GSAP
+     owns this element's parent transform (forms-up + squash), so no CSS float
+     here; the bob would fight the timeline. */
+  width: min(64vw, 340px);
+  height: auto;
+  aspect-ratio: 345 / 210;
+  border-radius: 22px;
+  object-fit: cover;
+  display: block;
+}

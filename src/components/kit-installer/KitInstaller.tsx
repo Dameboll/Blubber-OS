@@ -36,9 +36,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, FolderInput, Loader2, Package, Sparkles, XCircle } from 'lucide-react';
 import { Panel } from '../ui';
+import { requestTour } from '../../lib/tour';
 import './KitInstaller.css';
 
-type KitStep = 'manifest' | 'claudeMd' | 'agents' | 'skills' | 'structure';
+type KitStep = 'manifest' | 'claudeMd' | 'agents' | 'skills' | 'commands' | 'structure';
 type CompletedStep = Exclude<KitStep, 'manifest'>;
 
 interface KitNarration {
@@ -46,6 +47,7 @@ interface KitNarration {
   onClaudeMdInstalled: string;
   onAgentsInstalled: string;
   onSkillsInstalled: string;
+  onCommandsInstalled: string;
   onStructureCreated: string;
   onComplete: string;
 }
@@ -61,7 +63,7 @@ interface KitInstallResponse {
   stepsCompleted: CompletedStep[];
   error?: string;
   narration: KitNarration | null;
-  installedTo?: { claudeMd: string; agents: string; skills: string; projectStructure: string };
+  installedTo?: { claudeMd: string; agents: string; skills: string; commands: string; projectStructure: string };
 }
 
 interface InstalledProbe {
@@ -75,6 +77,7 @@ const STEP_NARRATION_KEY: Record<CompletedStep, keyof KitNarration> = {
   claudeMd: 'onClaudeMdInstalled',
   agents: 'onAgentsInstalled',
   skills: 'onSkillsInstalled',
+  commands: 'onCommandsInstalled',
   structure: 'onStructureCreated',
 };
 
@@ -83,6 +86,7 @@ const STEP_LABEL: Record<KitStep, string> = {
   claudeMd: 'CLAUDE.md',
   agents: 'Agents',
   skills: 'Skills',
+  commands: 'Commands',
   structure: 'Project folders',
 };
 
@@ -122,7 +126,13 @@ export default function KitInstaller() {
       .then((data) => {
         setResult(data);
         setPhase('done');
-        if (data.ok) setProbe({ installed: true, installedAt: new Date().toISOString() });
+        if (data.ok) {
+          setProbe({ installed: true, installedAt: new Date().toISOString() });
+          // Injecting the kit triggers the guided walkthrough — the same beat a
+          // kit buyer gets when detection finds the kit on boot. Fires the live
+          // tour event so page.tsx starts the tour without a reload.
+          requestTour();
+        }
       })
       .catch((err) => {
         setResult({

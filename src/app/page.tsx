@@ -31,6 +31,8 @@ import AmbientGlow from '../components/AmbientGlow';
 import DemoBadge from '../components/DemoBadge';
 import IntroCinematic from '../components/IntroCinematic';
 import OnboardingOverlay from '../components/onboarding/OnboardingOverlay';
+import DashboardTour from '../components/tour/DashboardTour';
+import { consumeTourPending, TOUR_EVENT } from '../lib/tour';
 import { FlubberBrainProvider } from '../components/FlubberBrainProvider';
 import DashboardScreen from '../components/screens/DashboardScreen';
 import AgentsScreen from '../components/screens/AgentsScreen';
@@ -56,6 +58,21 @@ export default function Home() {
   // on a fetch error so a broken check can never trap a user behind a
   // permanently blank screen.
   const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
+
+  // Starter-Kit dashboard walkthrough (see src/lib/tour.ts). Launches either
+  // from a pending flag set during onboarding (kit was detected + user opted
+  // in) or from a live 'blubber:start-tour' event (kit injected from Settings
+  // this session). Only ever fires when the kit is present — the request side
+  // is gated on kit detection, never the free build.
+  const [showTour, setShowTour] = useState(false);
+
+  useEffect(() => {
+    if (onboardingSeen !== true) return;
+    if (consumeTourPending()) setShowTour(true);
+    const onTour = () => setShowTour(true);
+    window.addEventListener(TOUR_EVENT, onTour);
+    return () => window.removeEventListener(TOUR_EVENT, onTour);
+  }, [onboardingSeen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,6 +135,9 @@ export default function Home() {
             {SCREENS[activeNavId]}
           </AppShell>
         </FlubberBrainProvider>
+        {showTour && (
+          <DashboardTour onNavChange={setActiveNavId} onClose={() => setShowTour(false)} />
+        )}
       </>
     );
   }

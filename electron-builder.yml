@@ -5,12 +5,27 @@
 # electron/main.js and scripts/electron-rebuild.mjs for the native-module
 # ABI notes that a real production installer build will need to account for.
 #
-# File selection is left to electron-builder's default (production
-# `dependencies` from package.json + project files, devDependencies
-# excluded) rather than a hand-maintained `files` allowlist -- less to get
-# wrong in a scaffold. asarUnpack below is the one override that matters:
-# better-sqlite3 and node-pty ship native .node binaries that cannot be
-# loaded from inside app.asar, so they're kept as real files on disk.
+# `files` is an explicit exclude list layered on electron-builder's default
+# "**/*" (all patterns here start with `!`, so the default is preserved --
+# see electron-builder docs on `files`). A first real build attempt proved
+# the plain default isn't safe to leave alone: this project directory also
+# accumulates large/transient dev-only trees next to the app source --
+# multiple Next.js cache dirs (.next dev cache, .next-build production
+# output that DOES ship, .next-soak/.next-verify from separate
+# load-test/verify tooling), test artifacts, and unrelated scaffolding
+# (supabase/) that has nothing to do with this Electron app. Packaging
+# "**/*" unfiltered pulled in a mid-write webpack cache file from a
+# concurrently-running process and crashed with ENOENT, and would
+# otherwise have shipped gigabytes of irrelevant dev cruft (and, worse,
+# the developer's own live local databases under data/) inside the
+# installer. Every exclude below is a directory the packaged app does not
+# read from at runtime -- server.js/src recreate data/ and music/ fresh on
+# first run (see src/server/pet-store.ts, quest-store.ts,
+# src/app/api/tracks/route.ts).
+#
+# asarUnpack below is the other override that matters: better-sqlite3 and
+# node-pty ship native .node binaries that cannot be loaded from inside
+# app.asar, so they're kept as real files on disk.
 
 appId: com.dameos.blubber
 productName: Blubber
@@ -18,6 +33,35 @@ productName: Blubber
 directories:
   output: dist-electron
   buildResources: build
+
+files:
+  - "!.next/**"
+  - "!.next-soak/**"
+  - "!.next-verify/**"
+  - "!dist-electron/**"
+  - "!data/**"
+  - "!music/**"
+  - "!logs/**"
+  - "!e2e/**"
+  - "!test-results/**"
+  - "!playwright-report/**"
+  - "!blob-report/**"
+  - "!scripts/**"
+  - "!supabase/**"
+  - "!package-lock.json"
+
+# electron-builder defaults to rebuilding native deps (better-sqlite3,
+# node-pty) against Electron's own ABI before packaging (via
+# @electron/rebuild + node-gyp). That rebuild is unnecessary here and
+# fails hard on any machine without a native build toolchain (Visual
+# Studio Build Tools on Windows) -- electron/main.js spawns the app's
+# server.js with the system `node` on PATH by default (see main.js file
+# header), not Electron's bundled runtime, so the native modules only
+# ever need to match the system Node ABI they were already built/
+# prebuild-installed against during a normal `npm install`. Only flip
+# this back on if BLUBBER_ELECTRON_SPAWN_AS_NODE=1 becomes the shipped
+# default and a build toolchain is guaranteed present.
+npmRebuild: false
 
 asarUnpack:
   - node_modules/better-sqlite3/**/*

@@ -79,6 +79,7 @@ import { Panel } from '../ui';
 import FlubberCharacter from '../FlubberCharacter';
 import OnboardingSettingsSection from '../settings/OnboardingSettingsSection';
 import KitInstaller from '../kit-installer/KitInstaller';
+import RecommendedPlugins from '../settings/RecommendedPlugins';
 import './SettingsScreen.css';
 import '../../styles/fit-sweep.css';
 
@@ -897,6 +898,8 @@ export default function SettingsScreen() {
             <OnboardingSettingsSection />
 
             <KitInstaller />
+
+            <RecommendedPlugins />
           </div>
 
           <div className="settings-grid__rail">

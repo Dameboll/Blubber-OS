@@ -1,0 +1,201 @@
+/* RecommendedPlugins — Settings panel styling (Lane 4). Mirrors the dark-card /
+ * green-accent language the rest of Settings + KitInstaller use, via the shared
+ * design tokens (--text-*, --border-glow, --core-accent-*). */
+
+.rp {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rp__head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.rp__head-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--core-accent-bright, oklch(78% 0.17 155));
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.rp__title {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.rp__subtitle {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  margin: 2px 0 0;
+}
+
+.rp__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rp__item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-glow);
+  background: oklch(16% 0.01 160 / 0.5);
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.rp__item:hover:not(:disabled) {
+  border-color: var(--core-accent-bright, oklch(78% 0.17 155));
+}
+
+.rp__item:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.rp__item--on {
+  background: oklch(20% 0.03 160 / 0.6);
+}
+
+.rp__check {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1px solid var(--border-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: oklch(12% 0 0);
+  margin-top: 1px;
+}
+
+.rp__check--on {
+  background: var(--core-accent-bright, oklch(78% 0.17 155));
+  border-color: var(--core-accent-bright, oklch(78% 0.17 155));
+}
+
+.rp__item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rp__item-name {
+  font-family: var(--font-ui);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rp__item-desc {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.rp__console {
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glow);
+  background: oklch(13% 0.01 160);
+  color: var(--text-secondary);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.rp__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rp__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 10px 18px;
+  min-height: 44px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: filter 150ms ease, background 150ms ease;
+}
+
+.rp__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rp__btn--primary {
+  background: var(--core-accent-bright, oklch(78% 0.17 155));
+  color: oklch(12% 0 0);
+}
+
+.rp__btn--primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.rp__btn--ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-glow);
+}
+
+.rp__btn--ghost:hover {
+  border-color: var(--core-accent-bright, oklch(78% 0.17 155));
+}
+
+.rp__spin {
+  animation: rp-spin 1s linear infinite;
+}
+
+@keyframes rp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp__spin {
+    animation-duration: 0.01ms;
+  }
+}
+
+.rp__status {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.rp__status--ok {
+  color: var(--core-accent-bright, oklch(78% 0.17 155));
+}
+
+.rp__status--err {
+  color: oklch(70% 0.18 25);
+}

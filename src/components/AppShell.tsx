@@ -615,6 +615,7 @@ export default function AppShell({
               <button
                 key={item.id}
                 type="button"
+                data-nav-id={item.id}
                 className={`blubber-shell__nav-item${isActive ? ' blubber-shell__nav-item--active' : ''}`}
                 onClick={() => onNavChange(item.id)}
                 aria-current={isActive ? 'page' : undefined}

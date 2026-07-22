@@ -15,12 +15,46 @@
   padding: 24px;
 }
 
+/* Dame's animated "main room booting up" loop plays behind the card
+   (.onb__video, mounted in the TSX — muted/looped/decorative). The static
+   blurred reactor still lives here in .onb__backdrop underneath it as the
+   reduced-motion + video-load fallback, and this layer's radial scrim keeps
+   card text at full contrast over either. */
+.onb__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05);
+}
+
 .onb__backdrop {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(ellipse 70% 50% at 50% 20%, oklch(74% 0.2 151 / 10%) 0%, transparent 60%),
-    oklch(6% 0 0 / 96%);
+  /* Scrim only — the video underneath provides the room. */
+  background-image: radial-gradient(
+    ellipse 90% 80% at 50% 45%,
+    oklch(6% 0.01 160 / 62%) 0%,
+    oklch(5% 0 0 / 88%) 78%
+  );
+  background-size: cover;
+  background-position: center;
+}
+
+/* Reduced motion: no video (also unmounted in the TSX) — the blurred static
+   reactor still steps in under the same scrim. */
+@media (prefers-reduced-motion: reduce) {
+  .onb__video {
+    display: none;
+  }
+  .onb__backdrop {
+    background-image:
+      radial-gradient(ellipse 90% 80% at 50% 45%, oklch(6% 0.01 160 / 78%) 0%, oklch(5% 0 0 / 94%) 78%),
+      url('/bg/reactor.webp');
+    background-size: cover, cover;
+    background-position: center, center 38%;
+  }
 }
 
 .onb__card {
@@ -42,13 +76,35 @@
   gap: 16px;
 }
 
+/* The official static Blubber (public/blubber-hero.png — glossy render,
+   landscape). Rounded-rect at the art's own aspect so his arms and the
+   floating bubbles stay in frame (a circle crop was amputating him), floating
+   on a slow bob. transform-only animation, reduced-motion safe. */
 .onb__badge {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--core-accent-bright), var(--core-accent) 70%);
+  width: 176px;
+  height: 107px;
+  border-radius: 18px;
+  object-fit: cover;
+  border: 1px solid var(--border-glow);
   box-shadow: var(--glow-shadow);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  animation: onb-float 3.4s ease-in-out infinite;
+}
+
+@keyframes onb-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onb__badge {
+    animation: none;
+  }
 }
 
 .onb__title {
@@ -208,4 +264,61 @@
     animation: none;
     opacity: 0.9;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Streamed-installer console + recommended-plugins list (Lanes 3 & 4).
+ * The console shows REAL installer stdout/stderr as it scrolls — see
+ * OnboardingOverlay's installingClaude / plugins steps and use-install-stream.
+ * ------------------------------------------------------------------------- */
+.onb__console {
+  width: 100%;
+  max-height: 180px;
+  overflow-y: auto;
+  margin: 4px 0 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glow);
+  background: oklch(14% 0.01 160);
+  color: var(--text-secondary);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
+}
+
+.onb__plugin-list {
+  list-style: none;
+  margin: 6px 0 10px;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.onb__plugin {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-glow);
+  background: oklch(16% 0.01 160 / 0.5);
+}
+
+.onb__plugin-name {
+  font-family: var(--font-ui);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.onb__plugin-desc {
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
 }

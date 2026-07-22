@@ -6,13 +6,11 @@
  *
  * Sequence (~4.6s, skippable any time):
  *   1. Dark bloom fade-in over the (already-mounted, hidden-behind) app.
- *   2. One live 3D Blubber "forms up" in a small stage — reuses the app's
- *      single shared WebGL host via the existing <Flubber3D> component
- *      (./Flubber3D.tsx -> lib/flubber3d/host.ts + instance.ts + motion.ts +
- *      materials.ts). No new 3D/shader code is written here — this just
- *      registers one more slot on the shared host, the same way every other
- *      live Blubber in the app does, and lets the instance's own built-in
- *      squash-spring physics (pulse()) sell the "forming up" beat.
+ *   2. The STATIC reference-photo Blubber (public/blubber-hero.png) "forms
+ *      up" in a small stage — scale/opacity in plus a GSAP squash-and-settle
+ *      kick. Deliberately NOT the live 3D: the 3D Blubber is held back and only
+ *      revealed once the user is booted inside the app, so the render image is
+ *      the face of both startup and onboarding. No WebGL context is spun up here.
  *   3. Wordmark (public/brand/flubber-wordmark-lg.webp) crossfades in (1s).
  *   4. A held beat, then the whole overlay crossfades/glides out, revealing
  *      the app that has been mounted underneath the entire time (children
@@ -35,25 +33,23 @@
  * it once, in the gate-check effect below, since the intro plays at most once
  * ever and the flag can't meaningfully change mid-check.
  *
- * Teardown: unmounting <Flubber3D> runs that component's own effect cleanup,
- * which calls slotHandle.dispose() exactly the way every other Flubber3D
- * consumer in the app already tears down (see Flubber3D.tsx). No bespoke
- * WebGL cleanup lives here, and nothing here creates a second renderer — this
- * uses the SAME shared host singleton as the rest of the app, so it can never
- * "compete" with a later Flubber3D mount; it just gives its slot back.
+ * Teardown: the overlay is a plain image + GSAP timeline, so unmounting just
+ * reverts the gsap.context() (see the cleanup below). No WebGL host, no slot to
+ * dispose, nothing that could compete with the app's later in-screen 3D mounts.
  */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import gsap from 'gsap';
-import Flubber3D from './Flubber3D';
-import type { FlubberSlotHandle } from '../lib/flubber3d/host';
 import { isReduceEffectsActive } from '../lib/reduce-effects';
 import './IntroCinematic.css';
 
 type Phase = 'checking' | 'playing' | 'done';
 
-// Hero tier kicks in at >=160px (see Flubber3D.tierForSize) — this is well
-// past that so the intro gets the full goo/transmission treatment, not MID.
+// The intro uses the STATIC reference-photo Blubber (public/blubber-hero.png),
+// NOT the live 3D. The 3D Blubber is deliberately held back and only revealed
+// once the user is actually booted inside the app (see page.tsx / the in-screen
+// Flubber3D mounts). So the startup + onboarding both show the render image; the
+// 3D is the "you're inside now" payoff.
 const STAGE_SIZE = 240;
 
 export default function IntroCinematic({ children }: { children: ReactNode }) {
@@ -64,7 +60,6 @@ export default function IntroCinematic({ children }: { children: ReactNode }) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const wordmarkRef = useRef<HTMLImageElement | null>(null);
   const skipHintRef = useRef<HTMLButtonElement | null>(null);
-  const slotHandleRef = useRef<FlubberSlotHandle | null>(null);
   const completedRef = useRef(false);
   const skipRef = useRef<(() => void) | null>(null);
 
@@ -132,11 +127,12 @@ export default function IntroCinematic({ children }: { children: ReactNode }) {
       // 1. Dark bloom fade-in.
       tl.to(bloomRef.current, { opacity: 1, duration: 0.9, ease: 'power2.out' }, 0);
 
-      // 2. Blubber "forms up" — scale/opacity in, then a real squash-spring
-      //    kick from the instance itself (physical secondary motion, not a
-      //    hand-rolled CSS bounce) right as it finishes materializing.
+      // 2. Blubber "forms up" — the static render scales/fades in, then a quick
+      //    squash-and-settle kick sells the goo landing (elastic is right here:
+      //    Blubber has mass, per the easing law — physical objects spring).
       tl.to(stageRef.current, { opacity: 1, scale: 1, duration: 1.0, ease: 'power3.out' }, 0.35);
-      tl.call(() => slotHandleRef.current?.pulse(), [], 1.0);
+      tl.to(stageRef.current, { scaleX: 1.07, scaleY: 0.93, duration: 0.12, ease: 'power2.out' }, 1.0);
+      tl.to(stageRef.current, { scaleX: 1, scaleY: 1, duration: 0.5, ease: 'elastic.out(1, 0.5)' }, 1.12);
 
       // Subtle skip hint — fades in once there's something worth skipping.
       tl.to(skipHintRef.current, { opacity: 0.55, duration: 0.6 }, 1.0);
@@ -193,13 +189,14 @@ export default function IntroCinematic({ children }: { children: ReactNode }) {
 
           <div className="intro-cinematic__center">
             <div ref={stageRef} className="intro-cinematic__stage">
-              <Flubber3D
-                expression="happy"
-                size={STAGE_SIZE}
-                tier="hero"
-                onSlotReady={(handle) => {
-                  slotHandleRef.current = handle;
-                }}
+              {/* Static reference-photo Blubber — the 3D is held for in-app only. */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- static /public asset, no next/image usage elsewhere in this app */}
+              <img
+                src="/blubber-hero.png"
+                alt="Blubber"
+                width={STAGE_SIZE}
+                height={STAGE_SIZE}
+                className="intro-cinematic__blubber"
               />
             </div>
 

@@ -1,0 +1,189 @@
+/* DashboardTour — floating-Blubber + chat-bubble walkthrough. Uses the app's
+   shared tokens (--core-accent-*, --text-*, --border-glow, --font-*). All
+   animation is transform/opacity only. */
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  /* The ring's box-shadow does the dimming; this layer just owns the stacking
+     context and lets clicks through everywhere except its own children. */
+  pointer-events: none;
+}
+
+/* Spotlight ring: transparent center, giant dark shadow = everything else dims.
+   pointer-events auto so clicks on the dimmed area are swallowed (the user
+   drives the tour through the bubble, not by clicking behind it). Position is
+   set per-step from the live DOM rect and snaps — no layout-property
+   animation anywhere in this file. */
+.tour__ring {
+  position: fixed;
+  border-radius: 12px;
+  border: 2px solid var(--core-accent-bright, oklch(78% 0.17 155));
+  box-shadow: 0 0 0 9999px oklch(8% 0.02 160 / 0.76);
+  pointer-events: auto;
+}
+
+/* Fallback dimmer when the target button isn't found. */
+.tour__scrim {
+  position: fixed;
+  inset: 0;
+  background: oklch(8% 0.02 160 / 0.76);
+  pointer-events: auto;
+}
+
+/* Blubber + bubble travel together, positioned per-step from the live rect. */
+.tour__escort {
+  position: fixed;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  pointer-events: auto;
+  animation: tour-appear 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tour-appear {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* The official static Blubber at the art's own landscape aspect (arms + his
+   bubbles in frame, no circle amputation), floating on a slow bob — he escorts
+   the user tab to tab. */
+.tour__blubber {
+  width: 148px;
+  height: 90px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 1px solid var(--border-glow, oklch(30% 0.02 160));
+  box-shadow: 0 0 32px oklch(74% 0.2 151 / 0.35);
+  animation: tour-bob 3.2s ease-in-out infinite;
+}
+
+@keyframes tour-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* The chat bubble IS the advance button — click it to continue, like stepping
+   through dialogue. Tail points back at Blubber. */
+.tour__bubble {
+  position: relative;
+  width: min(300px, calc(100vw - 180px));
+  text-align: left;
+  background: oklch(16% 0.015 160);
+  border: 1px solid var(--core-accent-bright, oklch(78% 0.17 155));
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+  padding: 14px 16px;
+  margin-top: 26px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 16px 48px oklch(0% 0 0 / 0.5);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tour__bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 56px oklch(0% 0 0 / 0.55), 0 0 24px oklch(74% 0.2 151 / 0.25);
+}
+
+.tour__bubble:active {
+  transform: translateY(0) scale(0.99);
+}
+
+/* Bubble tail — a small rotated square bridging toward Blubber. */
+.tour__bubble::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 26px;
+  width: 12px;
+  height: 12px;
+  background: oklch(16% 0.015 160);
+  border-left: 1px solid var(--core-accent-bright, oklch(78% 0.17 155));
+  border-bottom: 1px solid var(--core-accent-bright, oklch(78% 0.17 155));
+  transform: rotate(45deg);
+}
+
+.tour__step-count {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--core-accent-bright, oklch(78% 0.17 155));
+}
+
+.tour__caption {
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-primary, oklch(96% 0 0));
+}
+
+.tour__hint {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--text-secondary, oklch(65% 0.02 160));
+  opacity: 0.8;
+}
+
+/* Back / Skip live quietly at the bottom, out of the bubble's way. */
+.tour__controls {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.tour__btn {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 9px 18px;
+  min-height: 40px;
+  background: oklch(14% 0.01 160 / 0.85);
+  color: var(--text-secondary, oklch(72% 0.02 160));
+  border: 1px solid var(--border-glow, oklch(30% 0.02 160));
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.tour__btn:hover {
+  color: var(--text-primary, oklch(96% 0 0));
+  border-color: var(--core-accent-bright, oklch(78% 0.17 155));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour__escort {
+    animation-duration: 0.01ms;
+  }
+  .tour__blubber {
+    animation: none;
+  }
+  .tour__bubble,
+  .tour__bubble:hover,
+  .tour__bubble:active {
+    transition: none;
+    transform: none;
+  }
+}

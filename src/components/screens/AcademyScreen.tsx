@@ -108,6 +108,18 @@ export default function AcademyScreen() {
         </div>
       </header>
 
+      {/* The Academy key art — "ACADEMY ACCESS SOON" is in the art itself, so
+          it doubles as the coming-soon statement. The waitlist form below is
+          the first-dibs email capture. */}
+      <div className="academy-hero">
+        {/* eslint-disable-next-line @next/next/no-img-element -- static /public asset, app-wide convention */}
+        <img
+          className="academy-hero__img"
+          src="/bg/academy-hero.png"
+          alt="Blubber Academy — access coming soon"
+        />
+      </div>
+
       <div className="academy-screen__body">
         <Panel accent title="What Academy Is" className="academy-panel">
           <div className="academy-intro">

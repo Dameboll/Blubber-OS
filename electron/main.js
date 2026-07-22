@@ -35,7 +35,7 @@
 
 const path = require("node:path");
 const http = require("node:http");
-const { app, BrowserWindow, dialog } = require("electron");
+const { app, BrowserWindow, dialog, shell: electronShell } = require("electron");
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const HOST = "127.0.0.1";
@@ -76,6 +76,16 @@ function startServer() {
     NODE_ENV: app.isPackaged
       ? "production"
       : process.env.NODE_ENV || "development",
+    // Production `next build` writes to .next-build, not the default
+    // `.next` (see next.config.js / package.json "build" + "start"
+    // scripts -- the split exists so a production build never clobbers a
+    // concurrently running dev server's `.next` chunks). server.js's
+    // `next({ dev, ... })` call reads distDir from next.config.js, which
+    // reads this env var. Packaged mode always runs the production build,
+    // so it must always point at .next-build -- without this, the
+    // packaged app's server throws "Could not find a production build in
+    // the '.next' directory" and the window never loads.
+    ...(app.isPackaged ? { NEXT_DIST_DIR: ".next-build" } : {}),
   };
 
   let command;
@@ -170,6 +180,16 @@ async function createWindow() {
       nodeIntegration: false,
       sandbox: true,
     },
+  });
+
+  // target="_blank" links (e.g. onboarding's "I'll do it myself" install link)
+  // are silently dead in Electron without this: route them to the system
+  // browser and never open a second Electron window.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("https://") || url.startsWith("http://")) {
+      electronShell.openExternal(url);
+    }
+    return { action: "deny" };
   });
 
   mainWindow.once("ready-to-show", () => mainWindow.show());

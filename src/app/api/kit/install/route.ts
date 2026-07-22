@@ -14,7 +14,8 @@
 //   2. copy claudeMdSource -> ~/.claude/CLAUDE.md
 //   3. copy agentsSource/  -> ~/.claude/agents/
 //   4. copy skillsSource/  -> ~/.claude/skills/
-//   5. create projectStructure.subfolders under a portable Development-root
+//   5. copy commandsSource/-> ~/.claude/commands/
+//   6. create projectStructure.subfolders under a portable Development-root
 //      path (see developmentRoot() below)
 //
 // A failed step returns 400/500 immediately with `step` naming exactly which
@@ -40,17 +41,19 @@ import os from "node:os";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { markKitInstalled, hasInstalledKit, getKitInstalledAt } from "../../../../server/kit-store";
+import { writeKitMarker } from "../../../../server/kit-marker";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type KitStep = "manifest" | "claudeMd" | "agents" | "skills" | "structure";
+type KitStep = "manifest" | "claudeMd" | "agents" | "skills" | "commands" | "structure";
 
 interface KitNarration {
   onInstallStart: string;
   onClaudeMdInstalled: string;
   onAgentsInstalled: string;
   onSkillsInstalled: string;
+  onCommandsInstalled: string;
   onStructureCreated: string;
   onComplete: string;
 }
@@ -61,6 +64,7 @@ interface KitManifest {
   claudeMdSource: string;
   agentsSource: string;
   skillsSource: string;
+  commandsSource: string;
   guidesSource: string;
   projectStructure: {
     rootFolderName: string;
@@ -76,6 +80,7 @@ const REQUIRED_TOP_LEVEL_KEYS = [
   "claudeMdSource",
   "agentsSource",
   "skillsSource",
+  "commandsSource",
   "guidesSource",
   "projectStructure",
   "installTargets",
@@ -87,6 +92,7 @@ const REQUIRED_NARRATION_KEYS: (keyof KitNarration)[] = [
   "onClaudeMdInstalled",
   "onAgentsInstalled",
   "onSkillsInstalled",
+  "onCommandsInstalled",
   "onStructureCreated",
   "onComplete",
 ];
@@ -112,11 +118,12 @@ function validateManifest(raw: unknown): ManifestValidation {
     typeof m.claudeMdSource !== "string" ||
     typeof m.agentsSource !== "string" ||
     typeof m.skillsSource !== "string" ||
+    typeof m.commandsSource !== "string" ||
     typeof m.guidesSource !== "string"
   ) {
     return {
       ok: false,
-      error: "claudeMdSource, agentsSource, skillsSource, and guidesSource must all be strings",
+      error: "claudeMdSource, agentsSource, skillsSource, commandsSource, and guidesSource must all be strings",
     };
   }
 
@@ -258,7 +265,25 @@ export async function POST(request: Request) {
     );
   }
 
-  // Step 4 — projectStructure folders, under the same portable Development
+  // Step 4 — commands/  (the kit's slash-commands, e.g. /landing-page,
+  // /ship-check). Copied to ~/.claude/commands/ so Claude Code picks them up
+  // as user-scoped slash commands exactly like agents/skills above.
+  try {
+    const src = path.join(kitPath, manifest.commandsSource);
+    const dest = path.join(claudeDir(), "commands");
+    fs.cpSync(src, dest, { recursive: true });
+    stepsCompleted.push("commands");
+  } catch (err) {
+    return stepError(
+      "commands",
+      stepsCompleted,
+      `failed to install commands: ${(err as Error).message}`,
+      500,
+      manifest.narration,
+    );
+  }
+
+  // Step 5 — projectStructure folders, under the same portable Development
   // root every other real filesystem feature in this codebase already uses.
   try {
     const structureRoot = path.join(developmentRoot(), manifest.projectStructure.rootFolderName);
@@ -280,6 +305,20 @@ export async function POST(request: Request) {
 
   markKitInstalled();
 
+  // Drop the filesystem receipt next to the installed kit files so onboarding's
+  // ~/.claude scan can DETECT the Starter Kit (and fire the walkthrough), not
+  // just read this app's own DB flag. Best-effort — the install already fully
+  // succeeded above; a marker-write hiccup shouldn't fail the whole install.
+  try {
+    writeKitMarker({
+      kitVersion: manifest.kitVersion ?? "unknown",
+      kitName: manifest.kitName ?? "Starter Kit",
+      installedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("[api/kit/install] kit marker write failed (install still succeeded):", err);
+  }
+
   return NextResponse.json({
     ok: true,
     stepsCompleted,
@@ -288,6 +327,7 @@ export async function POST(request: Request) {
       claudeMd: path.join(claudeDir(), "CLAUDE.md"),
       agents: path.join(claudeDir(), "agents"),
       skills: path.join(claudeDir(), "skills"),
+      commands: path.join(claudeDir(), "commands"),
       projectStructure: path.join(developmentRoot(), manifest.projectStructure.rootFolderName),
     },
   });

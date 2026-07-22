@@ -293,3 +293,21 @@
     width: 100%;
   }
 }
+
+/* Academy key art banner — the coming-soon statement piece above the panels.
+   Art is 1656x945ish; wide rounded banner, capped height, blob + signage kept
+   in frame via center crop. */
+.academy-hero {
+  margin: 4px 0 12px;
+}
+
+.academy-hero__img {
+  display: block;
+  width: 100%;
+  max-height: 340px;
+  object-fit: cover;
+  object-position: center 42%;
+  border-radius: var(--radius-panel, 16px);
+  border: 1px solid var(--border-glow);
+  box-shadow: var(--glow-shadow);
+}

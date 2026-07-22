@@ -29,17 +29,21 @@ test.describe('Onboarding — detect branches', () => {
     await resetOnboarding(request);
   });
 
-  test("detect 'not-found' renders the two-button no-Claude-Code branch", async ({ page }) => {
+  test("detect 'not-found' renders the no-Claude-Code branch with install + escape hatches", async ({ page }) => {
     await mockDetect(page, 'not-found');
     await page.goto('/');
 
     await page.getByRole('button', { name: 'Continue' }).click();
 
     await expect(page.getByRole('heading', { name: 'No Claude Code detected' })).toBeVisible();
-    const installLink = page.getByRole('link', { name: 'Install Claude Code' });
+    // Primary: install Claude Code in-app (Lane 3).
+    await expect(page.getByRole('button', { name: 'Install it for me' })).toBeVisible();
+    // Escape hatch 1: do it yourself via the external link (never forced).
+    const installLink = page.getByRole('link', { name: "I'll do it myself" });
     await expect(installLink).toBeVisible();
     await expect(installLink).toHaveAttribute('href', 'https://claude.com/claude-code');
-    await expect(page.getByRole('button', { name: 'Try Demo Mode' })).toBeVisible();
+    // Escape hatch 2: demo mode.
+    await expect(page.getByRole('button', { name: 'Try demo mode' })).toBeVisible();
   });
 
   test("detect 'empty' renders the clean-slate branch and completes onboarding", async ({ page }) => {

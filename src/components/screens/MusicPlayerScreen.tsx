@@ -1006,7 +1006,7 @@ export default function MusicPlayerScreen() {
                 {engine.loading && <TrackListSkeleton rows={4} />}
                 {!engine.loading && !hasQueueTracks && (
                   <div className="mps-tab-empty">
-                    <FlubberCharacter expression="thinking" size={56} mode="character" showToggle={false} />
+                    <FlubberCharacter expression="thinking" size={56} mode="character" tier="mid" showToggle={false} />
                     <p>Nothing queued yet — add tracks from your library to get started.</p>
                     <button type="button" className="mps-empty-action" onClick={() => setActiveTab('library')}>
                       Go to Library
@@ -1088,7 +1088,7 @@ export default function MusicPlayerScreen() {
               {engine.loading && <TrackListSkeleton rows={6} />}
               {!engine.loading && !hasLibraryTracks && (
                 <div className="mps-tab-empty">
-                  <FlubberCharacter expression="thinking" size={56} mode="character" showToggle={false} />
+                  <FlubberCharacter expression="thinking" size={56} mode="character" tier="mid" showToggle={false} />
                   <p>No tracks in your library yet — drop audio files above, or straight into music/.</p>
                   <button type="button" className="mps-empty-action" onClick={() => fileInputRef.current?.click()}>
                     Browse files

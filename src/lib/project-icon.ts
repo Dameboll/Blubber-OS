@@ -54,7 +54,7 @@ interface IconRule {
 export const ICON_RULES: IconRule[] = [
   { test: /music|audio|beat|sound|song/, icon: Music },
   { test: /bot|agent|\bai\b|gpt|claude/, icon: Bot },
-  { test: /game|play|arcade/, icon: Gamepad2 },
+  { test: /game|play|arcade|gta|rpg|roblox/, icon: Gamepad2 },
   { test: /api|server|backend/, icon: Server },
   { test: /app|mobile|native/, icon: Smartphone },
   { test: /shop|store|commerce|market/, icon: ShoppingBag },

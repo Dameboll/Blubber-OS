@@ -1479,3 +1479,18 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* The project's main visual: the deterministic keyword-mapped type icon on a
+   tinted tile (replaced the ProjectThumb folder-image scan, which grabbed
+   whatever image happened to live in the folder and read as random). Sized
+   inline per call site (grid 64 / list 40 / overview 48). */
+.project-card__icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: linear-gradient(145deg, oklch(24% 0.05 155 / 0.9), oklch(16% 0.02 160 / 0.9));
+  border: 1px solid var(--border-glow);
+  color: var(--core-accent-bright);
+}

@@ -244,7 +244,7 @@ function ProjectListRow({ project, selected, now, onSelect, plate }: ProjectList
       title={`${project.rootLabel}\\${project.rawName}`}
       style={plateStyle}
     >
-      <ProjectThumb root={project.rootLabel} name={project.rawName} size={40} />
+      <span className="project-card__icon-tile" style={{ width: 40, height: 40 }} aria-hidden="true"><TypeIcon size={18} /></span>
       <span className="project-list-row__main">
         <span className="project-list-row__title-line">
           <TypeIcon size={13} className="project-list-row__type-icon" aria-hidden="true" />
@@ -347,10 +347,14 @@ interface ProjectOverviewProps {
 function ProjectOverview({ project, starred, now, onToggleStar, onOpenProject }: ProjectOverviewProps) {
   const { meta, state } = useProjectMeta(project.rootLabel, project.rawName);
   const facts = metaFacts(state, meta, now);
+  // Same deterministic type icon as the grid/list — see project-icon.ts.
+  const TypeIcon = getProjectIcon(project.rawName);
   return (
     <div className="project-overview">
       <div className="project-overview__header">
-        <ProjectThumb root={project.rootLabel} name={project.rawName} size={48} />
+        <span className="project-card__icon-tile" style={{ width: 48, height: 48 }} aria-hidden="true">
+          <TypeIcon size={22} />
+        </span>
         <div className="project-overview__title-block">
           <span className="project-overview__title-row">
             <span className="project-overview__title">{project.name}</span>

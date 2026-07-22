@@ -242,10 +242,19 @@ export function ProjectCard({ project, selected, starred, now, onSelect, thumbSi
       title={`${project.rootLabel}\\${project.rawName}`}
       style={plateStyle}
     >
+      {/* Main visual = the deterministic keyword-mapped type icon, big, on a
+          tinted tile. The old ProjectThumb folder-image scan read as RANDOM
+          (it grabbed whatever image happened to live in the folder — a doc
+          screenshot, an asset, anything), which made the grid feel senseless.
+          One honest icon that matches what the project IS beats a lucky-dip
+          image. ProjectThumb still serves the compact list rows. */}
       <header className="project-card__portrait">
-        <ProjectThumb root={project.rootLabel} name={project.rawName} expression={THUMB_EXPRESSION} size={thumbSize} />
-        <span className="project-card__type-badge" aria-hidden="true">
-          <TypeIcon size={12} />
+        <span
+          className="project-card__icon-tile"
+          style={{ width: thumbSize, height: thumbSize }}
+          aria-hidden="true"
+        >
+          <TypeIcon size={Math.round(thumbSize * 0.45)} />
         </span>
       </header>
 

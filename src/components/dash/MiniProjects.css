@@ -148,6 +148,20 @@
   transform: translateY(-1px);
 }
 
+/* Deterministic type-icon tile (replaced the old random folder-image thumb) —
+   matches the Projects screen grid's icon-tile treatment. */
+.mini-projects__card-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  color: var(--core-accent-bright, oklch(80% 0.17 155));
+  background: oklch(20% 0.03 155 / 55%);
+  border: 1px solid var(--border-glow);
+  box-shadow: inset 0 0 20px oklch(74% 0.2 151 / 8%);
+}
+
 /* Most-recently-touched project — a thin steady green edge, no pulsing. */
 .mini-projects__card--hot::before {
   content: '';

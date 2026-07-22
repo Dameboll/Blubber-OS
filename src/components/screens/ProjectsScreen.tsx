@@ -70,7 +70,6 @@ import { getProjectIcon } from '../../lib/project-icon';
 import { assignPlates, platePath, type ProjectPlate } from '../../lib/project-plates';
 import {
   ProjectCard,
-  ProjectThumb,
   buildProjectView,
   metaFacts,
   useProjectMeta,

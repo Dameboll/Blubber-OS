@@ -10,14 +10,10 @@
  * Memory/Projects screens already trust — no full per-project filesystem walk
  * needed just to sort a dashboard tile.
  *
- * COORDINATION NOTE: `ProjectThumb` is imported from
- * `src/components/projects/ProjectCard.tsx`, which Lane 3 extracts out of
- * ProjectsScreen.tsx this same workflow run (see docs/plans/
- * pill-worlds-mini-dash.md, Lane 3 task 1). This file was built against that
- * planned export/prop shape (matching ProjectsScreen.tsx's pre-extraction
- * `ProjectThumbProps`: `{ root, name, expression, size }`) per the plan's
- * explicit instruction to build against the planned path when the source
- * hasn't landed yet. Re-verify this import once Lane 3's file exists.
+ * Each card's icon is the deterministic keyword-mapped type icon from the real
+ * folder name (src/lib/project-icon.ts) — the same honest badge the Projects
+ * screen grid uses. (Was the old random folder-image thumbnail, which read as
+ * a lucky-dip of whatever image happened to live in the folder.)
  *
  * FINAL STRETCH Lane 2+3: live 30s poll + focus refetch with a FLIP reorder
  * animation (transform/opacity only, reduced-motion aware), a "hot" accent
@@ -31,7 +27,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FolderOpen } from 'lucide-react';
-import { ProjectThumb } from '../projects/ProjectCard';
+import { getProjectIcon } from '../../lib/project-icon';
 import { useSession } from '../../context/SessionProvider';
 import { humanizeSlug } from '../../lib/humanize';
 import './MiniProjects.css';
@@ -236,6 +232,10 @@ export default function MiniProjects() {
             {projects.map((p, i) => {
               const key = cardKey(p);
               const plate = plates[i];
+              // Deterministic keyword-mapped type icon from the real folder name
+              // (src/lib/project-icon.ts) — same honest badge the Projects screen
+              // grid uses, replacing the old random folder-image thumbnail.
+              const TypeIcon = getProjectIcon(p.name);
               return (
                 <button
                   key={key}
@@ -255,7 +255,9 @@ export default function MiniProjects() {
                   />
                   <span className="mini-projects__card-scrim" aria-hidden="true" />
                   <span className="mini-projects__card-content">
-                    <ProjectThumb root={p.root} name={p.name} expression="happy" size={72} />
+                    <span className="mini-projects__card-icon" aria-hidden="true">
+                      <TypeIcon size={30} />
+                    </span>
                     <span className="mini-projects__card-name">{humanizeSlug(p.name)}</span>
                     <span className="mini-projects__card-root">{p.root}</span>
                   </span>

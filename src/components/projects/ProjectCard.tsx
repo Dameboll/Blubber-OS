@@ -1,26 +1,16 @@
 'use client';
 
 /**
- * ProjectCard — the real per-project grid tile (portrait + name + real file
- * facts), extracted out of ProjectsScreen so DashboardScreen's mini "Projects"
- * tab (Lane 2) can render the exact same card instead of a second
- * reimplementation. Everything here is real data:
- *
- * - `ProjectThumb` renders the real per-project image from
- *   GET /api/projects/thumb, falling back to a shiny mid-tier Flubber3D slot
- *   only when the folder genuinely has no usable image (never a fake asset).
- * - `useProjectMeta` / `metaFacts` read real filesystem facts (file count,
- *   size, created/last-touched) from GET /api/projects/meta, server-cached,
- *   fetched lazily per card on mount.
- *
- * Both ProjectsScreen.tsx (full grid) and DashboardScreen's mini Projects tab
- * import from here — see docs/plans/pill-worlds-mini-dash.md Lane 3 task 1.
+ * ProjectCard — the real per-project grid tile (deterministic type icon + name
+ * + real file facts). The card's main visual is the keyword-mapped icon from
+ * getProjectIcon (src/lib/project-icon.ts), an honest type hint that beats the
+ * old random folder-image scan. `useProjectMeta` / `metaFacts` read real
+ * filesystem facts (file count, size, created/last-touched) from
+ * GET /api/projects/meta, server-cached, fetched lazily per card on mount.
  */
 
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Clock, Database, FileText, Star } from 'lucide-react';
-import type { FlubberExpression } from '../FlubberCharacter';
-import Flubber3D from '../Flubber3D';
 import { humanizeSlug } from '../../lib/humanize';
 import { getProjectIcon } from '../../lib/project-icon';
 import { platePath, type ProjectPlate } from '../../lib/project-plates';
@@ -149,56 +139,6 @@ export function useProjectMeta(rootLabel: string, rawName: string): { meta: Proj
   }, [rootLabel, rawName]);
 
   return { meta, state };
-}
-
-// ---------------------------------------------------------------------------
-// Real per-project thumbnail
-// ---------------------------------------------------------------------------
-
-const THUMB_EXPRESSION: FlubberExpression = 'happy';
-
-export interface ProjectThumbProps {
-  root: string;
-  name: string;
-  expression?: FlubberExpression;
-  size: number;
-}
-
-// Real per-project thumbnail: the actual representative image discovered by
-// GET /api/projects/thumb (curated agent pick first, else a live heuristic
-// scan of the folder). Falls back to a Blubber portrait only when the folder
-// genuinely has no usable image (route 404s) — never a fake asset.
-export function ProjectThumb({ root, name, expression = THUMB_EXPRESSION, size }: ProjectThumbProps) {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    // Fallback portrait renders in compact list/row/mini cards well below
-    // FlubberCharacter's auto-micro cutoff (<64px), which would flatten it to
-    // the dull matcap. Render the shared-host slot directly at tier="mid" so
-    // every fallback reads as the shiny clearcoat jelly (host caps + overflows
-    // to micro past its global MID budget, so this stays perf-safe).
-    return <Flubber3D expression={expression} size={size} tier="mid" />;
-  }
-  const src = `/api/projects/thumb?root=${encodeURIComponent(root)}&name=${encodeURIComponent(name)}`;
-  return (
-    // eslint-disable-next-line @next/next/no-img-element -- serving real bytes from an outside-of-/public folder route, next/image can't proxy it
-    <img
-      src={src}
-      alt=""
-      width={size}
-      height={size}
-      loading="lazy"
-      onError={() => setFailed(true)}
-      className="project-thumb"
-      style={{
-        width: size,
-        height: size,
-        objectFit: 'cover',
-        borderRadius: 12,
-        display: 'block',
-        background: 'rgba(0, 0, 0, 0.35)',
-      }}
-    />
-  );
 }
 
 // ---------------------------------------------------------------------------

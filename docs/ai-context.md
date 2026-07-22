@@ -21,6 +21,24 @@ Launch-shaped. HEAD e5ce295 — E2E SUITE GREEN 17/17 (full clean pass, prod bui
 - Academy: full-bleed key art (bg/academy-hero.png) + coming-soon waitlist strip.
 - Electron: setWindowOpenHandler → external browser; before-quit taskkill /T (orphan-server fix); NEXT_DIST_DIR=.next-build packaged; electron-builder files excludes + npmRebuild:false. Installer built once OK.
 
+## Optimization pass (2026-07-22, HEAD 859cc18)
+Verified against a PRODUCTION build + real prod server, not dev (dev doesn't code-split; its
+"stuck screen boot" is on-demand compilation, a dev-only artifact — ignore it).
+- FONTS SELF-HOSTED: Syncopate/DM Sans/DM Mono now in public/fonts (18 woff2, 584KB) +
+  src/app/fonts.css; globals.css @imports it locally. Was a remote fonts.googleapis @import —
+  killed the cold-launch CDN round-trip + makes brand fonts render fully OFFLINE. Verified:
+  document.fonts loads every weight, ZERO googleapis/gstatic requests at runtime.
+- SCREEN CODE-SPLIT: 8 non-default screens + 3 first-run overlays are next/dynamic now
+  (Dashboard stays static for first paint). Main route 146kB→70.5kB, First Load 406kB→331kB.
+  All 8 verified mounting in prod. NOTE: AgentsScreen root class is `acc-workflow`, NOT
+  `agents-screen` (bit a smoke probe).
+- DEAD GL DELETED: Core3D.tsx + BackgroundField.tsx gone (each did `new WebGLRenderer` —
+  landmine vs the one-shared-context rule in flubber3d/host.ts). e2e "one WebGL context" test
+  still green. Inlined the one legacy type they fed FlubberCharacter (onBootEvent).
+- academy-hero.png 2.0MB → .webp 148KB + explicit width/height.
+- /api/system was double-polled (SessionProvider app-wide + DashboardScreen's own
+  useSystemVitals). Dropped the local poll; Dashboard derives vitals from session.vitals.
+
 ## Launch decisions (locked)
 - Free shell stays SILENT about the Starter Kit — no in-app upsell, ever. The landing page
   (blubber-site) is the funnel; all downloads route through it, so the kit pitch already

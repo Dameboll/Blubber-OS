@@ -35,7 +35,9 @@ Launch-shaped. HEAD e5ce295 — E2E SUITE GREEN 17/17 (full clean pass, prod bui
    does NOT move baseline. Ground-truthed via direct usage.db queries (table is `events`,
    not usage_events). Real data/ restored after.
 5. Voice unheard-tested beyond Dame ("robot noises" — hence muted default).
-6. Landing page URL for Academy button — Dame to supply; waitlist form is the placeholder.
+6. ~~Landing page URL for Academy~~ RESOLVED 2026-07-22 (Dame's call): no Academy exists yet,
+   so there is no external link at all — the locked screen with the email waitlist IS the
+   launch state. Verified: no dead/clickable-to-nowhere button anywhere in src.
 
 ## Gotchas
 - Pre-write slop hook blocks CSS animating layout props — transform/opacity/filter only.

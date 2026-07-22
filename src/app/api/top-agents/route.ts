@@ -6,14 +6,15 @@
 // but had no route exposing them yet. No new aggregation logic here, just a
 // thin range -> query mapping, same shape/precedent as /api/weekly.
 //
-// Demo Mode: when the `blubber_demo` cookie is set (see src/lib/demo-mode.ts),
-// this returns the bundled demo dataset's topAgents list (scaled per range)
-// instead of querying SQLite -- a demo visitor has no real agent-run history.
+// Placeholder until connected: before the user's real ~/.claude workspace has
+// ever been connected (see src/server/connected-store.ts), this returns the
+// bundled placeholder dataset's topAgents list (scaled per range) instead of
+// querying SQLite -- a fresh install has no real agent-run history yet.
 
 import { NextResponse } from "next/server";
 import { ensureIndexed } from "../../../server/log-indexer";
 import { getTopByCategory, getTopByCategoryAllTime, type NamedCount } from "../../../server/db";
-import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { isWorkspaceConnected } from "../../../server/connected-store";
 import { getDemoTopAgents, type DemoTopAgentsRange } from "../../../server/demo-dataset";
 
 // Depends on live filesystem state + SQLite, same as /api/weekly.
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
     const rangeParam = searchParams.get("range") ?? "weekly";
     const range = RANGES.has(rangeParam) ? rangeParam : "weekly";
 
-    if (isDemoModeRequest(request)) {
+    if (!isWorkspaceConnected()) {
       return NextResponse.json({ agents: getDemoTopAgents(range as DemoTopAgentsRange), range });
     }
 

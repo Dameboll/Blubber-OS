@@ -1,14 +1,18 @@
 /**
- * demo-dataset — server-side loader for the bundled Demo Mode fixture (see
- * src/lib/demo-mode.ts for the on/off flag itself). The dataset lives at
- * public/demo/demo-dataset.json — a straight copy of the canned fixture —
- * bundled into the app itself so Demo Mode works on a stranger's machine
- * with zero real Claude Code history and no dependency on any private
- * folder that won't exist outside this dev machine.
+ * demo-dataset — server-side loader for the bundled placeholder fixture
+ * served to every stats/activity API route until the user's real ~/.claude
+ * workspace has been connected (see src/server/connected-store.ts for that
+ * gate). The dataset lives at public/demo/demo-dataset.json — a straight
+ * copy of the canned fixture — bundled into the app itself so the free-tier
+ * raw shell has something believable to show on a fresh install with zero
+ * real Claude Code history and no dependency on any private folder that
+ * won't exist outside this dev machine.
  *
  * Each getter below reshapes the raw fixture into the EXACT response shape
- * the real (non-demo) code path already returns for that route, so swapping
- * between real and demo data is invisible to every frontend consumer.
+ * the real (connected) code path already returns for that route, so
+ * swapping between real and placeholder data is invisible to every frontend
+ * consumer. Naming inside this file ("demo") is historical — kept because
+ * public/demo/demo-dataset.json is the actual on-disk fixture path.
  */
 
 import fs from "node:fs";

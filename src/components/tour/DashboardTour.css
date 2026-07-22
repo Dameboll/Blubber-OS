@@ -11,24 +11,34 @@
   pointer-events: none;
 }
 
-/* Spotlight ring: transparent center, giant dark shadow = everything else dims.
-   pointer-events auto so clicks on the dimmed area are swallowed (the user
-   drives the tour through the bubble, not by clicking behind it). Position is
-   set per-step from the live DOM rect and snaps — no layout-property
-   animation anywhere in this file. */
+/* Full-screen dimmer + blur. Heavily obscures the app behind (including the
+   3D mascot) without going flat black — dark translucent fill layered under
+   a backdrop blur. Its clip-path is set per-step from the live DOM rect
+   (DashboardTour.tsx's veilStyle) to punch a crisp-edged hole around the
+   spotlighted button; with no rect it covers edge-to-edge as a plain dimmer.
+   clip-path is swapped, never transitioned/animated — a snap, same as the
+   ring's position. pointer-events auto so clicks on the dimmed area are
+   swallowed (the user drives the tour through the bubble, not by clicking
+   behind it); the clipped-out hole is excluded from hit-testing too, so the
+   real button underneath it stays clickable. */
+.tour__veil {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: oklch(6% 0.01 160 / 0.82);
+  backdrop-filter: blur(10px) saturate(0.9);
+  -webkit-backdrop-filter: blur(10px) saturate(0.9);
+  pointer-events: auto;
+}
+
+/* Spotlight ring: crisp border traced around the same rect the veil's hole
+   is cut to, so it reads as a frame around the one thing left unblurred.
+   Position is set per-step from the live DOM rect and snaps — no
+   layout-property animation anywhere in this file. */
 .tour__ring {
   position: fixed;
   border-radius: 12px;
   border: 2px solid var(--core-accent-bright, oklch(78% 0.17 155));
-  box-shadow: 0 0 0 9999px oklch(8% 0.02 160 / 0.76);
-  pointer-events: auto;
-}
-
-/* Fallback dimmer when the target button isn't found. */
-.tour__scrim {
-  position: fixed;
-  inset: 0;
-  background: oklch(8% 0.02 160 / 0.76);
   pointer-events: auto;
 }
 

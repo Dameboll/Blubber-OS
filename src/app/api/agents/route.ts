@@ -10,7 +10,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { isWorkspaceConnected } from "../../../server/connected-store";
 import { getDemoAgentList } from "../../../server/demo-dataset";
 
 export interface AgentSummary {
@@ -125,10 +125,10 @@ async function readRoster(): Promise<AgentSummary[]> {
   return agents;
 }
 
-export async function GET(request: Request) {
-  // Demo Mode: the fixture roster, never the visiting machine's real
-  // ~/.claude/agents (this fed the sidebar's "Recent Agents" leak).
-  if (isDemoModeRequest(request)) {
+export async function GET() {
+  // Placeholder until connected: the fixture roster, never the machine's real
+  // ~/.claude/agents (this fed the sidebar's "Recent Agents" leak pre-connect).
+  if (!isWorkspaceConnected()) {
     return NextResponse.json({ agents: getDemoAgentList() });
   }
 

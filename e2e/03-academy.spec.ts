@@ -34,10 +34,11 @@ test.describe('Academy tab', () => {
     await expect(page.getByRole('heading', { name: 'Blubber Academy' })).toBeVisible();
   });
 
-  test('shows the locked course outline and the waitlist form', async ({ page }) => {
-    await expect(page.locator('.academy-module--locked')).toHaveCount(5);
-    await expect(page.getByRole('heading', { name: 'Getting Started with Claude Code' })).toBeVisible();
-    await expect(page.getByText('Bundled with All Access')).toBeVisible();
+  test('shows the coming-soon key art and the waitlist form', async ({ page }) => {
+    // The Academy takeover pass replaced the locked course-outline panels with
+    // the full-bleed key art + a compact coming-soon waitlist overlay.
+    await expect(page.locator('.academy-hero__img')).toBeVisible();
+    await expect(page.getByText('Coming soon')).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Email address' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Join waitlist' })).toBeVisible();
   });

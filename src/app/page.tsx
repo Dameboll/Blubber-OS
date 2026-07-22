@@ -28,7 +28,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import AppShell, { type NavId } from '../components/AppShell';
 import AmbientGlow from '../components/AmbientGlow';
-import DemoBadge from '../components/DemoBadge';
 import IntroCinematic from '../components/IntroCinematic';
 import OnboardingOverlay from '../components/onboarding/OnboardingOverlay';
 import DashboardTour from '../components/tour/DashboardTour';
@@ -122,10 +121,6 @@ export default function Home() {
             self-manages its rAF loop (paused when hidden/off-screen) and renders
             nothing under prefers-reduced-motion. */}
         <AmbientGlow />
-        {/* Fixed "Demo Mode" badge — self-manages visibility via isDemoModeActive(),
-            renders nothing unless ?demo=1 (or a previously persisted demo choice)
-            is active. See src/lib/demo-mode.ts. */}
-        <DemoBadge />
         {/* One brain wraps the whole app so terminal/music/nav/pet events reach
             every mood-synced Blubber, cross-screen. (The old click-drag roaming
             pet was removed — the main Blubber is the star, living in each

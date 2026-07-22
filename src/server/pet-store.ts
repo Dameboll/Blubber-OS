@@ -40,8 +40,16 @@ export interface PetState {
   updatedAt: string;
 }
 
-// Per-hour decay rates — hunger falls fastest, love slowest.
-const DECAY_PER_HOUR: Needs = { hunger: 2.5, hygiene: 1.5, fun: 2.0, energy: 1.2, love: 0.8 };
+// Per-hour decay rates, tuned so a full (100) bar drains to 0 over roughly
+// 8-24h of real wall-clock time per need — fast enough that neglect is
+// visible within a day, slow enough that a single missed evening doesn't
+// wreck every need at once:
+//   hunger  100/12.5 = 8h   (fastest — Blubber gets hungry quick)
+//   energy  100/10   = 10h  (needs sleep almost as often as food)
+//   fun     100/8.33 = 12h  (a half-day without play starts to show)
+//   hygiene 100/6.25 = 16h  (can go most of a day before it matters)
+//   love    100/4.17 = 24h  (slowest — a full day of neglect before it bottoms out)
+const DECAY_PER_HOUR: Needs = { hunger: 12.5, hygiene: 6.25, fun: 8.33, energy: 10, love: 4.17 };
 
 // Server-side care effects (moved out of VirtualPetScreen).
 const NEED_BUMPS: Record<PetAction, Partial<Needs>> = {

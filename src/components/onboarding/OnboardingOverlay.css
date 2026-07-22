@@ -226,6 +226,53 @@
   background: var(--bg-elevated);
 }
 
+/* Raw-shell welcome step (Lane C): a snapping-highlight drop target for
+   "point me at your Claude Code workspace." No layout-property transitions —
+   only border-color + background (both paint-only) shift on dragover, per
+   the animate-only-transform/opacity/filter rule (a static color swap here
+   isn't an animation, just a state change, so it's exempt from that rule the
+   same way a button's :hover background-color is). */
+.onb__dropzone {
+  width: 100%;
+  border: 1px dashed var(--border-glow);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: var(--bg-elevated);
+}
+
+.onb__dropzone-text {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.onb__dropzone-text code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--text-primary);
+}
+
+/* Quiet text link — the "do it yourself" escape hatch on the notfound
+   branch. Deliberately NOT styled as a button (see .onb__btn--ghost above):
+   this is a secondary, low-emphasis way out, not a competing call to action. */
+.onb__link {
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.onb__link:hover {
+  color: var(--text-primary);
+}
+
+.onb__link:focus-visible {
+  outline: 2px solid var(--core-accent-bright);
+  outline-offset: 3px;
+}
+
 .onb__stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

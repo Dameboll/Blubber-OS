@@ -17,15 +17,22 @@
 // Same plumbing precedent as /api/weekly + /api/top-agents: ensureIndexed()
 // throttled background refresh, then serve the persisted SQLite snapshot.
 //
-// Demo Mode: when the `blubber_demo` cookie is set (see src/lib/demo-mode.ts),
-// this returns a reshaped slice of the bundled demo dataset instead of
-// touching the indexer/SQLite at all -- a demo visitor has no real ~/.claude
-// history to index.
+// Placeholder until connected: before the user's real ~/.claude workspace has
+// ever been connected (see src/server/connected-store.ts), this returns a
+// reshaped slice of the bundled placeholder dataset instead of touching the
+// indexer/SQLite at all -- a fresh install has no real ~/.claude history to
+// index yet.
+//
+// POST clears the feed: it just moves the recent-clear-store baseline to now
+// (see src/server/recent-clear-store.ts) -- nothing is deleted from the
+// underlying SQLite index. GET then filters real events to ts > that
+// baseline. Placeholder-path events never touch the baseline at all.
 
 import { NextResponse } from "next/server";
 import { ensureIndexed } from "../../../server/log-indexer";
 import { getRecentEvents } from "../../../server/db";
-import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { getRecentClearedAt, markRecentCleared } from "../../../server/recent-clear-store";
+import { isWorkspaceConnected } from "../../../server/connected-store";
 import { getDemoRecentEvents } from "../../../server/demo-dataset";
 
 export const dynamic = "force-dynamic";
@@ -41,15 +48,29 @@ export async function GET(request: Request) {
     const limit = Number.isFinite(raw) ? Math.min(Math.max(raw, 1), MAX_LIMIT) : DEFAULT_LIMIT;
     const project = searchParams.get("project")?.trim() || null;
 
-    if (isDemoModeRequest(request)) {
+    if (!isWorkspaceConnected()) {
       return NextResponse.json({ events: getDemoRecentEvents(limit, project) });
     }
 
     ensureIndexed();
     const events = getRecentEvents(limit, project);
-    return NextResponse.json({ events });
+    const clearedAt = getRecentClearedAt();
+    const visible = clearedAt ? events.filter((evt) => evt.ts > clearedAt) : events;
+    return NextResponse.json({ events: visible });
   } catch (err) {
     console.error("[api/recent] failed to load recent events:", err);
     return NextResponse.json({ error: "Failed to load recent activity", events: [] }, { status: 500 });
+  }
+}
+
+/** Clears the Activity Feed by moving the recent-clear-store baseline to now.
+ * See the file header for why this filters rather than deletes. */
+export async function POST() {
+  try {
+    const clearedAt = markRecentCleared();
+    return NextResponse.json({ clearedAt });
+  } catch (err) {
+    console.error("[api/recent] failed to clear recent events:", err);
+    return NextResponse.json({ error: "Failed to clear recent activity" }, { status: 500 });
   }
 }

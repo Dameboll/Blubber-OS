@@ -8,6 +8,11 @@
  * The spec explicitly asked for the 'not-found' path; 'found' and 'empty'
  * are included too since they're the same mechanism and cost nothing extra
  * to verify for real.
+ *
+ * Raw-shell pass (Lane C): welcome's action button is 'Scan my workspace'
+ * (was 'Continue'), and there's no demo-mode escape hatch anywhere in the
+ * flow anymore — the notfound branch is now a terse "not found, scan again,
+ * or go install it yourself" card.
  */
 
 import { test, expect } from 'playwright/test';
@@ -29,28 +34,26 @@ test.describe('Onboarding — detect branches', () => {
     await resetOnboarding(request);
   });
 
-  test("detect 'not-found' renders the no-Claude-Code branch with install + escape hatches", async ({ page }) => {
+  test("detect 'not-found' renders the terse not-found branch with a re-scan + manual link", async ({ page }) => {
     await mockDetect(page, 'not-found');
     await page.goto('/');
 
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Scan my workspace' }).click();
 
-    await expect(page.getByRole('heading', { name: 'No Claude Code detected' })).toBeVisible();
-    // Primary: install Claude Code in-app (Lane 3).
-    await expect(page.getByRole('button', { name: 'Install it for me' })).toBeVisible();
-    // Escape hatch 1: do it yourself via the external link (never forced).
-    const installLink = page.getByRole('link', { name: "I'll do it myself" });
+    await expect(page.getByRole('heading', { name: 'No Claude Code workspace found at ~/.claude.' })).toBeVisible();
+    // Primary: re-scan (no in-app installer or demo-mode escape hatch on Free).
+    await expect(page.getByRole('button', { name: 'Scan again' })).toBeVisible();
+    // Quiet text link out to install it manually — never forced.
+    const installLink = page.getByRole('link', { name: 'claude.com/claude-code' });
     await expect(installLink).toBeVisible();
     await expect(installLink).toHaveAttribute('href', 'https://claude.com/claude-code');
-    // Escape hatch 2: demo mode.
-    await expect(page.getByRole('button', { name: 'Try demo mode' })).toBeVisible();
   });
 
   test("detect 'empty' renders the clean-slate branch and completes onboarding", async ({ page }) => {
     await mockDetect(page, 'empty');
     await page.goto('/');
 
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Scan my workspace' }).click();
     await expect(page.getByRole('heading', { name: 'Clean slate' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Enter Blubber OS' }).click();
@@ -71,7 +74,7 @@ test.describe('Onboarding — detect branches', () => {
     );
     await page.goto('/');
 
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Scan my workspace' }).click();
     await expect(page.getByRole('heading', { name: 'Found your setup' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Inject my setup' }).click();

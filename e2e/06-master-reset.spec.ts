@@ -40,7 +40,7 @@ test.describe('Master reset — regression check', () => {
     await expect(page.getByRole('dialog', { name: 'Welcome to Blubber' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Meet Blubber' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('button', { name: 'Scan my workspace' }).click();
     await expect(page.getByText('Looking for Claude Code on this machine')).toBeVisible();
 
     // Cleanup: leave the app in a normal, usable state for whoever opens the

@@ -10,10 +10,18 @@
  * like clicking through dialogue in a game. Back / Skip stay available, Esc
  * bails, arrows step. Fully opt-out at any point.
  *
- * The spotlight is the classic coach-mark trick: a ring element with a huge
- * dark box-shadow dims the whole screen EXCEPT the target button's rect — no
- * separate backdrop, and it always lines up with the real element because the
- * rect is read live from the DOM ([data-nav-id] on AppShell's nav buttons).
+ * The spotlight is a full-screen blurred veil (.tour__veil — backdrop-filter
+ * blur + a dark translucent fill) with a hole punched through it via an
+ * inline clip-path "keyhole" polygon: the outer viewport rect plus the
+ * target's rect (traced as an inner loop, bridged back to the outer path via
+ * a zero-width seam) under the evenodd fill rule. That leaves the app behind
+ * — including the 3D mascot — heavily obscured (dark AND blurred, not flat
+ * black) while only the spotlighted nav button stays crisp. A separate
+ * .tour__ring div draws the crisp border on top of the hole. It always lines
+ * up with the real element because the rect is read live from the DOM
+ * ([data-nav-id] on AppShell's nav buttons). Position is set per-step from
+ * that live rect and snaps — no transition/animation on clip-path or
+ * position anywhere in this file.
  *
  * NOT part of the free Community Edition — this only ever mounts when the
  * Starter Kit is present (page.tsx gates it behind the kit-detected tour
@@ -120,9 +128,25 @@ export default function DashboardTour({ onNavChange, onClose }: DashboardTourPro
       }
     : undefined;
 
+  // Viewport dims, read fresh on every render (the resize listener in the
+  // measure effect above triggers a re-render via setRect on resize).
+  const viewportW = typeof window !== 'undefined' ? window.innerWidth : 1600;
+  const viewportH = typeof window !== 'undefined' ? window.innerHeight : 900;
+
+  // Keyhole clip-path for the veil: outer viewport rect + the target's rect
+  // (same PAD as the ring) traced as an inner loop, joined back to the outer
+  // path by a zero-width seam so the whole thing is one continuous polygon.
+  // Under fill-rule evenodd that inner loop reads as a hole — the target
+  // button sits outside the clipped (and therefore outside the blurred/
+  // dimmed) region entirely. No hole at all when rect is null.
+  const veilStyle = rect
+    ? {
+        clipPath: `polygon(evenodd, 0px 0px, ${viewportW}px 0px, ${viewportW}px ${viewportH}px, 0px ${viewportH}px, 0px 0px, ${rect.left - PAD}px ${rect.top - PAD}px, ${rect.left - PAD}px ${rect.top + rect.height + PAD}px, ${rect.left + rect.width + PAD}px ${rect.top + rect.height + PAD}px, ${rect.left + rect.width + PAD}px ${rect.top - PAD}px, ${rect.left - PAD}px ${rect.top - PAD}px, 0px 0px)`,
+      }
+    : undefined;
+
   // Blubber + his bubble sit to the right of the nav button (left sidebar),
   // vertically centered on it, clamped so the pair never runs off-screen.
-  const viewportH = typeof window !== 'undefined' ? window.innerHeight : 900;
   const escortStyle = rect
     ? {
         top: Math.max(16, Math.min(rect.top + rect.height / 2 - 60, viewportH - 240)),
@@ -132,14 +156,18 @@ export default function DashboardTour({ onNavChange, onClose }: DashboardTourPro
 
   return (
     <div className="tour" role="dialog" aria-modal="true" aria-label="Dashboard tour">
-      {/* Spotlight ring — its huge box-shadow dims everything but the target. */}
-      {rect ? (
-        <div className="tour__ring" style={ringStyle} aria-hidden="true" />
-      ) : (
-        // Fallback if the target button can't be found: a plain dimmer so the
-        // bubble still reads and the tour never gets stuck on a blank screen.
-        <div className="tour__scrim" aria-hidden="true" />
-      )}
+      {/* Full-screen blurred dimmer. Its clip-path (see veilStyle above)
+          punches a hole around the target so only that button stays crisp;
+          with no target found, it renders with no hole — a plain dimmer so
+          the bubble still reads and the tour never gets stuck on a blank
+          screen. pointer-events stay on so background clicks are swallowed;
+          the hole itself is clipped out of the hit-test region too, so the
+          real button underneath stays clickable. */}
+      <div className="tour__veil" style={veilStyle} aria-hidden="true" />
+
+      {/* Spotlight ring — crisp border marking the target; the veil above
+          now owns all the dimming/blurring. */}
+      {rect && <div className="tour__ring" style={ringStyle} aria-hidden="true" />}
 
       {/* Blubber + chat bubble. The bubble is the click-through control. */}
       <div className="tour__escort" style={escortStyle}>

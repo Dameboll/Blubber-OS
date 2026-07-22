@@ -11,7 +11,7 @@
 import { NextResponse } from "next/server";
 import { ensureIndexed } from "../../../server/log-indexer";
 import { getDailyTotals, getTopByCategory, getOverallTotals } from "../../../server/db";
-import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { isWorkspaceConnected } from "../../../server/connected-store";
 import { getDemoWeekly } from "../../../server/demo-dataset";
 
 // Depends on live filesystem state (the ~/.claude/projects transcripts) and
@@ -22,9 +22,9 @@ export const runtime = "nodejs";
 const TRAILING_DAYS = 7;
 const TOP_N = 5;
 
-export async function GET(request: Request) {
-  // Demo Mode: fixture recap, never the real transcript rollup.
-  if (isDemoModeRequest(request)) {
+export async function GET() {
+  // Placeholder until connected: fixture recap, never the real transcript rollup.
+  if (!isWorkspaceConnected()) {
     return NextResponse.json(getDemoWeekly());
   }
 

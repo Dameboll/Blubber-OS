@@ -719,6 +719,34 @@
   outline-offset: 2px;
 }
 
+/* Ghost "clear feed" icon button — sits in the Activity Feed panel's header
+   action slot (see ui/Panel.tsx's action prop). Quiet by default, brightens
+   on hover/focus like the other header controls in this file. */
+.dashboard-activity-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 150ms ease-out, background-color 150ms ease-out;
+}
+
+.dashboard-activity-clear:hover {
+  color: var(--core-accent-bright);
+  background: oklch(70% 0.19 155 / 12%);
+}
+
+.dashboard-activity-clear:focus-visible {
+  outline: 2px solid var(--core-accent);
+  outline-offset: 2px;
+}
+
 /* ------------------------------------------------------------------ */
 /* Activity Feed / Top Agents panel styling — reused by dash/
    ActivityFeedPanel.tsx + dash/TopAgentsPanel.tsx, now mounted in the

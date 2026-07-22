@@ -11,12 +11,13 @@
  *   <home>\Development\general\
  *   <home>\Development\research\
  *
- * Demo Mode: when the `blubber_demo` cookie is set (see src/lib/demo-mode.ts),
- * GET returns the bundled demo dataset's project names under a placeholder
- * HOBBY root instead of reading the real filesystem -- a demo visitor's
- * machine has no ACTIVE/HOBBY/general/research folders to list. POST (real
- * folder creation via scaffoldProject) is also gated on the same cookie --
- * a demo visitor must never be able to create a real folder on the host.
+ * Placeholder until connected: before the user's real ~/.claude workspace has
+ * ever been connected (see src/server/connected-store.ts), GET returns the
+ * bundled placeholder dataset's project names under a placeholder HOBBY root
+ * instead of reading the real filesystem -- a fresh install's machine may not
+ * have ACTIVE/HOBBY/general/research folders to list yet. POST (real folder
+ * creation via scaffoldProject) is also gated on the same check -- a
+ * not-yet-connected shell must never write a real folder to the host.
  */
 
 import fs from "node:fs/promises";
@@ -24,7 +25,7 @@ import os from "node:os";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { scaffoldProject } from "../../../server/project-scaffold";
-import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { isWorkspaceConnected } from "../../../server/connected-store";
 import { getDemoProjectRoots } from "../../../server/demo-dataset";
 
 export const runtime = "nodejs";
@@ -51,8 +52,8 @@ async function listSubdirectories(root: string): Promise<string[]> {
   }
 }
 
-export async function GET(request: Request) {
-  if (isDemoModeRequest(request)) {
+export async function GET() {
+  if (!isWorkspaceConnected()) {
     return NextResponse.json({ roots: getDemoProjectRoots() });
   }
 
@@ -79,14 +80,14 @@ export async function GET(request: Request) {
  * and scaffolds the chosen template. All validation + the path fence live in
  * scaffoldProject — this handler just shuttles the request through.
  *
- * Demo Mode: a demo visitor must never be able to write to the host
- * filesystem, so this is gated on the same `blubber_demo` cookie check GET
- * uses, before scaffoldProject (or any fs access) ever runs.
+ * Placeholder until connected: a not-yet-connected shell must never write to
+ * the host filesystem, so this is gated on the same workspace-connected check
+ * GET uses, before scaffoldProject (or any fs access) ever runs.
  */
 export async function POST(request: Request) {
-  if (isDemoModeRequest(request)) {
+  if (!isWorkspaceConnected()) {
     return NextResponse.json(
-      { ok: false, error: "Project creation is disabled in Demo Mode" },
+      { ok: false, error: "Project creation is disabled until a workspace is connected" },
       { status: 403 }
     );
   }

@@ -11,9 +11,16 @@
 // walk over ~/.claude/projects happens in the background. The onboarding UI
 // follows this call with a plain GET /api/system fetch to show real, live
 // machine stats as proof the dashboard is reading real data.
+//
+// A successful inject also flips the workspace-connected gate (see
+// src/server/connected-store.ts) — this is the one place in the app that
+// marks the free-tier "raw shell" as connected, which is what switches every
+// stats/activity API route from the bundled placeholder dataset over to real
+// data going forward.
 
 import { NextResponse } from 'next/server';
 import { ensureIndexed } from '../../../../server/log-indexer';
+import { markWorkspaceConnected } from '../../../../server/connected-store';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -21,6 +28,7 @@ export const runtime = 'nodejs';
 export async function POST() {
   try {
     ensureIndexed();
+    markWorkspaceConnected();
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[api/onboarding/inject] POST failed:', err);

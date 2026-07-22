@@ -1,28 +1,42 @@
 'use client';
 
 /**
- * OnboardingOverlay — the entire free-tier "inject" onboarding flow (Lane B1).
+ * OnboardingOverlay — the entire free-tier onboarding flow (Lane B1, raw-shell
+ * pass Lane C).
  *
- * Community Edition ships with ZERO built-in help content: whoever is running
- * this already knows Claude Code and GitHub, so this is a ~30 second beat,
- * not a tutorial. Six self-managed steps:
+ * PHILOSOPHY: Community Edition is a raw shell for builders who already know
+ * Claude Code. This overlay is not a tutorial — it's one screen, one action,
+ * one tip. No demo mode, no "let me walk you through it," no coddling. The
+ * dashboard's stats/activity panels show a bundled placeholder dataset (see
+ * src/server/demo-dataset.ts) until the user actually scans and connects a
+ * real ~/.claude workspace (src/server/connected-store.ts flips on a
+ * successful inject) — that's the DEFAULT state, not a separate "mode" the
+ * user has to opt into or escape from.
  *
- *   welcome    → full-screen "Meet Blubber" card. Continue (runs detect) OR
- *                "Explore in demo mode" — demo is offered up front here so it's
- *                reachable regardless of whether a Claude setup is detected,
- *                not only on the notfound branch.
+ * Anything guided beyond that one tip — the streamed in-app Claude Code
+ * installer, the dashboard walkthrough — is Starter-Kit-gated. Free never
+ * sees it. Five self-managed steps:
+ *
+ *   welcome    → full-screen "Meet Blubber" card. ONE primary action, "Scan my
+ *                workspace" (runs detect against ~/.claude), plus Blubber's
+ *                single tip in a drop-zone: drag your ~/.claude folder onto
+ *                the window, or just hit scan if it lives in the default spot.
  *   detecting  → fires GET /api/onboarding/detect (real filesystem check on
  *                ~/.claude — see that route for exactly what it looks at).
  *   found      → ~/.claude has real project history. One confirm button
  *                ("Inject my setup") → POST /api/onboarding/inject (which
- *                calls the existing background indexer, see that route) →
- *                fetches GET /api/system for real, live machine stats →
- *                advances to `summary`.
+ *                calls the existing background indexer AND marks the
+ *                workspace connected, see that route) → fetches GET
+ *                /api/system for real, live machine stats → advances to
+ *                `summary`.
  *   empty      → ~/.claude exists but is untouched. "Clean slate" message,
  *                one button straight through to the dashboard.
- *   notfound   → no ~/.claude at all. Two buttons: a plain link out to
- *                install Claude Code, or "Try Demo Mode" (appends ?demo=1
- *                and reloads — a separate lane wires the actual demo data).
+ *   notfound   → no ~/.claude at all. Terse: what's missing, a "Scan again"
+ *                button, and a quiet text link out to install Claude Code
+ *                manually. Nothing else — no install-for-you flow, no demo
+ *                escape hatch (that flow is Starter-Kit-gated; see
+ *                src/app/api/onboarding/install-claude/route.ts, left intact
+ *                but unhooked from this overlay).
  *   summary    → one card of real machine stats confirming the inject
  *                actually did something, then a final continue.
  *
@@ -40,28 +54,18 @@
  * AND the manual reduce-effects toggle — see shouldSkipMotion() below.
  */
 
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState, type DragEvent } from 'react';
 import { gsap } from 'gsap';
 import { isReduceEffectsActive } from '../../lib/reduce-effects';
-import { useInstallStream } from '../../lib/use-install-stream';
 import { requestTour } from '../../lib/tour';
 import './OnboardingOverlay.css';
 
-// Community Edition onboarding is barebones by design: welcome, detect,
-// (optionally help install Claude Code / demo), done. The ONE thing detection
-// adds for paying users is the Starter Kit: the same ~/.claude scan also looks
-// for the kit marker (detect returns { kit }), and if it's found we offer the
-// guided dashboard tour on the way in ('starterKit' step → requestTour()). No
-// kit detected = none of this ever shows.
-type Step =
-  | 'welcome'
-  | 'detecting'
-  | 'found'
-  | 'empty'
-  | 'notfound'
-  | 'installingClaude'
-  | 'starterKit'
-  | 'summary';
+// Community Edition onboarding is barebones by design: welcome, detect, done.
+// The ONE thing detection adds for paying users is the Starter Kit: the same
+// ~/.claude scan also looks for the kit marker (detect returns { kit }), and
+// if it's found we offer the guided dashboard tour on the way in
+// ('starterKit' step → requestTour()). No kit detected = none of this ever shows.
+type Step = 'welcome' | 'detecting' | 'found' | 'empty' | 'notfound' | 'starterKit' | 'summary';
 type DetectStatus = 'found' | 'empty' | 'not-found';
 
 interface SystemStats {
@@ -96,9 +100,6 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
   const [kitDetected, setKitDetected] = useState(false);
   const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
-  // Shared streamed-installer state, reused for both the "install Claude Code"
-  // and "install recommended plugins" beats (see useInstallStream).
-  const install = useInstallStream();
 
   // Fade/rise the card in on every step change — the one animation beat this
   // overlay uses. Skipped entirely under prefers-reduced-motion.
@@ -164,25 +165,21 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
     onComplete();
   }, [onComplete]);
 
-  const handleTryDemo = useCallback(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('demo', '1');
-    window.location.assign(url.toString());
+  // The drop-zone doesn't (and can't, without Electron preload work — out of
+  // scope here) resolve an actual dropped path. A drop is read as "the user
+  // pointed at their workspace" and just re-runs the same default-location
+  // scan runDetect() already does — honest behavior, not a fake file-path read.
+  const handleDropzoneDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
   }, []);
 
-  // Lane 3 — install Claude Code itself, in-app, streamed. Never forced: the
-  // notfound branch keeps the manual link + demo mode, and this step has a
-  // Cancel that aborts the run (killing the child server-side) and drops back
-  // to the notfound choices.
-  const handleInstallClaude = useCallback(() => {
-    setStep('installingClaude');
-    install.start('/api/onboarding/install-claude');
-  }, [install]);
-
-  const cancelInstallClaude = useCallback(() => {
-    install.cancel();
-    setStep('notfound');
-  }, [install]);
+  const handleDropzoneDrop = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      runDetect();
+    },
+    [runDetect],
+  );
 
   // Kit buyer opted into the walkthrough: flag the tour to run once the app
   // mounts (page.tsx consumes it), then finish onboarding normally.
@@ -228,20 +225,23 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
             <img className="onb__badge" src="/blubber-hero.png" alt="Blubber" width={96} height={96} />
             <h1 className="onb__title">Meet Blubber</h1>
             <p className="onb__body">
-              This is your local command deck — a live shell over the Claude Code sessions already running on
-              this machine. No account, no setup wizard. Just your real work, given a face.
+              A live shell over the Claude Code sessions already running on this machine — sessions, agents, token
+              burn, real. No account, no setup wizard, no tutorial. You already know how this works.
             </p>
-            <div className="onb__actions onb__actions--pair">
-              <button
-                type="button"
-                className="onb__btn onb__btn--ghost"
-                onClick={handleTryDemo}
-              >
-                Explore in demo mode
-              </button>
+            <div className="onb__actions">
               <button type="button" className="onb__btn onb__btn--primary" onClick={runDetect}>
-                Continue
+                Scan my workspace
               </button>
+            </div>
+            <div
+              className="onb__dropzone"
+              onDragOver={handleDropzoneDragOver}
+              onDrop={handleDropzoneDrop}
+            >
+              <p className="onb__dropzone-text">
+                Point me at your Claude Code workspace — drop your <code>~/.claude</code> folder onto this window,
+                or just hit scan if it lives in the default spot.
+              </p>
             </div>
           </>
         )}
@@ -290,83 +290,23 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
 
         {step === 'notfound' && (
           <>
-            <h2 className="onb__title onb__title--sm">No Claude Code detected</h2>
-            <p className="onb__body">
-              Blubber is a shell over Claude Code — it needs it installed to show anything real. I can install it
-              for you right here, or you can do it yourself. No pressure either way — you can also just poke around
-              in demo mode.
-            </p>
+            <h2 className="onb__title onb__title--sm">No Claude Code workspace found at ~/.claude.</h2>
+            <p className="onb__body">Blubber is a shell over Claude Code. Set it up, then come back and scan again.</p>
             <div className="onb__actions">
-              <button type="button" className="onb__btn onb__btn--primary" onClick={handleInstallClaude}>
-                Install it for me
+              <button type="button" className="onb__btn onb__btn--primary" onClick={runDetect}>
+                Scan again
               </button>
             </div>
-            <div className="onb__actions onb__actions--pair">
-              <a
-                className="onb__btn onb__btn--ghost"
-                href="https://claude.com/claude-code"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                I'll do it myself
-              </a>
-              <button type="button" className="onb__btn onb__btn--ghost" onClick={handleTryDemo}>
-                Try demo mode
-              </button>
-            </div>
+            <a
+              className="onb__link"
+              href="https://claude.com/claude-code"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              claude.com/claude-code
+            </a>
           </>
         )}
-
-        {step === 'installingClaude' && (
-          <>
-            <h2 className="onb__title onb__title--sm">
-              {install.status === 'done'
-                ? 'Claude Code installed'
-                : install.status === 'error'
-                  ? "That didn't finish"
-                  : 'Installing Claude Code…'}
-            </h2>
-            <p className="onb__narration">
-              {install.status === 'running'
-                ? install.currentLabel || 'Starting the installer…'
-                : install.status === 'done'
-                  ? 'Got it. Let me look for your setup again.'
-                  : install.status === 'error'
-                    ? 'You can retry, install it yourself, or jump into demo mode instead.'
-                    : ''}
-            </p>
-            {install.output && (
-              <pre className="onb__console" aria-label="installer output">
-                {install.output.slice(-4000)}
-              </pre>
-            )}
-            {install.status === 'running' && (
-              <div className="onb__actions">
-                <button type="button" className="onb__btn onb__btn--ghost" onClick={cancelInstallClaude}>
-                  Cancel
-                </button>
-              </div>
-            )}
-            {install.status === 'done' && (
-              <div className="onb__actions">
-                <button type="button" className="onb__btn onb__btn--primary" onClick={runDetect}>
-                  Continue
-                </button>
-              </div>
-            )}
-            {install.status === 'error' && (
-              <div className="onb__actions onb__actions--pair">
-                <button type="button" className="onb__btn onb__btn--ghost" onClick={handleTryDemo}>
-                  Try demo mode
-                </button>
-                <button type="button" className="onb__btn onb__btn--primary" onClick={handleInstallClaude}>
-                  Retry
-                </button>
-              </div>
-            )}
-          </>
-        )}
-
 
         {step === 'summary' && (
           <>

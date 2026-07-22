@@ -1,8 +1,9 @@
 /* AcademyScreen — Lane B3. One-window (LAW 2): the screen is height:100%
-   inside AppShell's bounded content area; the header stays fixed and
-   `.academy-screen__body` is the single scroll region beneath it, so the
-   page itself never scrolls at any size. All colors come from the shared
-   CSS custom properties (globals.css) — no new palette introduced. */
+   inside AppShell's bounded content area; the header stays fixed
+   (flex-shrink: 0) and `.academy-hero` (the key art) fills the rest via
+   flex: 1, so the page itself never scrolls at any size. All colors come
+   from the shared CSS custom properties (globals.css) — no new palette
+   introduced. */
 
 .academy-screen {
   height: 100%;
@@ -39,147 +40,15 @@
   flex-shrink: 0;
 }
 
-.academy-screen__body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1.1rem;
-}
-
-.academy-panel {
-  flex-shrink: 0;
-}
-
-/* ── Intro panel ─────────────────────────────────────────────────────── */
-
-.academy-intro {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.academy-intro__badge {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.03em;
-  color: var(--core-accent-bright);
-  border: 1px solid var(--border-glow);
-  border-radius: 999px;
-  padding: 0.3rem 0.75rem;
-  background: oklch(23% 0.05 151 / 40%);
-}
-
-.academy-intro__copy {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.88rem;
-  line-height: 1.6;
-  max-width: 62ch;
-}
-
-/* ── Course outline: locked module teaser cards ──────────────────────── */
-
-.academy-modules {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 0.85rem;
-}
-
-.academy-module {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  border-radius: 14px;
-  border: 1px solid var(--border-glow);
-  background: var(--bg-elevated);
-  padding: 0.9rem 1rem 1rem;
-  overflow: hidden;
-}
-
-.academy-module__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.academy-module__index {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
-  opacity: 0.75;
-}
-
-.academy-module__lock {
-  color: var(--core-accent-bright);
-  opacity: 0.85;
-}
-
-.academy-module__title {
-  margin: 0;
-  font-size: 0.92rem;
-  font-weight: 650;
-  color: var(--text-primary);
-  /* Locked content: the title stays legibly readable (it's the teaser) while
-     the blurb below it is the part that's genuinely obscured. */
-}
-
-.academy-module__blurb {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  color: var(--text-secondary);
-  filter: blur(3px);
-  user-select: none;
-  opacity: 0.75;
-}
-
-.academy-module__tag {
-  align-self: flex-start;
-  margin-top: 0.15rem;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  border: 1px solid oklch(55% 0.05 155 / 35%);
-  border-radius: 999px;
-  padding: 0.15rem 0.55rem;
-  opacity: 0.85;
-}
-
-.academy-module--locked::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(180deg, transparent 55%, oklch(10% 0.02 155 / 55%) 100%);
-}
-
 /* ── Waitlist form ────────────────────────────────────────────────────── */
+/* Compact single row now — email input + submit button share one line
+   inside the overlay strip (see .academy-overlay below), rather than the
+   old stacked panel layout. */
 
 .academy-waitlist {
+  width: 100%;
   display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-}
-
-.academy-waitlist__copy {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-  line-height: 1.5;
-}
-
-.academy-waitlist__row {
-  display: flex;
+  align-items: center;
   gap: 0.6rem;
   flex-wrap: wrap;
 }
@@ -285,8 +154,17 @@
     display: none;
   }
 
-  .academy-modules {
-    grid-template-columns: minmax(0, 1fr);
+  .academy-overlay {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    transform: none;
+    width: auto;
+  }
+
+  .academy-waitlist {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .academy-waitlist__submit {
@@ -294,20 +172,64 @@
   }
 }
 
-/* Academy key art banner — the coming-soon statement piece above the panels.
-   Art is 1656x945ish; wide rounded banner, capped height, blob + signage kept
-   in frame via center crop. */
+/* Academy key art — now the entire rest of the tab (flex-grow fills down to
+   the bottom of the one-window content area, LAW 2), not a capped-height
+   banner above separate panels. Art is 1656x945ish; object-fit: cover keeps
+   the blob + signage in frame via center crop regardless of the container's
+   resulting aspect ratio. `position: relative` so the overlay strip below
+   can anchor to its bottom edge. */
 .academy-hero {
-  margin: 4px 0 12px;
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--radius-panel, 16px);
+  border: 1px solid var(--border-glow);
+  box-shadow: var(--glow-shadow);
+  overflow: hidden;
 }
 
 .academy-hero__img {
   display: block;
   width: 100%;
-  max-height: 340px;
+  height: 100%;
   object-fit: cover;
   object-position: center 42%;
-  border-radius: var(--radius-panel, 16px);
+}
+
+/* Overlay strip: "Coming soon" + waitlist form, floating over the bottom-
+   center of the key art. Translucent dark panel (same token language as the
+   rest of the shell) with a blur so it reads as glass over the art rather
+   than a flat sticker. */
+.academy-overlay {
+  position: absolute;
+  left: 50%;
+  bottom: 1.1rem;
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - 2.2rem));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 1.1rem 1rem;
+  border-radius: 14px;
   border: 1px solid var(--border-glow);
-  box-shadow: var(--glow-shadow);
+  background: oklch(10% 0.015 155 / 72%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 32px oklch(0% 0 0 / 0.4);
+}
+
+.academy-overlay__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--core-accent-bright);
+  border: 1px solid var(--border-glow);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  background: oklch(23% 0.05 151 / 40%);
 }

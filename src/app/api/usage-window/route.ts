@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { ensureIndexed } from "../../../server/log-indexer";
 import { getWindowTotals } from "../../../server/db";
-import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { isWorkspaceConnected } from "../../../server/connected-store";
 import { getDemoUsageWindow } from "../../../server/demo-dataset";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +13,11 @@ export const runtime = "nodejs";
 
 const WEEK_HOURS = 24 * 7;
 
-export async function GET(request: Request) {
-  // Demo Mode must never leak the real machine's token burn (this was the
-  // most visible leak: a "Demo Mode" dashboard showing real 5h/weekly totals).
-  if (isDemoModeRequest(request)) {
+export async function GET() {
+  // A not-yet-connected shell must never leak the real machine's token burn
+  // via the placeholder screen (this was the original leak: a "Demo Mode"
+  // dashboard showing real 5h/weekly totals) -- placeholder until connected.
+  if (!isWorkspaceConnected()) {
     return NextResponse.json(getDemoUsageWindow());
   }
   try {

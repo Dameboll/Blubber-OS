@@ -5,7 +5,7 @@
 // used for PTY sessions.
 
 import { liveUsageWatcher, type UsagePayload } from "../../../server/live-usage-watcher";
-import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { isWorkspaceConnected } from "../../../server/connected-store";
 import { getDemoLiveTick } from "../../../server/demo-dataset";
 
 // This route depends on live server state (fs polling + in-memory
@@ -17,13 +17,13 @@ function encodeUsageEvent(payload: UsagePayload): string {
   return `event: usage\ndata: ${JSON.stringify(payload)}\n\n`;
 }
 
-export async function GET(request: Request) {
+export async function GET() {
   const encoder = new TextEncoder();
 
-  // Demo Mode: never subscribe to the real live-usage watcher (that's the
-  // visiting machine's actual token burn). One synthetic tick so the meter
-  // renders, then a quiet stream.
-  if (isDemoModeRequest(request)) {
+  // Placeholder until connected: never subscribe to the real live-usage
+  // watcher (that's the machine's actual token burn) before a workspace has
+  // been connected. One synthetic tick so the meter renders, then a quiet stream.
+  if (!isWorkspaceConnected()) {
     const demoStream = new ReadableStream({
       start(controller) {
         controller.enqueue(encoder.encode(encodeUsageEvent(getDemoLiveTick())));

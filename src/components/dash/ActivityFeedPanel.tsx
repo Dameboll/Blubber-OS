@@ -10,8 +10,8 @@
  * MiniProjects.tsx: 'use client', useEffect fetch, loading/error/empty states.
  */
 
-import { useEffect, useMemo, useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Sparkles, Trash2 } from 'lucide-react';
 import AgentAvatar from '../AgentAvatar';
 import { ActivityItem, Panel } from '../ui';
 import { humanizeSlug } from '../../lib/humanize';
@@ -130,8 +130,11 @@ function buildActivityEvents(events: RecentEvent[]): ActivityEvent[] {
 
 /** Fetches the real recent tool-invocation feed (skill/agent runs, newest
  *  first) from GET /api/recent and re-polls so the Activity Feed stays live.
- *  Empty until real activity is indexed. */
-function useRecentEvents(pollMs: number): { events: RecentEvent[]; state: FetchState } {
+ *  Empty until real activity is indexed. `clearFeed` POSTs the clear (moves
+ *  the recent-clear-store baseline server-side, see api/recent/route.ts) and
+ *  empties the list optimistically -- the next poll then confirms against the
+ *  real filtered feed. */
+function useRecentEvents(pollMs: number): { events: RecentEvent[]; state: FetchState; clearFeed: () => void } {
   const [events, setEvents] = useState<RecentEvent[]>([]);
   const [state, setState] = useState<FetchState>('loading');
 
@@ -160,7 +163,15 @@ function useRecentEvents(pollMs: number): { events: RecentEvent[]; state: FetchS
     };
   }, [pollMs]);
 
-  return { events, state };
+  const clearFeed = useCallback(() => {
+    setEvents([]);
+    fetch('/api/recent', { method: 'POST' }).catch(() => {
+      // Best-effort -- if the POST fails the next poll will just bring the
+      // un-cleared feed back, which is an honest reflection of reality.
+    });
+  }, []);
+
+  return { events, state, clearFeed };
 }
 
 export interface ActivityFeedPanelProps {
@@ -183,6 +194,11 @@ export default function ActivityFeedPanel({ className, avoidRoam, onViewFull }: 
     <Panel
       accent
       title="Activity Feed"
+      action={
+        <button type="button" className="dashboard-activity-clear" onClick={recent.clearFeed} title="Clear feed">
+          <Trash2 size={14} aria-hidden="true" />
+        </button>
+      }
       className={['dashboard-panel', 'dashboard-panel--activity', className ?? ''].filter(Boolean).join(' ')}
       avoidRoam={avoidRoam}
     >

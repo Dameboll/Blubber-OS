@@ -14,14 +14,16 @@
  *
  * Node runtime (os.cpus / process.memoryUsage are unavailable on the edge).
  *
- * Demo Mode: when the `blubber_demo` cookie is set (see src/lib/demo-mode.ts),
- * this returns hand-picked plausible vitals instead of reading the real
- * machine — a demo visitor's laptop isn't the thing being demonstrated.
+ * Placeholder until connected: before the user's real ~/.claude workspace has
+ * ever been connected (see src/server/connected-store.ts — flipped by the
+ * onboarding inject flow), this returns hand-picked plausible vitals instead
+ * of reading the real machine — a fresh install's laptop isn't the thing
+ * being demonstrated on the free-tier raw shell's default screen.
  */
 
 import os from "node:os";
 import { NextResponse } from "next/server";
-import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { isWorkspaceConnected } from "../../../server/connected-store";
 import { getDemoSystemStats } from "../../../server/demo-dataset";
 
 export const runtime = "nodejs";
@@ -46,8 +48,8 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function GET(request: Request) {
-  if (isDemoModeRequest(request)) {
+export async function GET() {
+  if (!isWorkspaceConnected()) {
     return NextResponse.json(getDemoSystemStats(), { headers: { "Cache-Control": "no-store" } });
   }
 

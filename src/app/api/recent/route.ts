@@ -49,6 +49,16 @@ export async function GET(request: Request) {
     const project = searchParams.get("project")?.trim() || null;
 
     if (!isWorkspaceConnected()) {
+      // The placeholder feed is synthetic sample data whose timestamps are
+      // regenerated relative to "now" on every request (see
+      // getDemoRecentEvents), so a `ts > clearedAt` filter can never hold it
+      // cleared — the events would always be "after" any past baseline and
+      // repopulate instantly. Treat a clear made while not connected as "user
+      // dismissed the sample feed" and keep it empty. The real feed (with a
+      // genuine, filterable baseline) takes over once the workspace connects.
+      if (getRecentClearedAt()) {
+        return NextResponse.json({ events: [] });
+      }
       return NextResponse.json({ events: getDemoRecentEvents(limit, project) });
     }
 

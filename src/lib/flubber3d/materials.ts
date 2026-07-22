@@ -33,14 +33,18 @@ export const GOO_IOR = 1.4;
 export const GOO_ROUGHNESS = 0.05;
 // RS5: attenuation hue fixed to the locked-palette dominant green (#4CAF1E
 // family) — the old 0x1f9c3d blue channel is what read as "washed gray-jade".
-export const GOO_ATTENUATION_COLOR = 0x2ec418;
+// Glow-up pass (2026-07-21): lifted toward lime so light passing THROUGH the
+// body reads bright/juicy like the reference render, not murky forest green.
+export const GOO_ATTENUATION_COLOR = 0x36d41a;
 export const GOO_SPOT_ATTENUATION_COLOR = 0x8dff4a; // locked-palette brightest lime
 export const GOO_SPOT_LUMINANCE_LOW = 0.35;
 export const GOO_SPOT_LUMINANCE_HIGH = 0.55;
 // RS6: spot self-lift fed as faint emissive AFTER the transmission mix, where
 // it actually survives — attenuation alone is too weak at transmission 0.76+.
 export const GOO_SPOT_EMISSIVE_COLOR = 0x8dff4a;
-export const GOO_SPOT_EMISSIVE_STRENGTH = 0.08;
+// Glow-up pass: 0.08 → 0.14 — the baked spots should read as bright freckles
+// lit from inside (reference has luminous speckle), not faint tints.
+export const GOO_SPOT_EMISSIVE_STRENGTH = 0.14;
 export const GOO_CLEARCOAT = 0.96;
 export const GOO_CLEARCOAT_ROUGHNESS = 0.035;
 // thickness/attenuationDistance are authored as fractions of the body's own
@@ -53,16 +57,25 @@ export const GOO_BASE_COLOR = 0x1d8a12;
 // is consumed ONLY by createGooMaterial() below (MID hardcodes its own 1.05
 // directly), so raising it brightens HERO's reflections/highlights alone —
 // MID/MICRO are untouched. No new color, just more of the existing env light.
-export const GOO_ENV_MAP_INTENSITY = 1.3;
-export const GOO_TONE_MAPPING_EXPOSURE = 1.22;
+// Glow-up pass: 1.3 → 1.6 — bigger/brighter wet blooms off the studio cards.
+export const GOO_ENV_MAP_INTENSITY = 1.6;
+export const GOO_TONE_MAPPING_EXPOSURE = 1.25;
 export const GOO_RIM_COLOR = 0x8cff54;
-// Base rim strength — still what MID's clearcoat jelly uses (unchanged).
-export const GOO_RIM_STRENGTH = 0.32;
+// Base rim strength — what MID's clearcoat jelly uses. Glow-up: 0.32 → 0.44.
+export const GOO_RIM_STRENGTH = 0.44;
 // Lane D — HERO-only rim strength, brighter than MID's GOO_RIM_STRENGTH. The
 // rim fragment chunk is now built per-material via buildGooRimFragmentChunk()
 // (see below) so HERO and MID can each bake in their own coefficient instead
-// of sharing one literal — MID's read stays byte-for-byte identical.
-export const GOO_HERO_RIM_STRENGTH = 0.44;
+// of sharing one literal. Glow-up: 0.44 → 0.7 for harder separation from the
+// dark room, matching the reference render's rim.
+export const GOO_HERO_RIM_STRENGTH = 0.7;
+// Glow-up pass — "lit from within" core: an additive lime lift where the
+// surface faces the camera, falling off toward the silhouette (the inverse of
+// the fresnel rim). This is what makes the reference body read as glowing goo
+// instead of painted jelly. Baked into the rim chunk per tier — HERO glows
+// harder than MID (small MID bodies over-glow into neon fast).
+export const GOO_HERO_CORE_GLOW = 0.26;
+export const GOO_MID_CORE_GLOW = 0.13;
 export const GOO_DPR_CAP = 0.9; // keeps the transmissive hero smooth under load
 // RS5 droplets: geometry sharing the goo material needs SOME color attribute
 // once vertexColors is on, or it binds to (0,0,0) and multiplies to black.
@@ -147,24 +160,36 @@ export const SPOT_EMISSIVE_FRAGMENT_CHUNK = `
 // (GOO_HERO_RIM_STRENGTH) than MID's read (GOO_RIM_STRENGTH) without a shared
 // constant forcing them to match; everything else in the chunk is identical
 // for both tiers.
-function buildGooRimFragmentChunk(rimStrength: number): string {
+// Glow-up pass (2026-07-21) — second param coreGlowStrength: additive lime
+// core glow on camera-facing surface (inverse fresnel), the reference's
+// "bright luminous center falling off to deep saturated edges". The old core
+// DARKENING floor is eased 0.74 → 0.84 — the ref's core is the BRIGHT part;
+// the deep-green band lives in the mid-annulus between core glow and rim.
+function buildGooRimFragmentChunk(rimStrength: number, coreGlowStrength: number): string {
   return `
 {
   float gooPeak = max( outgoingLight.r, max( outgoingLight.g, outgoingLight.b ) );
   float gooWhiteGlint = smoothstep( 0.55, 0.90, gooPeak );
   vec3 gooSaturatedBody = outgoingLight * vec3( 0.92, 1.0, 0.56 );
   outgoingLight = mix( gooSaturatedBody, outgoingLight, gooWhiteGlint );
-  float gooFresnel = pow(
-    clamp( 1.0 - dot( normalize( normal ), normalize( vViewPosition ) ), 0.0, 1.0 ),
-    5.2
-  );
-  float gooCoreDepth = mix( 0.74, 1.0, smoothstep( 0.01, 0.42, gooFresnel ) );
+  float gooNdV = clamp( dot( normalize( normal ), normalize( vViewPosition ) ), 0.0, 1.0 );
+  float gooFresnel = pow( 1.0 - gooNdV, 5.2 );
+  float gooCoreDepth = mix( 0.8, 1.0, smoothstep( 0.01, 0.42, gooFresnel ) );
   gooCoreDepth = mix( gooCoreDepth, 1.0, gooWhiteGlint );
   outgoingLight *= gooCoreDepth;
   outgoingLight += vec3( 0.025, 0.047, 0.0038 ) * ( 1.0 - gooWhiteGlint );
+  // Lit-from-within: lime radiance strongest where the surface faces the
+  // camera, dying off before the silhouette so the deep-green annulus and the
+  // fresnel rim both survive. Tightened falloff (^2.4) keeps the glow a CORE
+  // instead of a full-body wash; hue biased green (R low) so the body stays
+  // green→lime, never yellow. Glint mask keeps white speculars white.
+  float gooCoreGlow = pow( gooNdV, 2.4 ) * ${coreGlowStrength.toFixed(3)};
+  outgoingLight += vec3( 0.26, 0.95, 0.08 ) * gooCoreGlow * ( 1.0 - gooWhiteGlint * 0.6 );
   vec3 gooN = normalize( normal );
   float gooUnderGlow = pow( max( -gooN.y, 0.0 ), 2.0 );
-  outgoingLight += vec3( 0.12, 0.72, 0.055 ) * gooUnderGlow * 0.52;
+  // Glow-up: 0.52 → 0.62 — the reference's stage light kicks harder up into
+  // the underside of the body.
+  outgoingLight += vec3( 0.12, 0.72, 0.055 ) * gooUnderGlow * 0.62;
   outgoingLight += uGooRimColor * gooFresnel * ${rimStrength.toFixed(3)};
 }
 #include <opaque_fragment>
@@ -268,14 +293,20 @@ export function createStudioEnvironment(renderer: THREE.WebGLRenderer): THREE.Te
     mesh.rotateZ(roll);
     studio.add(mesh);
   };
-  addCard(15.0, 3.2, 0xffffff, new THREE.Vector3(-2.0, 12.0, -6.0), 9.0, true, Math.PI / 2);
-  addCard(2.2, 1.8, 0xf5ffed, new THREE.Vector3(-6.0, 9.0, 3.1), 6.0, true);
-  addCard(4.0, 2.0, 0xeaffdf, new THREE.Vector3(3.5, -8.0, 1.0), 7.0, true);
-  addCard(1.15, 0.75, 0xffffff, new THREE.Vector3(5.2, 4.0, 3.8), 3.2, true);
-  addCard(3.0, 1.1, 0x44ff35, new THREE.Vector3(2.5, 2.2, -4.0), 1.8);
+  // Glow-up pass (2026-07-21): key cards brightened (the reference's big wet
+  // blooms) and the upper-front glint card pushed harder — combined with the
+  // wider PMREM blur below this reads as large SOFT highlight blooms instead
+  // of small hard glints. One-time bake, zero per-frame cost.
+  addCard(15.0, 3.2, 0xffffff, new THREE.Vector3(-2.0, 12.0, -6.0), 11.0, true, Math.PI / 2);
+  addCard(2.2, 1.8, 0xf5ffed, new THREE.Vector3(-6.0, 9.0, 3.1), 7.0, true);
+  addCard(4.0, 2.0, 0xeaffdf, new THREE.Vector3(3.5, -8.0, 1.0), 7.5, true);
+  addCard(1.15, 0.75, 0xffffff, new THREE.Vector3(5.2, 4.0, 3.8), 4.5, true);
+  addCard(3.0, 1.1, 0x44ff35, new THREE.Vector3(2.5, 2.2, -4.0), 2.2);
 
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const texture = pmrem.fromScene(studio, 0.015).texture;
+  // Sigma 0.015 → 0.05: pre-blurs the studio cards so speculars bloom soft
+  // and wide like the reference render's wet highlights.
+  const texture = pmrem.fromScene(studio, 0.05).texture;
   pmrem.dispose();
   studio.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) return;
@@ -304,8 +335,12 @@ export function createGooMaterial(wobble: WobbleUniforms): THREE.MeshPhysicalMat
     attenuationColor: new THREE.Color(GOO_ATTENUATION_COLOR),
     attenuationDistance: 1,
     envMapIntensity: GOO_ENV_MAP_INTENSITY,
-    emissive: new THREE.Color(0x0f9b17),
-    emissiveIntensity: 0.14,
+    // Glow-up pass: 0x0f9b17 @ 0.14 → 0x17b013 @ 0.17 — the whole-body ambient
+    // radiance under the core-glow term; keeps shadow side from going dead.
+    // (0.2 in round 1 washed the deep-green annulus toward uniform chartreuse —
+    // the ref keeps rich dark green between core glow and rim.)
+    emissive: new THREE.Color(0x17b013),
+    emissiveIntensity: 0.17,
     vertexColors: true,
   });
   material.onBeforeCompile = (shader) => {
@@ -337,13 +372,13 @@ export function createGooMaterial(wobble: WobbleUniforms): THREE.MeshPhysicalMat
     );
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <opaque_fragment>',
-      buildGooRimFragmentChunk(GOO_HERO_RIM_STRENGTH),
+      buildGooRimFragmentChunk(GOO_HERO_RIM_STRENGTH, GOO_HERO_CORE_GLOW),
     );
   };
-  // Lane D bumped envMapIntensity + the rim strength baked into this shader —
-  // new cache key so three.js never serves a program compiled under the old
+  // Glow-up pass changed rim strength + added the baked core-glow term — new
+  // cache key so three.js never serves a program compiled under the old
   // constants from its internal program cache.
-  material.customProgramCacheKey = () => 'flubber-goo-nextgen-v37';
+  material.customProgramCacheKey = () => 'flubber-goo-nextgen-v40';
   return material;
 }
 
@@ -362,8 +397,10 @@ export function createClearcoatGooMaterial(wobble: WobbleUniforms): THREE.MeshPh
     metalness: 0,
     clearcoat: GOO_CLEARCOAT,
     clearcoatRoughness: GOO_CLEARCOAT_ROUGHNESS,
-    envMapIntensity: 1.05,
-    emissive: new THREE.Color(0x1f9c1a),
+    // Glow-up pass: 1.05 → 1.2 env so MID picks up the same bigger wet blooms
+    // the hero got; emissive nudged limeward to track the hero's inner glow.
+    envMapIntensity: 1.2,
+    emissive: new THREE.Color(0x24a816),
     emissiveIntensity: 0.4,
     vertexColors: true,
   });
@@ -377,10 +414,10 @@ export function createClearcoatGooMaterial(wobble: WobbleUniforms): THREE.MeshPh
     shader.fragmentShader = 'uniform vec3 uGooRimColor;\n' + shader.fragmentShader;
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <opaque_fragment>',
-      buildGooRimFragmentChunk(GOO_RIM_STRENGTH),
+      buildGooRimFragmentChunk(GOO_RIM_STRENGTH, GOO_MID_CORE_GLOW),
     );
   };
-  material.customProgramCacheKey = () => 'flubber-goo-clearcoat-mid-v1';
+  material.customProgramCacheKey = () => 'flubber-goo-clearcoat-mid-v4';
   return material;
 }
 

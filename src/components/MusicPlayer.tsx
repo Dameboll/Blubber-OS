@@ -97,6 +97,11 @@ export interface Track {
   id: string;
   title: string;
   file: string;
+  /** ID3 TPE1/TALB when the source file has them (mp3 only) — see /api/tracks. */
+  artist?: string;
+  album?: string;
+  /** Whether /api/cover/<id> has art to serve (auto-extracted or custom-uploaded). */
+  hasArt?: boolean;
 }
 
 /** Real 3-band EQ gains in dB (typically -15..+15), applied live. */

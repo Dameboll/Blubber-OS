@@ -31,7 +31,9 @@ import AmbientGlow from '../components/AmbientGlow';
 import IntroCinematic from '../components/IntroCinematic';
 import OnboardingOverlay from '../components/onboarding/OnboardingOverlay';
 import DashboardTour from '../components/tour/DashboardTour';
+import SoulInterview from '../components/soul/SoulInterview';
 import { consumeTourPending, TOUR_EVENT } from '../lib/tour';
+import { consumeSoulPending, SOUL_EVENT } from '../lib/soul';
 import { FlubberBrainProvider } from '../components/FlubberBrainProvider';
 import DashboardScreen from '../components/screens/DashboardScreen';
 import AgentsScreen from '../components/screens/AgentsScreen';
@@ -65,12 +67,26 @@ export default function Home() {
   // is gated on kit detection, never the free build.
   const [showTour, setShowTour] = useState(false);
 
+  // Soul Interview (Lane 3, see src/lib/soul.ts's header for the three launch
+  // paths). Same pending-flag + live-event shape as the tour above, same gate
+  // (only ever requested from Starter-Kit-only code paths — the free build
+  // never calls requestSoulInterview()).
+  const [showSoul, setShowSoul] = useState(false);
+
   useEffect(() => {
     if (onboardingSeen !== true) return;
     if (consumeTourPending()) setShowTour(true);
     const onTour = () => setShowTour(true);
     window.addEventListener(TOUR_EVENT, onTour);
     return () => window.removeEventListener(TOUR_EVENT, onTour);
+  }, [onboardingSeen]);
+
+  useEffect(() => {
+    if (onboardingSeen !== true) return;
+    if (consumeSoulPending()) setShowSoul(true);
+    const onSoul = () => setShowSoul(true);
+    window.addEventListener(SOUL_EVENT, onSoul);
+    return () => window.removeEventListener(SOUL_EVENT, onSoul);
   }, [onboardingSeen]);
 
   useEffect(() => {
@@ -133,6 +149,7 @@ export default function Home() {
         {showTour && (
           <DashboardTour onNavChange={setActiveNavId} onClose={() => setShowTour(false)} />
         )}
+        {showSoul && <SoulInterview onClose={() => setShowSoul(false)} />}
       </>
     );
   }

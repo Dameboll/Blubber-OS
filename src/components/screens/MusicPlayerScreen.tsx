@@ -10,29 +10,39 @@
  * and reads real state back via its `onStateChange` callback, plus
  * `onAudioEnergy`/`onBeat` for the visuals.
  *
- * Matches "flubber 2.png": tab strip, hero with FlubberCharacter on a
- * glowing platform between two speakers with a reactive equalizer
+ * Matches "flubber 2.png" for the Now Playing tab: hero with FlubberCharacter
+ * on a glowing platform between two speakers with a reactive equalizer
  * background, a Playlist Queue table, a sticky transport bar, and a right
- * rail (Now Playing / Playback Controls / Visualizer Mode / Equalizer).
+ * rail (Now Playing / Playback Controls / Visualizer Mode / Playlist Queue).
+ *
+ * LANE 4 — LIBRARY TAB OVERHAUL: the old Library/Playlists/Liked Songs tabs
+ * merged into one Apple-Music-style "Library" tab — a left rail (Library /
+ * Liked Songs / Playlists + New Playlist) selects what the main area shows,
+ * and the main area is a sortable track table (Title/Artist/Album/Duration,
+ * click a header to sort, direction persists per column). See
+ * `librarySelection` / `sortColumn` / `sortedLibraryTracks` below.
  *
  * INDEX-SPACE NOTE (read before touching play handlers): MusicPlayer keeps
  * two lists — `engine.tracks` (the full library) and `engine.queue` (whatever
- * is actually playing: the library by default, or a playlist once one is
- * played). `engine.currentIndex` is ALWAYS an index into `engine.queue`, never
- * into `engine.tracks`. Row highlighting is done by track id, not index, so
- * it stays correct regardless of which list a given tab is rendering:
+ * is actually playing: the library by default, or a playlist/custom-sort once
+ * one is played). `engine.currentIndex` is ALWAYS an index into `engine.queue`,
+ * never into `engine.tracks`. Row highlighting is done by track id, not
+ * index, so it stays correct regardless of which list is rendering:
  *   - Now Playing's "Playlist Queue" panel renders `engine.queue` and plays
  *     rows via `playQueueTrackAt(index)` (queue-space).
- *   - Library / Liked tabs render `engine.tracks` and play rows via
- *     `playLibraryTrackAt(index)` (library-space — resets the queue to the
- *     full library first).
+ *   - The Library table plays rows via `playFromSortedList(index)`, which
+ *     takes the CURRENTLY DISPLAYED (possibly sorted) row order as the
+ *     queue — see that function for why Library-in-natural-order is a
+ *     special case that keeps the old library-auto-sync behavior.
  *
- * Data reality check (see /api/tracks/route.ts): a Track is only
- * { id, title, file, sizeBytes } — no artist/producer, no duration, no art.
- * This screen never fabricates that missing metadata:
- *   - "prod. by" subtext -> replaced with an honest "local library" tag.
- *   - Album art -> a deterministic generated gradient tile (seeded off the
- *     track id), not a fake photo.
+ * Data reality check (see /api/tracks/route.ts): a Track has real
+ * artist/album/cover-art ONLY when the source file is an mp3 with ID3 tags
+ * (server-side extraction, see id3-parser.ts + cover-art-store.ts) — every
+ * other case stays honest rather than fabricated:
+ *   - No ID3 title -> filename-derived title (as before).
+ *   - No ID3 artist/album, or a non-mp3 file -> that column just reads "—".
+ *   - No embedded/custom art -> a deterministic generated gradient tile
+ *     (seeded off the track id), not a fake photo.
  *   - Duration -> read for REAL via a lightweight metadata-only probe
  *     (see useTrackDurations below), not guessed.
  *   - "Liked" state -> real, but session-local only (no backend for it yet).
@@ -58,17 +68,20 @@ import {
   useMemo,
   useRef,
   useState,
+  type ChangeEvent,
   type CSSProperties,
   type DragEvent,
 } from 'react';
 import {
+  ArrowDown,
+  ArrowUp,
   AudioWaveform,
   BarChart3,
-  ChevronDown,
+  Check,
   Disc3,
-  FolderPlus,
-  GripVertical,
   Heart,
+  ImagePlus,
+  ListMusic,
   MoreHorizontal,
   Music,
   Pause,
@@ -95,22 +108,36 @@ import MusicPlayer, { type MusicEngineState, type MusicPlayerHandle, type Track 
 import { useFlubberBrainApi } from '../../hooks/useFlubberBrain';
 import './MusicPlayerScreen.css';
 
-type ScreenTab = 'now-playing' | 'playlists' | 'library' | 'liked';
+// LANE 4: the tab strip dropped from 4 tabs to 2 — Playlists/Library/Liked
+// merged into one Apple-Music-style "Library" view (left rail nav + a
+// sortable track table in the main area) instead of three separate flat
+// lists. "Now Playing" (the hero visualizer) is untouched.
+type ScreenTab = 'now-playing' | 'library';
 type VisualizerMode = 'bars' | 'wave' | 'radial' | 'pulse';
 type EqPresetName = 'Flat' | 'Bass Boost' | 'Vocal' | 'Treble' | 'Custom';
+
+/** Which sub-view the Library rail has selected — drives what the main-area
+ *  table shows. A playlist selection is stored as its id since playlists
+ *  come and go. */
+type LibrarySelection = { kind: 'library' } | { kind: 'liked' } | { kind: 'playlist'; id: string };
+
+type SortColumn = 'title' | 'artist' | 'album' | 'duration';
+type SortDirection = 'asc' | 'desc';
 
 interface Playlist {
   id: string;
   name: string;
   trackIds: string[];
   createdAt: string;
+  /** Computed server-side from cover-art-store.ts — whether a custom cover
+   *  has been uploaded for this playlist (playlists have no embedded art of
+   *  their own to auto-extract, unlike tracks). */
+  hasCustomCover?: boolean;
 }
 
 const TABS: { id: ScreenTab; label: string }[] = [
   { id: 'now-playing', label: 'Now Playing' },
-  { id: 'playlists', label: 'Playlists' },
   { id: 'library', label: 'Library' },
-  { id: 'liked', label: 'Liked Songs' },
 ];
 
 // Order + default match the reference (flubber 2.png / fidelity-specs/music.md
@@ -217,16 +244,42 @@ function useTrackDurations(tracks: Track[]): Map<string, number> {
   return durations;
 }
 
+/** Builds the /api/cover/<id> URL for a track or playlist, or undefined when
+ *  the caller has nothing to fetch (no auto-extracted or custom art) — kept
+ *  as a plain function rather than baking the URL into TrackArt so callers
+ *  can skip the request entirely instead of letting an <img> 404. `version`
+ *  is a cache-busting counter bumped after every successful cover upload so
+ *  a freshly-uploaded cover shows immediately instead of waiting out the
+ *  route's Cache-Control. */
+function coverUrlFor(kind: 'track' | 'playlist', id: string, hasArt: boolean, version: number): string | undefined {
+  if (!hasArt) return undefined;
+  return `/api/cover/${encodeURIComponent(id)}?type=${kind}&v=${version}`;
+}
+
 interface TrackArtProps {
   seed: string;
   size?: number;
+  /** Real cover art URL (see coverUrlFor). Omit/undefined to always show the
+   *  generated placeholder — this component never guesses or probes. */
+  coverUrl?: string;
+  /** Gentle breathing pulse while playback is active (LAW: the Now Playing
+   *  cover only — see .mps-art--pulse in MusicPlayerScreen.css). */
+  pulse?: boolean;
 }
 
-function TrackArt({ seed, size = 44 }: TrackArtProps) {
+function TrackArt({ seed, size = 44, coverUrl, pulse = false }: TrackArtProps) {
+  // Resets whenever the art URL itself changes (new track, or a cache-busted
+  // re-upload) so a previous track's broken-image state never sticks to a
+  // different track that reuses this same mounted component instance.
+  const [imgFailed, setImgFailed] = useState(false);
+  useEffect(() => setImgFailed(false), [coverUrl]);
+
   const hue = 132 + Math.round(hash01(seed) * 46); // stays in the brand's green family
+  const showImg = Boolean(coverUrl) && !imgFailed;
+
   return (
     <div
-      className="mps-art"
+      className={`mps-art${pulse ? ' mps-art--pulse' : ''}`}
       style={{
         width: size,
         height: size,
@@ -234,7 +287,11 @@ function TrackArt({ seed, size = 44 }: TrackArtProps) {
       }}
       aria-hidden="true"
     >
-      <Music size={Math.round(size * 0.36)} strokeWidth={1.5} />
+      {showImg ? (
+        <img src={coverUrl} alt="" className="mps-art__img" onError={() => setImgFailed(true)} />
+      ) : (
+        <Music size={Math.round(size * 0.36)} strokeWidth={1.5} />
+      )}
     </div>
   );
 }
@@ -274,6 +331,7 @@ interface TrackRowProps {
   liked: boolean;
   duration: number | undefined;
   energy: number;
+  coverUrl?: string;
   onPlay: () => void;
   onToggleLike: () => void;
   /** Library tab only — replaces the decorative "more" button with a real inline-confirm delete. */
@@ -281,6 +339,9 @@ interface TrackRowProps {
   deletePending?: boolean;
 }
 
+/** Compact row shape used only by the Now Playing tab's "Playlist Queue"
+ *  rail panel now (the Library tab's main table has its own row component,
+ *  LibraryTrackRow, below — different columns, different actions). */
 function TrackRow({
   track,
   index,
@@ -289,6 +350,7 @@ function TrackRow({
   liked,
   duration,
   energy,
+  coverUrl,
   onPlay,
   onToggleLike,
   onDelete,
@@ -309,10 +371,10 @@ function TrackRow({
       </button>
 
       <button type="button" className="mps-track__main" onClick={onPlay}>
-        <TrackArt seed={track.id} size={40} />
+        <TrackArt seed={track.id} size={40} coverUrl={coverUrl} />
         <span className="mps-track__meta">
           <span className="mps-track__title">{track.title}</span>
-          <span className="mps-track__sub">local library</span>
+          <span className="mps-track__sub">{track.artist ?? 'local library'}</span>
         </span>
       </button>
 
@@ -364,6 +426,145 @@ function TrackListSkeleton({ rows = 5 }: { rows?: number }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function sortArrow(active: boolean, direction: SortDirection) {
+  if (!active) return null;
+  const Icon = direction === 'asc' ? ArrowUp : ArrowDown;
+  return <Icon size={11} className="mps-table__sort-icon" aria-hidden="true" />;
+}
+
+interface LibraryTrackRowProps {
+  track: Track;
+  rowIndex: number;
+  isActive: boolean;
+  isPlaying: boolean;
+  liked: boolean;
+  duration: number | undefined;
+  coverUrl?: string;
+  onPlay: () => void;
+  onToggleLike: () => void;
+  playlists: Playlist[];
+  onTogglePlaylistMembership: (playlistId: string, trackId: string) => void;
+  onUploadCover: () => void;
+  menuOpen: boolean;
+  onToggleMenu: () => void;
+  /** Library selection only — every other selection removes a track by
+   *  toggling it off in the row menu instead (see onTogglePlaylistMembership). */
+  onDelete?: () => void;
+  deletePending?: boolean;
+}
+
+/** One row of the Library tab's main-area track table (Title/Artist/Album/
+ *  Duration + like/menu/delete). Distinct from TrackRow (the compact
+ *  Playlist Queue rail list in the Now Playing tab) because the columns and
+ *  available actions are genuinely different — a table row, not a list item. */
+function LibraryTrackRow({
+  track,
+  rowIndex,
+  isActive,
+  isPlaying,
+  liked,
+  duration,
+  coverUrl,
+  onPlay,
+  onToggleLike,
+  playlists,
+  onTogglePlaylistMembership,
+  onUploadCover,
+  menuOpen,
+  onToggleMenu,
+  onDelete,
+  deletePending,
+}: LibraryTrackRowProps) {
+  return (
+    <li className={`mps-table__row${isActive ? ' mps-table__row--active' : ''}`} role="row">
+      <button
+        type="button"
+        className="mps-table__cell mps-table__cell--index"
+        role="cell"
+        onClick={onPlay}
+        aria-label={isActive && isPlaying ? `Pause ${track.title}` : `Play ${track.title}`}
+      >
+        <span className="mps-table__index-num">{rowIndex + 1}</span>
+        <span className="mps-table__index-play">{isActive && isPlaying ? <Pause size={13} /> : <Play size={13} />}</span>
+      </button>
+
+      <button type="button" className="mps-table__cell mps-table__cell--title" role="cell" onClick={onPlay}>
+        <TrackArt seed={track.id} size={36} coverUrl={coverUrl} />
+        <span className="mps-table__title-text">{track.title}</span>
+      </button>
+
+      <span className="mps-table__cell mps-table__cell--artist" role="cell">
+        {track.artist ?? '—'}
+      </span>
+      <span className="mps-table__cell mps-table__cell--album" role="cell">
+        {track.album ?? '—'}
+      </span>
+      <span className="mps-table__cell mps-table__cell--duration" role="cell">
+        {duration !== undefined ? formatTime(duration) : '--:--'}
+      </span>
+
+      <button
+        type="button"
+        className={`mps-track__heart${liked ? ' mps-track__heart--active' : ''}`}
+        onClick={onToggleLike}
+        aria-label={liked ? `Unlike ${track.title}` : `Like ${track.title}`}
+        aria-pressed={liked}
+      >
+        <Heart size={14} fill={liked ? 'currentColor' : 'none'} />
+      </button>
+
+      <div className="mps-row-menu-wrap">
+        <button type="button" className="mps-track__menu" onClick={onToggleMenu} aria-label={`More options for ${track.title}`} aria-expanded={menuOpen}>
+          <MoreHorizontal size={16} />
+        </button>
+        {menuOpen && (
+          <div className="mps-row-menu" role="menu">
+            <button type="button" role="menuitem" onClick={onUploadCover}>
+              <ImagePlus size={13} aria-hidden="true" />
+              Upload Cover
+            </button>
+            <div className="mps-row-menu__divider" role="separator" />
+            <span className="mps-row-menu__label">Add to Playlist</span>
+            {playlists.length === 0 ? (
+              <p className="mps-empty mps-row-menu__empty">No playlists yet — make one in the sidebar.</p>
+            ) : (
+              playlists.map((playlist) => {
+                const inPlaylist = playlist.trackIds.includes(track.id);
+                return (
+                  <button
+                    key={playlist.id}
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={inPlaylist}
+                    onClick={() => onTogglePlaylistMembership(playlist.id, track.id)}
+                  >
+                    <span className="mps-row-menu__check">{inPlaylist ? <Check size={13} /> : null}</span>
+                    {playlist.name}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+
+      {onDelete ? (
+        <button
+          type="button"
+          className={`mps-track__delete${deletePending ? ' mps-track__delete--confirm' : ''}`}
+          onClick={onDelete}
+          aria-label={deletePending ? `Confirm delete ${track.title}` : `Delete ${track.title}`}
+          title={deletePending ? 'Click again to delete' : 'Delete track'}
+        >
+          <Trash2 size={14} />
+        </button>
+      ) : (
+        <span className="mps-table__cell mps-table__cell--spacer" aria-hidden="true" />
+      )}
+    </li>
   );
 }
 
@@ -444,13 +645,30 @@ export default function MusicPlayerScreen() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [playlistsLoading, setPlaylistsLoading] = useState(true);
   const [newPlaylistName, setNewPlaylistName] = useState('');
-  const [expandedPlaylistId, setExpandedPlaylistId] = useState<string | null>(null);
-  const [addTrackOpenFor, setAddTrackOpenFor] = useState<string | null>(null);
   const [renamingPlaylistId, setRenamingPlaylistId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   const [playlistDeleteConfirmId, setPlaylistDeleteConfirmId] = useState<string | null>(null);
   const playlistDeleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dragTrackIndexRef = useRef<number | null>(null);
+
+  // ---- Library tab: rail selection + sortable table state ----
+  const [librarySelection, setLibrarySelection] = useState<LibrarySelection>({ kind: 'library' });
+  const [sortColumn, setSortColumn] = useState<SortColumn>('title');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [rowMenuOpenFor, setRowMenuOpenFor] = useState<string | null>(null);
+
+  // ---- Cover art: upload + cache-busting ----
+  // Bumped after every successful cover upload and folded into every
+  // coverUrlFor() call so a freshly-uploaded cover shows immediately
+  // instead of waiting out /api/cover's Cache-Control window.
+  const [coverVersion, setCoverVersion] = useState(0);
+  // `${kind}:${id}` set immediately on a successful upload, before the
+  // subsequent refreshTracks()/fetchPlaylists() round-trip resolves — lets
+  // the just-uploaded cover render this frame instead of one network
+  // round-trip later.
+  const [optimisticCoverIds, setOptimisticCoverIds] = useState<Set<string>>(() => new Set());
+  const [coverUploadPending, setCoverUploadPending] = useState<string | null>(null); // `${kind}:${id}` mid-upload, for a small inline spinner state
+  const coverUploadTargetRef = useRef<{ kind: 'track' | 'playlist'; id: string } | null>(null);
+  const coverUploadInputRef = useRef<HTMLInputElement>(null);
 
   const durations = useTrackDurations(engine.tracks);
   const brainApi = useFlubberBrainApi();
@@ -521,21 +739,6 @@ export default function MusicPlayerScreen() {
       }
     },
     [engine.currentIndex]
-  );
-
-  // Plays a row from Library/Liked — index is IN THE FULL LIBRARY, resets the
-  // active queue to the library. Toggles instead of restarting if it's already
-  // the current track (e.g. clicked from Liked while queued from a playlist).
-  const playLibraryTrackAt = useCallback(
-    (index: number) => {
-      const track = engine.tracks[index];
-      if (track && engine.currentTrack?.id === track.id) {
-        playerRef.current?.toggle();
-      } else {
-        playerRef.current?.playFromLibrary(index, true);
-      }
-    },
-    [engine.tracks, engine.currentTrack]
   );
 
   const handleScrub = useCallback(
@@ -650,6 +853,7 @@ export default function MusicPlayerScreen() {
       setIsDraggingFile(false);
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         setActiveTab('library');
+        setLibrarySelection({ kind: 'library' });
         handleFiles(e.dataTransfer.files);
       }
     },
@@ -667,6 +871,16 @@ export default function MusicPlayerScreen() {
   useEffect(() => {
     fetchPlaylists();
   }, [fetchPlaylists]);
+
+  // A playlist the rail currently has selected can vanish out from under it
+  // (deleted from another view, or by this same session's delete button) —
+  // fall back to the Library view rather than rendering a selection that
+  // points at nothing.
+  useEffect(() => {
+    if (librarySelection.kind === 'playlist' && !playlistsLoading && !playlists.some((p) => p.id === librarySelection.id)) {
+      setLibrarySelection({ kind: 'library' });
+    }
+  }, [librarySelection, playlists, playlistsLoading]);
 
   const requestDeleteTrack = useCallback(
     (id: string) => {
@@ -782,15 +996,18 @@ export default function MusicPlayerScreen() {
     [updatePlaylistTrackIds]
   );
 
-  const reorderPlaylistTrack = useCallback(
-    (playlist: Playlist, fromIndex: number, toIndex: number) => {
-      if (fromIndex === toIndex) return;
-      const next = [...playlist.trackIds];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      updatePlaylistTrackIds(playlist.id, next);
+  /** Toggles one track's membership in one playlist — the row-menu's
+   *  "add/remove" action is really just this: add if absent, remove if
+   *  present, same as a checkbox. Replaces the old expand-and-pick-tracks
+   *  playlist UI (folded into the per-row menu instead — see LibraryTrackRow). */
+  const togglePlaylistMembership = useCallback(
+    (playlistId: string, trackId: string) => {
+      const playlist = playlists.find((p) => p.id === playlistId);
+      if (!playlist) return;
+      if (playlist.trackIds.includes(trackId)) removeTrackFromPlaylist(playlist, trackId);
+      else addTrackToPlaylist(playlist, trackId);
     },
-    [updatePlaylistTrackIds]
+    [playlists, addTrackToPlaylist, removeTrackFromPlaylist]
   );
 
   const playPlaylist = useCallback((playlist: Playlist, startIndex = 0) => {
@@ -799,7 +1016,6 @@ export default function MusicPlayerScreen() {
     setActiveTab('now-playing');
   }, []);
 
-  const hasLibraryTracks = engine.tracks.length > 0;
   const hasQueueTracks = engine.queue.length > 0;
   const currentTrack = engine.currentTrack;
   const currentLiked = currentTrack ? likedIds.has(currentTrack.id) : false;
@@ -818,6 +1034,147 @@ export default function MusicPlayerScreen() {
 
   const likedTracks = useMemo(() => engine.tracks.filter((t) => likedIds.has(t.id)), [engine.tracks, likedIds]);
 
+  // ------------------------------------------------------------------ //
+  // Library tab: rail selection -> raw tracks -> sorted tracks -> play
+  // ------------------------------------------------------------------ //
+
+  const selectedPlaylist =
+    librarySelection.kind === 'playlist' ? playlists.find((p) => p.id === librarySelection.id) : undefined;
+
+  /** Raw (unsorted) tracks for whatever the rail currently has selected. */
+  const librarySelectionTracks = useMemo<Track[]>(() => {
+    if (librarySelection.kind === 'library') return engine.tracks;
+    if (librarySelection.kind === 'liked') return likedTracks;
+    if (!selectedPlaylist) return [];
+    return selectedPlaylist.trackIds
+      .map((id) => engine.tracks.find((t) => t.id === id))
+      .filter((t): t is Track => Boolean(t));
+  }, [librarySelection, engine.tracks, likedTracks, selectedPlaylist]);
+
+  const handleSortClick = useCallback(
+    (column: SortColumn) => {
+      if (column === sortColumn) {
+        setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
+      } else {
+        setSortColumn(column);
+        setSortDirection('asc');
+      }
+    },
+    [sortColumn]
+  );
+
+  // Array.prototype.sort has been spec-guaranteed stable since ES2019 (V8
+  // has honored this since Node 11), so a plain sort — no manual
+  // decorate-sort-undecorate — already satisfies "stable sort": rows that
+  // tie on the active column keep their prior relative order.
+  const sortedLibraryTracks = useMemo<Track[]>(() => {
+    const dir = sortDirection === 'asc' ? 1 : -1;
+    const withVal = (t: Track): string | number => {
+      if (sortColumn === 'title') return t.title.toLowerCase();
+      if (sortColumn === 'artist') return (t.artist ?? '').toLowerCase();
+      if (sortColumn === 'album') return (t.album ?? '').toLowerCase();
+      return durations.get(t.id) ?? -1; // undurationed rows sort to the front in asc, back in desc
+    };
+    return [...librarySelectionTracks].sort((a, b) => {
+      const av = withVal(a);
+      const bv = withVal(b);
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }, [librarySelectionTracks, sortColumn, sortDirection, durations]);
+
+  /** Plays a row from the Library table at its position in the CURRENTLY
+   *  DISPLAYED (possibly sorted) order. Library-in-its-natural-order (title
+   *  ascending, which is also the order /api/tracks itself returns) is
+   *  special-cased to go through playFromLibrary instead of playQueue so the
+   *  documented "queue auto-syncs to the growing library" behavior survives
+   *  for the common case — any other sort, or a playlist/Liked selection,
+   *  snapshots the displayed order into the queue via playQueue, matching
+   *  how Apple Music treats a custom sort as its own queue. */
+  const playFromSortedList = useCallback(
+    (rowIndex: number) => {
+      const track = sortedLibraryTracks[rowIndex];
+      if (!track) return;
+
+      const isNaturalLibraryOrder = librarySelection.kind === 'library' && sortColumn === 'title' && sortDirection === 'asc';
+      if (isNaturalLibraryOrder) {
+        const libraryIndex = engine.tracks.findIndex((t) => t.id === track.id);
+        if (libraryIndex === -1) return;
+        if (engine.currentTrack?.id === track.id) playerRef.current?.toggle();
+        else playerRef.current?.playFromLibrary(libraryIndex, true);
+        return;
+      }
+
+      if (engine.currentTrack?.id === track.id && librarySelection.kind !== 'liked') {
+        playerRef.current?.toggle();
+        return;
+      }
+      playerRef.current?.playQueue(
+        sortedLibraryTracks.map((t) => t.id),
+        rowIndex,
+        true
+      );
+    },
+    [sortedLibraryTracks, librarySelection, sortColumn, sortDirection, engine.tracks, engine.currentTrack]
+  );
+
+  // ------------------------------------------------------------------ //
+  // Cover art upload
+  // ------------------------------------------------------------------ //
+
+  const openCoverPicker = useCallback((kind: 'track' | 'playlist', id: string) => {
+    coverUploadTargetRef.current = { kind, id };
+    coverUploadInputRef.current?.click();
+  }, []);
+
+  const handleCoverFileSelected = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const target = coverUploadTargetRef.current;
+      const file = e.target.files?.[0];
+      e.target.value = ''; // allow re-selecting the same file next time
+      if (!target || !file) return;
+
+      const { kind, id } = target;
+      const optimisticKey = `${kind}:${id}`;
+      setCoverUploadPending(optimisticKey);
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      fetch(`/api/cover/${encodeURIComponent(id)}?type=${kind}`, { method: 'POST', body: formData })
+        .then((res) => {
+          if (!res.ok) throw new Error('upload failed');
+          setOptimisticCoverIds((prev) => new Set(prev).add(optimisticKey));
+          setCoverVersion((v) => v + 1);
+          if (kind === 'track') playerRef.current?.refreshTracks();
+          else fetchPlaylists();
+        })
+        .catch((error) => console.error('[MusicPlayerScreen] cover upload failed:', error))
+        .finally(() => setCoverUploadPending((cur) => (cur === optimisticKey ? null : cur)));
+    },
+    [fetchPlaylists]
+  );
+
+  // hasArt OR "we just uploaded one this session" (see handleCoverFileSelected)
+  // — the optimistic flag covers the gap before refreshTracks()/fetchPlaylists()
+  // resolves and the server-confirmed flag arrives.
+  const trackCoverUrl = useCallback(
+    (track: Track) =>
+      coverUrlFor('track', track.id, Boolean(track.hasArt) || optimisticCoverIds.has(`track:${track.id}`), coverVersion),
+    [optimisticCoverIds, coverVersion]
+  );
+  const playlistCoverUrl = useCallback(
+    (playlist: Playlist) =>
+      coverUrlFor(
+        'playlist',
+        playlist.id,
+        Boolean(playlist.hasCustomCover) || optimisticCoverIds.has(`playlist:${playlist.id}`),
+        coverVersion
+      ),
+    [optimisticCoverIds, coverVersion]
+  );
+
   return (
     <div
       className="mps-root"
@@ -832,6 +1189,17 @@ export default function MusicPlayerScreen() {
           <p>Drop to add to your library</p>
         </div>
       )}
+
+      {/* Single shared file input for cover uploads (track or playlist) —
+          coverUploadTargetRef says which id/kind it's for; see
+          openCoverPicker/handleCoverFileSelected. */}
+      <input
+        ref={coverUploadInputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={handleCoverFileSelected}
+      />
 
       <MusicPlayer ref={playerRef} variant="headless" onStateChange={handleStateChange} onAudioEnergy={handleAudioEnergy} onBeat={handleBeat} />
 
@@ -892,11 +1260,16 @@ export default function MusicPlayerScreen() {
             <aside className="mps-rail">
               <Panel title="NOW PLAYING">
                 <div className="mps-now-playing">
-                  <TrackArt seed={currentTrack?.id ?? 'idle'} size={168} />
+                  <TrackArt
+                    seed={currentTrack?.id ?? 'idle'}
+                    size={168}
+                    coverUrl={currentTrack ? trackCoverUrl(currentTrack) : undefined}
+                    pulse={engine.isPlaying}
+                  />
                   <div className="mps-now-playing__row">
                     <span className="mps-now-playing__meta">
                       <span className="mps-now-playing__title">{currentTrack?.title ?? '—'}</span>
-                      <span className="mps-now-playing__sub">{currentTrack ? 'local library' : '—'}</span>
+                      <span className="mps-now-playing__sub">{currentTrack?.artist ?? (currentTrack ? 'local library' : '—')}</span>
                     </span>
                     <button
                       type="button"
@@ -1008,7 +1381,14 @@ export default function MusicPlayerScreen() {
                   <div className="mps-tab-empty">
                     <FlubberCharacter expression="thinking" size={56} mode="character" tier="mid" showToggle={false} />
                     <p>Nothing queued yet — add tracks from your library to get started.</p>
-                    <button type="button" className="mps-empty-action" onClick={() => setActiveTab('library')}>
+                    <button
+                      type="button"
+                      className="mps-empty-action"
+                      onClick={() => {
+                        setActiveTab('library');
+                        setLibrarySelection({ kind: 'library' });
+                      }}
+                    >
                       Go to Library
                     </button>
                   </div>
@@ -1025,6 +1405,7 @@ export default function MusicPlayerScreen() {
                         liked={likedIds.has(track.id)}
                         duration={durations.get(track.id)}
                         energy={energy}
+                        coverUrl={trackCoverUrl(track)}
                         onPlay={() => playQueueTrackAt(index)}
                         onToggleLike={() => toggleLike(track.id)}
                       />
@@ -1037,188 +1418,78 @@ export default function MusicPlayerScreen() {
         )}
 
         {activeTab === 'library' && (
-          <>
-            <Panel avoidRoam title="UPLOAD MUSIC">
-              <div
-                className={`mps-dropzone${isDraggingFile ? ' mps-dropzone--active' : ''}`}
-                onClick={() => fileInputRef.current?.click()}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click();
-                }}
+          <div className="mps-library">
+            <aside className="mps-library-rail" data-flubber-avoid="true">
+              <button
+                type="button"
+                className={`mps-library-rail__nav${librarySelection.kind === 'library' ? ' mps-library-rail__nav--active' : ''}`}
+                onClick={() => setLibrarySelection({ kind: 'library' })}
               >
-                <Upload size={22} aria-hidden="true" />
-                <p>Drag audio files here, or click to browse</p>
-                <span className="mps-dropzone__hint">.mp3, .wav, .m4a, .ogg — up to 60MB each</span>
+                <ListMusic size={15} aria-hidden="true" />
+                Library
+                <span className="mps-library-rail__count">{engine.tracks.length}</span>
+              </button>
+              <button
+                type="button"
+                className={`mps-library-rail__nav${librarySelection.kind === 'liked' ? ' mps-library-rail__nav--active' : ''}`}
+                onClick={() => setLibrarySelection({ kind: 'liked' })}
+              >
+                <Heart size={15} aria-hidden="true" />
+                Liked Songs
+                <span className="mps-library-rail__count">{likedTracks.length}</span>
+              </button>
+
+              <div className="mps-library-rail__divider">
+                <span>Playlists</span>
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".mp3,.wav,.m4a,.ogg,audio/*"
-                multiple
-                hidden
-                onChange={(e) => {
-                  if (e.target.files) handleFiles(e.target.files);
-                  e.target.value = '';
-                }}
-              />
-              {uploads.size > 0 && (
-                <ul className="mps-uploads">
-                  {Array.from(uploads.entries()).map(([id, u]) => (
-                    <li key={id} className={`mps-upload${u.error ? ' mps-upload--error' : ''}`}>
-                      <span className="mps-upload__name">{u.name}</span>
-                      {u.error ? (
-                        <span className="mps-upload__error">{u.error}</span>
-                      ) : (
-                        <div className="mps-upload__bar" role="progressbar" aria-valuenow={u.progress} aria-valuemin={0} aria-valuemax={100}>
-                          <span style={{ transform: `scaleX(${u.progress / 100})` }} />
-                        </div>
-                      )}
-                      <button type="button" className="mps-upload__dismiss" onClick={() => dismissUpload(id)} aria-label={`Dismiss ${u.name}`}>
-                        <X size={13} />
-                      </button>
+
+              <div className="mps-playlist-create mps-playlist-create--rail">
+                <input
+                  type="text"
+                  value={newPlaylistName}
+                  onChange={(e) => setNewPlaylistName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') createPlaylist();
+                  }}
+                  placeholder="New playlist…"
+                  className="mps-playlist-create__input"
+                  aria-label="New playlist name"
+                />
+                <button
+                  type="button"
+                  className="mps-playlist-create__btn mps-playlist-create__btn--icon"
+                  onClick={createPlaylist}
+                  disabled={!newPlaylistName.trim()}
+                  aria-label="Create playlist"
+                  title="New Playlist"
+                >
+                  <Plus size={15} />
+                </button>
+              </div>
+
+              {playlistsLoading && (
+                <ul className="mps-library-rail__playlists" aria-hidden="true">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <li key={i}>
+                      <Skeleton height="1.9rem" radius={6} />
                     </li>
                   ))}
                 </ul>
               )}
-            </Panel>
 
-            <Panel title="LIBRARY" avoidRoam action={hasLibraryTracks ? <span className="mps-queue-meta">{formatSongCount(engine.tracks.length)}</span> : undefined}>
-              {engine.loading && <TrackListSkeleton rows={6} />}
-              {!engine.loading && !hasLibraryTracks && (
-                <div className="mps-tab-empty">
-                  <FlubberCharacter expression="thinking" size={56} mode="character" tier="mid" showToggle={false} />
-                  <p>No tracks in your library yet — drop audio files above, or straight into music/.</p>
-                  <button type="button" className="mps-empty-action" onClick={() => fileInputRef.current?.click()}>
-                    Browse files
-                  </button>
-                </div>
-              )}
-              {!engine.loading && hasLibraryTracks && (
-                <ul className="mps-track-list">
-                  {engine.tracks.map((track, index) => (
-                    <TrackRow
-                      key={track.id}
-                      track={track}
-                      index={index}
-                      isActive={currentTrack?.id === track.id}
-                      isPlaying={engine.isPlaying}
-                      liked={likedIds.has(track.id)}
-                      duration={durations.get(track.id)}
-                      energy={energy}
-                      onPlay={() => playLibraryTrackAt(index)}
-                      onToggleLike={() => toggleLike(track.id)}
-                      onDelete={() => requestDeleteTrack(track.id)}
-                      deletePending={trackDeleteConfirmId === track.id}
-                    />
-                  ))}
-                </ul>
-              )}
-            </Panel>
-          </>
-        )}
+              {!playlistsLoading && playlists.length === 0 && <p className="mps-empty mps-library-rail__empty">No playlists yet.</p>}
 
-        {activeTab === 'liked' && (
-          <Panel title="LIKED SONGS" action={likedTracks.length > 0 ? <span className="mps-queue-meta">{formatSongCount(likedTracks.length)}</span> : undefined}>
-            {likedTracks.length === 0 ? (
-              <div className="mps-tab-empty">
-                <FlubberCharacter expression="thinking" size={64} mode="character" showToggle={false} />
-                <p>Nothing liked yet — tap the heart on any track to save it here.</p>
-              </div>
-            ) : (
-              <ul className="mps-track-list">
-                {likedTracks.map((track) => {
-                  const index = engine.tracks.findIndex((t) => t.id === track.id);
-                  return (
-                    <TrackRow
-                      key={track.id}
-                      track={track}
-                      index={index}
-                      isActive={currentTrack?.id === track.id}
-                      isPlaying={engine.isPlaying}
-                      liked
-                      duration={durations.get(track.id)}
-                      energy={energy}
-                      onPlay={() => playLibraryTrackAt(index)}
-                      onToggleLike={() => toggleLike(track.id)}
-                    />
-                  );
-                })}
-              </ul>
-            )}
-          </Panel>
-        )}
-
-        {activeTab === 'playlists' && (
-          <Panel
-            title="PLAYLISTS"
-            action={playlists.length > 0 ? <span className="mps-queue-meta">{playlists.length === 1 ? '1 Playlist' : `${playlists.length} Playlists`}</span> : undefined}
-          >
-            <div className="mps-playlist-create">
-              <input
-                type="text"
-                value={newPlaylistName}
-                onChange={(e) => setNewPlaylistName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') createPlaylist();
-                }}
-                placeholder="New playlist name…"
-                className="mps-playlist-create__input"
-                aria-label="New playlist name"
-              />
-              <button
-                type="button"
-                className="mps-playlist-create__btn"
-                onClick={createPlaylist}
-                disabled={!newPlaylistName.trim()}
-              >
-                <Plus size={15} />
-                Create
-              </button>
-            </div>
-
-            {playlistsLoading && (
-              <ul className="mps-playlist-list mps-playlist-list--skeleton" aria-hidden="true">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <li key={i} className="mps-playlist mps-playlist--skeleton">
-                    <Skeleton height="2rem" radius={8} />
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            {!playlistsLoading && playlists.length === 0 && (
-              <div className="mps-tab-empty">
-                <FlubberCharacter expression="worried" size={64} mode="character" showToggle={false} />
-                <p>No playlists yet — name one above to start collecting tracks.</p>
-              </div>
-            )}
-
-            {!playlistsLoading && playlists.length > 0 && (
-              <ul className="mps-playlist-list">
-                {playlists.map((playlist) => {
-                  const expanded = expandedPlaylistId === playlist.id;
-                  const renaming = renamingPlaylistId === playlist.id;
-                  const playlistTracks = playlist.trackIds
-                    .map((id) => engine.tracks.find((t) => t.id === id))
-                    .filter((t): t is Track => Boolean(t));
-                  const availableToAdd = engine.tracks.filter((t) => !playlist.trackIds.includes(t.id));
-                  const deletePending = playlistDeleteConfirmId === playlist.id;
-
-                  return (
-                    <li key={playlist.id} className="mps-playlist">
-                      <div className="mps-playlist__row">
-                        <button
-                          type="button"
-                          className="mps-playlist__expand"
-                          onClick={() => setExpandedPlaylistId(expanded ? null : playlist.id)}
-                          aria-expanded={expanded}
-                          aria-label={expanded ? `Collapse ${playlist.name}` : `Expand ${playlist.name}`}
-                        >
-                          <ChevronDown size={14} style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
-                        </button>
-
+              {!playlistsLoading && playlists.length > 0 && (
+                <ul className="mps-library-rail__playlists">
+                  {playlists.map((playlist) => {
+                    const renaming = renamingPlaylistId === playlist.id;
+                    const deletePending = playlistDeleteConfirmId === playlist.id;
+                    const isSelected = librarySelection.kind === 'playlist' && librarySelection.id === playlist.id;
+                    return (
+                      <li
+                        key={playlist.id}
+                        className={`mps-library-rail__playlist${isSelected ? ' mps-library-rail__playlist--active' : ''}`}
+                      >
                         {renaming ? (
                           <input
                             type="text"
@@ -1234,120 +1505,248 @@ export default function MusicPlayerScreen() {
                             aria-label={`Rename ${playlist.name}`}
                           />
                         ) : (
-                          <button type="button" className="mps-playlist__name" onClick={() => setExpandedPlaylistId(expanded ? null : playlist.id)}>
-                            {playlist.name}
+                          <button
+                            type="button"
+                            className="mps-library-rail__playlist-name"
+                            onClick={() => setLibrarySelection({ kind: 'playlist', id: playlist.id })}
+                          >
+                            <span className="mps-library-rail__playlist-name-text">{playlist.name}</span>
+                            <span className="mps-library-rail__count">{playlist.trackIds.length}</span>
                           </button>
                         )}
-
-                        <span className="mps-playlist__count">{formatSongCount(playlist.trackIds.length)}</span>
-
-                        <button
-                          type="button"
-                          className="mps-icon-btn"
-                          onClick={() => playPlaylist(playlist, 0)}
-                          disabled={playlist.trackIds.length === 0}
-                          aria-label={`Play ${playlist.name} as queue`}
-                          title="Play as queue"
-                        >
-                          <Play size={14} />
-                        </button>
-
-                        <button
-                          type="button"
-                          className="mps-icon-btn"
-                          onClick={() => {
-                            setRenamingPlaylistId(playlist.id);
-                            setRenameDraft(playlist.name);
-                          }}
-                          aria-label={`Rename ${playlist.name}`}
-                          title="Rename"
-                        >
-                          <Pencil size={13} />
-                        </button>
-
-                        <button
-                          type="button"
-                          className={`mps-icon-btn mps-icon-btn--danger${deletePending ? ' mps-icon-btn--confirm' : ''}`}
-                          onClick={() => requestDeletePlaylist(playlist.id)}
-                          aria-label={deletePending ? `Confirm delete ${playlist.name}` : `Delete ${playlist.name}`}
-                          title={deletePending ? 'Click again to delete' : 'Delete playlist'}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-
-                      {expanded && (
-                        <div className="mps-playlist__body">
-                          {playlistTracks.length === 0 ? (
-                            <p className="mps-empty">No tracks yet — add some from your library below.</p>
-                          ) : (
-                            <ul className="mps-playlist__tracks">
-                              {playlistTracks.map((track, idx) => (
-                                <li
-                                  key={track.id}
-                                  className="mps-playlist__track"
-                                  draggable
-                                  onDragStart={() => {
-                                    dragTrackIndexRef.current = idx;
-                                  }}
-                                  onDragOver={(e) => e.preventDefault()}
-                                  onDrop={(e) => {
-                                    e.preventDefault();
-                                    const from = dragTrackIndexRef.current;
-                                    dragTrackIndexRef.current = null;
-                                    if (from === null) return;
-                                    reorderPlaylistTrack(playlist, from, idx);
-                                  }}
-                                >
-                                  <GripVertical size={14} className="mps-playlist__grip" aria-hidden="true" />
-                                  <span className="mps-playlist__track-title">{track.title}</span>
-                                  <button
-                                    type="button"
-                                    className="mps-icon-btn"
-                                    onClick={() => removeTrackFromPlaylist(playlist, track.id)}
-                                    aria-label={`Remove ${track.title} from ${playlist.name}`}
-                                  >
-                                    <X size={13} />
-                                  </button>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-
-                          <div className="mps-playlist__add">
-                            <button
-                              type="button"
-                              className="mps-playlist__add-toggle"
-                              onClick={() => setAddTrackOpenFor(addTrackOpenFor === playlist.id ? null : playlist.id)}
-                            >
-                              <FolderPlus size={14} />
-                              Add tracks
-                            </button>
-                            {addTrackOpenFor === playlist.id && (
-                              <ul className="mps-playlist__add-list">
-                                {availableToAdd.length === 0 ? (
-                                  <li className="mps-empty">Every library track is already in this playlist.</li>
-                                ) : (
-                                  availableToAdd.map((track) => (
-                                    <li key={track.id}>
-                                      <button type="button" onClick={() => addTrackToPlaylist(playlist, track.id)}>
-                                        <Plus size={12} />
-                                        {track.title}
-                                      </button>
-                                    </li>
-                                  ))
-                                )}
-                              </ul>
-                            )}
-                          </div>
+                        <div className="mps-library-rail__playlist-actions">
+                          <button
+                            type="button"
+                            className="mps-icon-btn"
+                            onClick={() => playPlaylist(playlist, 0)}
+                            disabled={playlist.trackIds.length === 0}
+                            aria-label={`Play ${playlist.name}`}
+                            title="Play as queue"
+                          >
+                            <Play size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            className="mps-icon-btn"
+                            onClick={() => {
+                              setRenamingPlaylistId(playlist.id);
+                              setRenameDraft(playlist.name);
+                            }}
+                            aria-label={`Rename ${playlist.name}`}
+                            title="Rename"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            className={`mps-icon-btn mps-icon-btn--danger${deletePending ? ' mps-icon-btn--confirm' : ''}`}
+                            onClick={() => requestDeletePlaylist(playlist.id)}
+                            aria-label={deletePending ? `Confirm delete ${playlist.name}` : `Delete ${playlist.name}`}
+                            title={deletePending ? 'Click again to delete' : 'Delete'}
+                          >
+                            <Trash2 size={12} />
+                          </button>
                         </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Panel>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </aside>
+
+            <div className="mps-library-main">
+              {librarySelection.kind === 'library' && (
+                <Panel avoidRoam title="UPLOAD MUSIC">
+                  <div
+                    className={`mps-dropzone${isDraggingFile ? ' mps-dropzone--active' : ''}`}
+                    onClick={() => fileInputRef.current?.click()}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click();
+                    }}
+                  >
+                    <Upload size={22} aria-hidden="true" />
+                    <p>Drag audio files here, or click to browse</p>
+                    <span className="mps-dropzone__hint">.mp3, .wav, .m4a, .ogg — up to 60MB each</span>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".mp3,.wav,.m4a,.ogg,audio/*"
+                    multiple
+                    hidden
+                    onChange={(e) => {
+                      if (e.target.files) handleFiles(e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
+                  {uploads.size > 0 && (
+                    <ul className="mps-uploads">
+                      {Array.from(uploads.entries()).map(([id, u]) => (
+                        <li key={id} className={`mps-upload${u.error ? ' mps-upload--error' : ''}`}>
+                          <span className="mps-upload__name">{u.name}</span>
+                          {u.error ? (
+                            <span className="mps-upload__error">{u.error}</span>
+                          ) : (
+                            <div className="mps-upload__bar" role="progressbar" aria-valuenow={u.progress} aria-valuemin={0} aria-valuemax={100}>
+                              <span style={{ transform: `scaleX(${u.progress / 100})` }} />
+                            </div>
+                          )}
+                          <button type="button" className="mps-upload__dismiss" onClick={() => dismissUpload(id)} aria-label={`Dismiss ${u.name}`}>
+                            <X size={13} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Panel>
+              )}
+
+              <Panel avoidRoam className="mps-library-table-panel">
+                <div className="mps-library-header">
+                  <div className="mps-library-header__art">
+                    {librarySelection.kind === 'playlist' && selectedPlaylist ? (
+                      <>
+                        <TrackArt seed={selectedPlaylist.id} size={64} coverUrl={playlistCoverUrl(selectedPlaylist)} />
+                        <button
+                          type="button"
+                          className="mps-cover-upload-btn"
+                          onClick={() => openCoverPicker('playlist', selectedPlaylist.id)}
+                          aria-label="Upload playlist cover"
+                          title="Upload cover"
+                          disabled={coverUploadPending === `playlist:${selectedPlaylist.id}`}
+                        >
+                          <ImagePlus size={13} />
+                        </button>
+                      </>
+                    ) : (
+                      <div className="mps-library-header__icon" aria-hidden="true">
+                        {librarySelection.kind === 'liked' ? <Heart size={24} /> : <ListMusic size={24} />}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mps-library-header__meta">
+                    {librarySelection.kind === 'playlist' && <span className="mps-library-header__eyebrow">Playlist</span>}
+                    <h2 className="mps-library-header__title">
+                      {librarySelection.kind === 'library'
+                        ? 'All Tracks'
+                        : librarySelection.kind === 'liked'
+                          ? 'Liked Songs'
+                          : (selectedPlaylist?.name ?? 'Playlist')}
+                    </h2>
+                    <span className="mps-library-header__count">{formatSongCount(sortedLibraryTracks.length)}</span>
+                  </div>
+                  {librarySelection.kind === 'playlist' && selectedPlaylist && (
+                    <button
+                      type="button"
+                      className="mps-icon-btn mps-library-header__play"
+                      onClick={() => playPlaylist(selectedPlaylist, 0)}
+                      disabled={selectedPlaylist.trackIds.length === 0}
+                      aria-label={`Play ${selectedPlaylist.name}`}
+                      title="Play"
+                    >
+                      <Play size={16} />
+                    </button>
+                  )}
+                </div>
+
+                {engine.loading && <TrackListSkeleton rows={6} />}
+
+                {!engine.loading && sortedLibraryTracks.length === 0 && (
+                  <div className="mps-tab-empty">
+                    <FlubberCharacter expression="thinking" size={56} mode="character" tier="mid" showToggle={false} />
+                    {librarySelection.kind === 'library' && (
+                      <>
+                        <p>No tracks in your library yet — drop audio files above, or straight into music/.</p>
+                        <button type="button" className="mps-empty-action" onClick={() => fileInputRef.current?.click()}>
+                          Browse files
+                        </button>
+                      </>
+                    )}
+                    {librarySelection.kind === 'liked' && <p>Nothing liked yet — tap the heart on any track to save it here.</p>}
+                    {librarySelection.kind === 'playlist' && <p>This playlist is empty — use a track&apos;s &quot;…&quot; menu to add songs.</p>}
+                  </div>
+                )}
+
+                {!engine.loading && sortedLibraryTracks.length > 0 && (
+                  <div className="mps-table" role="table" aria-label="Tracks">
+                    <div className="mps-table__head" role="row">
+                      <span className="mps-table__col mps-table__col--index" role="columnheader" aria-hidden="true" />
+                      <button
+                        type="button"
+                        className={`mps-table__col mps-table__col--title${sortColumn === 'title' ? ' mps-table__col--active' : ''}`}
+                        role="columnheader"
+                        onClick={() => handleSortClick('title')}
+                        aria-sort={sortColumn === 'title' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      >
+                        Title {sortArrow(sortColumn === 'title', sortDirection)}
+                      </button>
+                      <button
+                        type="button"
+                        className={`mps-table__col mps-table__col--artist${sortColumn === 'artist' ? ' mps-table__col--active' : ''}`}
+                        role="columnheader"
+                        onClick={() => handleSortClick('artist')}
+                        aria-sort={sortColumn === 'artist' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      >
+                        Artist {sortArrow(sortColumn === 'artist', sortDirection)}
+                      </button>
+                      <button
+                        type="button"
+                        className={`mps-table__col mps-table__col--album${sortColumn === 'album' ? ' mps-table__col--active' : ''}`}
+                        role="columnheader"
+                        onClick={() => handleSortClick('album')}
+                        aria-sort={sortColumn === 'album' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      >
+                        Album {sortArrow(sortColumn === 'album', sortDirection)}
+                      </button>
+                      <button
+                        type="button"
+                        className={`mps-table__col mps-table__col--duration${sortColumn === 'duration' ? ' mps-table__col--active' : ''}`}
+                        role="columnheader"
+                        onClick={() => handleSortClick('duration')}
+                        aria-sort={sortColumn === 'duration' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      >
+                        Duration {sortArrow(sortColumn === 'duration', sortDirection)}
+                      </button>
+                      {/* 3 trailing spacer columns matching LibraryTrackRow's
+                          heart / "..." menu / delete-or-spacer cells — see
+                          the grid-template-columns comment in the CSS. */}
+                      <span className="mps-table__col mps-table__col--spacer" role="columnheader" aria-hidden="true" />
+                      <span className="mps-table__col mps-table__col--spacer" role="columnheader" aria-hidden="true" />
+                      <span className="mps-table__col mps-table__col--spacer" role="columnheader" aria-hidden="true" />
+                    </div>
+                    <ul className="mps-table__body" role="rowgroup">
+                      {sortedLibraryTracks.map((track, index) => (
+                        <LibraryTrackRow
+                          key={track.id}
+                          track={track}
+                          rowIndex={index}
+                          isActive={currentTrack?.id === track.id}
+                          isPlaying={engine.isPlaying}
+                          liked={likedIds.has(track.id)}
+                          duration={durations.get(track.id)}
+                          coverUrl={trackCoverUrl(track)}
+                          onPlay={() => playFromSortedList(index)}
+                          onToggleLike={() => toggleLike(track.id)}
+                          playlists={playlists}
+                          onTogglePlaylistMembership={togglePlaylistMembership}
+                          onUploadCover={() => {
+                            setRowMenuOpenFor(null);
+                            openCoverPicker('track', track.id);
+                          }}
+                          menuOpen={rowMenuOpenFor === track.id}
+                          onToggleMenu={() => setRowMenuOpenFor((cur) => (cur === track.id ? null : track.id))}
+                          onDelete={librarySelection.kind === 'library' ? () => requestDeleteTrack(track.id) : undefined}
+                          deletePending={trackDeleteConfirmId === track.id}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </Panel>
+            </div>
+          </div>
         )}
       </div>
 
@@ -1358,10 +1757,12 @@ export default function MusicPlayerScreen() {
       <div className="mps-bottom-bar">
         <div className="mps-transport-bar" data-flubber-avoid="true">
           <div className="mps-transport-bar__now">
-            <TrackArt seed={currentTrack?.id ?? 'idle'} size={44} />
+            <TrackArt seed={currentTrack?.id ?? 'idle'} size={44} coverUrl={currentTrack ? trackCoverUrl(currentTrack) : undefined} />
             <div className="mps-transport-bar__meta">
               <span className="mps-transport-bar__title">{currentTrack?.title ?? '—'}</span>
-              <span className="mps-transport-bar__sub">{currentTrack ? 'local library' : hasQueueTracks ? 'Select a track' : 'No tracks loaded'}</span>
+              <span className="mps-transport-bar__sub">
+                {currentTrack?.artist ?? (currentTrack ? 'local library' : hasQueueTracks ? 'Select a track' : 'No tracks loaded')}
+              </span>
             </div>
             <button
               type="button"

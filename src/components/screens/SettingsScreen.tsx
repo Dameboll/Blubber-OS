@@ -80,6 +80,7 @@ import FlubberCharacter from '../FlubberCharacter';
 import OnboardingSettingsSection from '../settings/OnboardingSettingsSection';
 import KitInstaller from '../kit-installer/KitInstaller';
 import RecommendedPlugins from '../settings/RecommendedPlugins';
+import RetakeSoulInterview from '../settings/RetakeSoulInterview';
 import './SettingsScreen.css';
 import '../../styles/fit-sweep.css';
 
@@ -900,6 +901,8 @@ export default function SettingsScreen() {
             <KitInstaller />
 
             <RecommendedPlugins />
+
+            <RetakeSoulInterview />
           </div>
 
           <div className="settings-grid__rail">

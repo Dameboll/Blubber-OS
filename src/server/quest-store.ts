@@ -10,14 +10,21 @@
  *   - agentRuns      → real category='agent' invocations only (usage.db)
  *   - nightActivity  → real events logged between local midnight and 5am
  *   - careStreak     → pet_state.care_streak (consecutive care days)
- *   - careActions    → COUNT(*) of pet_actions in pet.db (real care history,
- *                      not currently backing a chain but kept for the Stats board)
+ *   - careActions    → COUNT(*) of pet_actions in pet.db since baseline (real
+ *                      care history, backs the Caretaker chain)
  *   - projects       → DISTINCT real Development projects with indexed activity
  *   - daysActive     → whole days since the stats baseline was set
+ *   - skillRuns      → real category='skill' invocations only (usage.db)
+ *   - earlyBird      → real events logged 5am-9am local since baseline
+ *   - weekendActivity→ real events logged on a Sat/Sun local since baseline
+ *   - deepWeekDays   → widest distinct-day spread within any single ISO week
+ *   - marathonDays   → distinct local days with a 2h+ first→last event span
  * The curated baseline library below (Boot Sequence, Tool Novice, Token Mage,
- * Agent Summoner, Night Shift, Streak) is ACTIVE from first load — every chain's
- * tier-0 quest is immediately visible and its progress bar reflects real numbers
- * the moment the OS starts indexing, never a locked/blank placeholder.
+ * Agent Summoner, Night Shift, Streak, Project Hopper, Early Bird, Weekend
+ * Warrior, Deep Week, Skill Caster, Caretaker, Marathon) is ACTIVE from first
+ * load — every chain's tier-0 quest is immediately visible and its progress
+ * bar reflects real numbers the moment the OS starts indexing, never a
+ * locked/blank placeholder.
  *
  * The only thing this store OWNS is which quests the user has CLAIMED (a small
  * atomically-written JSON file, same pattern as spawned-store). Quest XP and the
@@ -47,7 +54,14 @@ export type QuestMetric =
   | 'tokens'
   | 'agentRuns'
   | 'nightActivity'
-  | 'careStreak';
+  | 'careStreak'
+  | 'projects'
+  | 'careActions'
+  | 'skillRuns'
+  | 'earlyBird'
+  | 'weekendActivity'
+  | 'deepWeekDays'
+  | 'marathonDays';
 
 /** The real, honestly-derived numbers every quest and the Stats board read. */
 export interface QuestMetrics {
@@ -63,6 +77,16 @@ export interface QuestMetrics {
   projects: number;
   daysActive: number;
   agentsActive: number;
+  /** Real category='skill' invocations since baseline (Skill Caster chain). */
+  skillRuns: number;
+  /** Real events logged 5am-9am local since baseline (Early Bird chain). */
+  earlyBird: number;
+  /** Real events logged on a Saturday/Sunday local since baseline (Weekend Warrior). */
+  weekendActivity: number;
+  /** Max distinct active days within any single ISO week since baseline (Deep Week). */
+  deepWeekDays: number;
+  /** Count of distinct local days with a 2h+ span between first/last event since baseline (Marathon). */
+  marathonDays: number;
 }
 
 export type QuestStatus = 'locked' | 'active' | 'claimable' | 'claimed';
@@ -161,6 +185,69 @@ const CHAINS: QuestChainDef[] = [
       { title: 'Streak III', description: 'Hold a 14-day care streak.', target: 14, xp: 280 },
     ],
   },
+  {
+    chain: 'projectHopper',
+    label: 'Project Hopper',
+    metric: 'projects',
+    tiers: [
+      { title: 'Project Hopper I', description: 'Log real activity in 1 project.', target: 1, xp: 40 },
+      { title: 'Project Hopper II', description: 'Log real activity in 3 distinct projects.', target: 3, xp: 120 },
+      { title: 'Project Hopper III', description: 'Log real activity in 10 distinct projects.', target: 10, xp: 320 },
+    ],
+  },
+  {
+    chain: 'earlyBird',
+    label: 'Early Bird',
+    metric: 'earlyBird',
+    tiers: [
+      { title: 'Early Bird', description: 'Log real activity between 5am and 9am local time.', target: 1, xp: 70 },
+    ],
+  },
+  {
+    chain: 'weekendWarrior',
+    label: 'Weekend Warrior',
+    metric: 'weekendActivity',
+    tiers: [
+      { title: 'Weekend Warrior', description: 'Log real activity on a Saturday or Sunday.', target: 1, xp: 70 },
+    ],
+  },
+  {
+    chain: 'deepWeek',
+    label: 'Deep Week',
+    metric: 'deepWeekDays',
+    tiers: [
+      { title: 'Deep Week I', description: 'Log real activity on 5 distinct days within a single week.', target: 5, xp: 160 },
+      { title: 'Deep Week II', description: 'Log real activity on all 7 days of a single week.', target: 7, xp: 320 },
+    ],
+  },
+  {
+    chain: 'skillCaster',
+    label: 'Skill Caster',
+    metric: 'skillRuns',
+    tiers: [
+      { title: 'Skill Caster I', description: 'Invoke 10 real Skills.', target: 10, xp: 50 },
+      { title: 'Skill Caster II', description: 'Invoke 100 real Skills.', target: 100, xp: 150 },
+      { title: 'Skill Caster III', description: 'Invoke 500 real Skills.', target: 500, xp: 400 },
+    ],
+  },
+  {
+    chain: 'caretaker',
+    label: 'Caretaker',
+    metric: 'careActions',
+    tiers: [
+      { title: 'Caretaker I', description: 'Care for your Blubber 5 times.', target: 5, xp: 40 },
+      { title: 'Caretaker II', description: 'Care for your Blubber 25 times.', target: 25, xp: 120 },
+      { title: 'Caretaker III', description: 'Care for your Blubber 100 times.', target: 100, xp: 320 },
+    ],
+  },
+  {
+    chain: 'marathon',
+    label: 'Marathon',
+    metric: 'marathonDays',
+    tiers: [
+      { title: 'Marathon', description: 'Log 2+ hours of real activity in a single day.', target: 1, xp: 90 },
+    ],
+  },
 ];
 
 const questId = (chain: string, tier: number): string => `${chain}.${tier}`;
@@ -221,13 +308,25 @@ function writeStore(store: StoreShape): void {
 // ── real metric readers ──────────────────────────────────────────────────────
 
 /** Reuse the pet-store's live SQLite connection (set on globalThis when
- * pet-store is imported above) to count real care-action history. */
+ * pet-store is imported above) to count real care-action history.
+ *
+ * Baseline-aware (fixed alongside the fresh-start work in LANE 1 TASK B):
+ * pet.db is a separate SQLite file from usage.db, but pet_actions.ts is the
+ * same ISO-timestamp format as usage.db's stats baseline, so filtering by it
+ * here keeps this metric honest with every other quest metric — a master
+ * reset or a first-connect baseline move zeroes this too, not just the
+ * usage-derived ones. Previously this counted ALL pet_actions rows with no
+ * baseline filter (it wasn't backing any chain yet); now that Caretaker
+ * claims XP from it, an unfiltered read would have let pre-baseline care
+ * history count toward a claim after a reset. */
 function careActionsTotal(): number {
   const g = globalThis as unknown as { __blubberPetDb?: Database.Database };
   const petDb = g.__blubberPetDb;
   if (!petDb) return 0;
   try {
-    const row = petDb.prepare('SELECT COUNT(*) AS n FROM pet_actions').get() as { n: number };
+    const row = petDb
+      .prepare('SELECT COUNT(*) AS n FROM pet_actions WHERE ts >= ?')
+      .get(getStatsBaseline()) as { n: number };
     return row.n;
   } catch {
     return 0;
@@ -310,6 +409,99 @@ function nightActivityCount(): number {
   }
 }
 
+/** Real category='skill' tool invocations since baseline — backs the Skill
+ * Caster chain, the mirror image of Agent Summoner's agentRunsTotal(). */
+function skillRunsTotal(): number {
+  try {
+    const row = usageDb
+      .prepare(
+        `SELECT COUNT(*) AS n FROM events WHERE event_type = 'tool_invocation' AND category = 'skill' AND ts >= ?`,
+      )
+      .get(getStatsBaseline()) as { n: number };
+    return row.n;
+  } catch {
+    return 0;
+  }
+}
+
+/** Real events logged between 5am and 9am local since baseline — same
+ * 'localtime' approach as nightActivityCount(), just a different window. */
+function earlyBirdCount(): number {
+  try {
+    const row = usageDb
+      .prepare(
+        `SELECT COUNT(*) AS n FROM events
+         WHERE ts >= ? AND CAST(strftime('%H', ts, 'localtime') AS INTEGER) BETWEEN 5 AND 8`,
+      )
+      .get(getStatsBaseline()) as { n: number };
+    return row.n;
+  } catch {
+    return 0;
+  }
+}
+
+/** Real events logged on a Saturday (6) or Sunday (0) local since baseline. */
+function weekendActivityCount(): number {
+  try {
+    const row = usageDb
+      .prepare(
+        `SELECT COUNT(*) AS n FROM events
+         WHERE ts >= ? AND CAST(strftime('%w', ts, 'localtime') AS INTEGER) IN (0, 6)`,
+      )
+      .get(getStatsBaseline()) as { n: number };
+    return row.n;
+  } catch {
+    return 0;
+  }
+}
+
+/** Max distinct active days within any single ISO year-week since baseline —
+ * backs Deep Week. strftime('%Y-%W', ts) buckets rows into weeks; the widest
+ * bucket's distinct-day count is the real number, not an assumed 7. */
+function deepWeekMaxDays(): number {
+  try {
+    const row = usageDb
+      .prepare(
+        `SELECT COUNT(DISTINCT date(ts)) AS days
+         FROM events
+         WHERE ts >= ?
+         GROUP BY strftime('%Y-%W', ts)
+         ORDER BY days DESC
+         LIMIT 1`,
+      )
+      .get(getStatsBaseline()) as { days: number } | undefined;
+    return row?.days ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+
+/** Count of distinct local days since baseline where the span between the
+ * first and last logged event is 2h+ — backs the Marathon quest. Computed
+ * from a real min/max per day, never a fabricated "session length" field
+ * (the events table has none). */
+function marathonDaysCount(): number {
+  try {
+    const rows = usageDb
+      .prepare(
+        `SELECT MIN(ts) AS mn, MAX(ts) AS mx
+         FROM events
+         WHERE ts >= ?
+         GROUP BY date(ts, 'localtime')`,
+      )
+      .all(getStatsBaseline()) as { mn: string; mx: string }[];
+    let count = 0;
+    for (const r of rows) {
+      if (Date.parse(r.mx) - Date.parse(r.mn) >= TWO_HOURS_MS) count += 1;
+    }
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
 function readMetrics(): QuestMetrics {
   const pet = getPetState();
   const totals = getSinceBaselineTotals();
@@ -326,6 +518,11 @@ function readMetrics(): QuestMetrics {
     projects: distinctProjects(),
     daysActive: totals.days,
     agentsActive: spawnedCount(),
+    skillRuns: skillRunsTotal(),
+    earlyBird: earlyBirdCount(),
+    weekendActivity: weekendActivityCount(),
+    deepWeekDays: deepWeekMaxDays(),
+    marathonDays: marathonDaysCount(),
   };
 }
 

@@ -1,0 +1,41 @@
+/* RetakeSoulInterview — a single quiet pill button, matching the ghost-button
+   language used across Settings/Onboarding (var(--border-glow) outline,
+   green accent on hover). Intentionally not a full Panel — this drops in as
+   one line of chrome near KitInstaller/RecommendedPlugins, not another
+   full-width settings card. */
+
+.rsi-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  margin: -4px 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-glow);
+  border-radius: 999px;
+  padding: 8px 16px;
+  min-height: 34px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.rsi-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--core-accent-bright);
+  background: var(--bg-elevated);
+}
+
+.rsi-btn:focus-visible {
+  outline: 2px solid var(--core-accent-bright);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rsi-btn {
+    transition: none;
+  }
+}

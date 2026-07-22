@@ -25,7 +25,7 @@
   position: fixed;
   inset: 0;
   z-index: 0;
-  background: oklch(6% 0.01 160 / 0.82);
+  background: oklch(6% 0.01 160 / 0.68);
   backdrop-filter: blur(10px) saturate(0.9);
   -webkit-backdrop-filter: blur(10px) saturate(0.9);
   pointer-events: auto;

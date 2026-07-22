@@ -25,12 +25,20 @@ import { db } from "./db";
 
 const WORKSPACE_CONNECTED_KEY = "workspace_connected_v1";
 
-/** Record that the user's real ~/.claude workspace has been connected. */
-export function markWorkspaceConnected(): void {
+/** Record that the user's real ~/.claude workspace has been connected.
+ * Returns true only the FIRST time this flips false → true on this machine —
+ * the caller (the onboarding inject route) uses that to know it's the true
+ * "day zero" moment and should zero the stats baseline + quest claims so no
+ * pre-connect Claude history counts toward stats or quests. A re-run of
+ * inject on an already-connected workspace returns false and must NOT
+ * re-zero anything. */
+export function markWorkspaceConnected(): boolean {
+  const wasAlreadyConnected = isWorkspaceConnected();
   db.prepare(
     `INSERT INTO app_meta (key, value) VALUES (?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value`
   ).run(WORKSPACE_CONNECTED_KEY, new Date().toISOString());
+  return !wasAlreadyConnected;
 }
 
 /** Whether the workspace has ever been connected on this machine — the gate

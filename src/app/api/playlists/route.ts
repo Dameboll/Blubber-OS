@@ -4,7 +4,10 @@
  * CRUD surface over the JSON playlist store (src/server/playlist-store.ts).
  * Playlists are USER CONTENT — never touched by /api/reset.
  *
- * GET    -> { playlists: [{ id, name, trackIds, createdAt }] }
+ * GET    -> { playlists: [{ id, name, trackIds, createdAt, hasCustomCover }] }
+ *   `hasCustomCover` is computed from cover-art-store.ts (not stored on the
+ *   playlist itself) so the client knows whether to fetch
+ *   /api/cover/<id>?type=playlist without probing every playlist speculatively.
  * POST   body { name: string }                                -> { playlist }
  * PATCH  body { id: string, name?: string, trackIds?: string[] } -> { playlist }
  *   trackIds order = play order, so a PATCH reorder is just a full-array
@@ -19,10 +22,18 @@ import {
   listPlaylists,
   updatePlaylist,
 } from "@/server/playlist-store";
+import { deleteCustomCover, hasCustomCover } from "@/server/cover-art-store";
 
 export async function GET() {
   try {
-    return NextResponse.json({ playlists: listPlaylists() });
+    const playlists = listPlaylists();
+    const enriched = await Promise.all(
+      playlists.map(async (playlist) => ({
+        ...playlist,
+        hasCustomCover: await hasCustomCover("playlist", playlist.id),
+      }))
+    );
+    return NextResponse.json({ playlists: enriched });
   } catch (error) {
     console.error("[/api/playlists] list failed:", error);
     return NextResponse.json({ playlists: [] });
@@ -108,6 +119,9 @@ export async function DELETE(request: NextRequest) {
     if (!removed) {
       return NextResponse.json({ error: "not found" }, { status: 404 });
     }
+    await deleteCustomCover("playlist", id).catch((error) => {
+      console.error(`[/api/playlists] cover cleanup failed for ${id}:`, error);
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[/api/playlists] delete failed:", error);

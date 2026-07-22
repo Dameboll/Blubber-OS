@@ -32,6 +32,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import type { NavId } from '../AppShell';
+import { requestSoulInterview } from '../../lib/soul';
 import './DashboardTour.css';
 
 interface TourStep {
@@ -74,6 +75,26 @@ export default function DashboardTour({ onNavChange, onClose }: DashboardTourPro
   const step = STEPS[index];
   const isLast = index === STEPS.length - 1;
 
+  // Every live 3D Blubber on the page (Flubber3D canvases, tagged
+  // data-flubber-3d) shares ONE offscreen WebGL host (see
+  // src/lib/flubber3d/host.ts) — there's no single overlay element to hide,
+  // the canvases are ordinary DOM nodes scattered through whatever screen is
+  // mounted behind the veil. Tagging <body> instead lets one global CSS rule
+  // (globals.css, `body.tour-active [data-flubber-3d]`) hide every one of
+  // them at once, however many are on screen. visibility:hidden (not
+  // display:none) so layout never shifts and the host's IntersectionObserver
+  // keeps the slot "visible" — the instance still advances off-camera, which
+  // is fine since it's invisible either way and resumes exactly in step the
+  // moment the tour ends, instead of jump-cutting from a stale frame. Cleanup
+  // always runs, including an unmount mid-tour (Esc, nav away, etc.), so the
+  // mascot can never get stuck hidden.
+  useEffect(() => {
+    document.body.classList.add('tour-active');
+    return () => {
+      document.body.classList.remove('tour-active');
+    };
+  }, []);
+
   // Switch to this step's screen so the user sees it behind the spotlight.
   useEffect(() => {
     onNavChange(step.navId);
@@ -100,9 +121,18 @@ export default function DashboardTour({ onNavChange, onClose }: DashboardTourPro
     };
   }, [step.navId]);
 
+  // Clicking through the LAST step's bubble is a real completion, not a
+  // skip — that's the one moment this component offers the Soul Interview
+  // (see src/lib/soul.ts's header for the full launch-path list). Esc and
+  // the explicit "Skip tour" button below both call onClose directly, never
+  // this path, so bailing early never chains into another overlay.
   const next = useCallback(() => {
-    if (isLast) onClose();
-    else setIndex((i) => Math.min(i + 1, STEPS.length - 1));
+    if (isLast) {
+      requestSoulInterview();
+      onClose();
+    } else {
+      setIndex((i) => Math.min(i + 1, STEPS.length - 1));
+    }
   }, [isLast, onClose]);
 
   const back = useCallback(() => setIndex((i) => Math.max(i - 1, 0)), []);

@@ -1,0 +1,243 @@
+/* SoulInterview — full-viewport personalization interview. Visual language
+   matches DashboardTour.css / OnboardingOverlay.css: dark card, single green
+   accent, chat-bubble-with-tail. Sits above the tour (z-index 9000) since it
+   can be launched the instant the tour closes, on the same frame. All
+   animation is transform/opacity only. */
+
+.soul {
+  position: fixed;
+  inset: 0;
+  z-index: 9100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.soul__veil {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: oklch(6% 0.01 160 / 0.86);
+  backdrop-filter: blur(10px) saturate(0.9);
+  -webkit-backdrop-filter: blur(10px) saturate(0.9);
+}
+
+.soul__card {
+  position: relative;
+  z-index: 1;
+  width: min(460px, 100%);
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+/* Same treatment as DashboardTour's escort Blubber: art's own landscape
+   aspect, no circle amputation, slow bob. */
+.soul__blubber {
+  width: 148px;
+  height: 90px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 1px solid var(--border-glow, oklch(30% 0.02 160));
+  box-shadow: 0 0 32px oklch(74% 0.2 151 / 0.35);
+  animation: soul-bob 3.2s ease-in-out infinite;
+}
+
+@keyframes soul-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.soul__bubble {
+  position: relative;
+  width: 100%;
+  text-align: left;
+  background: oklch(16% 0.015 160);
+  border: 1px solid var(--core-accent-bright, oklch(78% 0.17 155));
+  border-radius: 18px;
+  border-top-left-radius: 4px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 16px 48px oklch(0% 0 0 / 0.5);
+  animation: soul-appear 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes soul-appear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tail bridging back toward Blubber, mirrored from the tour bubble's tail
+   (top-left corner here since Blubber sits above the bubble, not beside it). */
+.soul__bubble::before {
+  content: '';
+  position: absolute;
+  left: 26px;
+  top: -6px;
+  width: 12px;
+  height: 12px;
+  background: oklch(16% 0.015 160);
+  border-left: 1px solid var(--core-accent-bright, oklch(78% 0.17 155));
+  border-top: 1px solid var(--core-accent-bright, oklch(78% 0.17 155));
+  transform: rotate(45deg);
+}
+
+.soul__eyebrow {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--core-accent-bright, oklch(78% 0.17 155));
+}
+
+.soul__step-count {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary, oklch(65% 0.02 160));
+}
+
+.soul__question {
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--text-primary, oklch(96% 0 0));
+  margin: 0;
+}
+
+.soul__textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-primary, oklch(96% 0 0));
+  background: oklch(12% 0.01 160);
+  border: 1px solid var(--border-glow, oklch(30% 0.02 160));
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.soul__textarea::placeholder {
+  color: var(--text-secondary, oklch(55% 0.02 160));
+}
+
+.soul__textarea:focus-visible {
+  outline: none;
+  border-color: var(--core-accent-bright, oklch(78% 0.17 155));
+  box-shadow: 0 0 0 3px oklch(74% 0.2 151 / 0.18);
+}
+
+.soul__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.soul__btn {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 10px 20px;
+  min-height: 40px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.soul__btn:active {
+  transform: scale(0.98);
+}
+
+.soul__btn:focus-visible {
+  outline: 2px solid var(--core-accent-bright, oklch(78% 0.17 155));
+  outline-offset: 3px;
+}
+
+.soul__btn--primary {
+  background: var(--core-accent, oklch(70% 0.19 151));
+  color: oklch(10% 0 0);
+  box-shadow: 0 0 24px oklch(74% 0.2 151 / 0.3);
+}
+
+.soul__btn--primary:hover {
+  background: var(--core-accent-bright, oklch(78% 0.17 155));
+}
+
+.soul__btn--primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Quiet, low-emphasis — "skip this one" reads as an escape hatch, not a
+   competing call to action next to the primary button. */
+.soul__btn--text {
+  background: transparent;
+  border: none;
+  padding: 10px 4px;
+  color: var(--text-secondary, oklch(65% 0.02 160));
+}
+
+.soul__btn--text:hover {
+  color: var(--text-primary, oklch(96% 0 0));
+}
+
+.soul__btn--ghost {
+  background: oklch(14% 0.01 160 / 0.85);
+  color: var(--text-secondary, oklch(72% 0.02 160));
+  border: 1px solid var(--border-glow, oklch(30% 0.02 160));
+  padding: 9px 18px;
+}
+
+.soul__btn--ghost:hover {
+  color: var(--text-primary, oklch(96% 0 0));
+  border-color: var(--core-accent-bright, oklch(78% 0.17 155));
+}
+
+/* Persistent "skip interview" — bottom-anchored, same placement DashboardTour
+   uses for its own Back/Skip pair, so the two overlays feel like one system. */
+.soul__controls {
+  position: fixed;
+  z-index: 1;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .soul__blubber {
+    animation: none;
+  }
+  .soul__bubble {
+    animation: none;
+  }
+  .soul__btn,
+  .soul__btn:active,
+  .soul__textarea {
+    transition: none;
+  }
+}

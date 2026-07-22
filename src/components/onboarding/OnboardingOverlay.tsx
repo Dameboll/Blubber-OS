@@ -58,6 +58,7 @@ import { useCallback, useLayoutEffect, useRef, useState, type DragEvent } from '
 import { gsap } from 'gsap';
 import { isReduceEffectsActive } from '../../lib/reduce-effects';
 import { requestTour } from '../../lib/tour';
+import { requestSoulInterview } from '../../lib/soul';
 import './OnboardingOverlay.css';
 
 // Community Edition onboarding is barebones by design: welcome, detect, done.
@@ -182,9 +183,21 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
   );
 
   // Kit buyer opted into the walkthrough: flag the tour to run once the app
-  // mounts (page.tsx consumes it), then finish onboarding normally.
+  // mounts (page.tsx consumes it), then finish onboarding normally. The Soul
+  // Interview offer is chained off the TOUR's own completion instead (see
+  // DashboardTour.tsx's `next()`) — not here — so a kit buyer who takes the
+  // tour only ever gets one guided overlay at a time, never both stacked.
   const handleTakeTour = useCallback(() => {
     requestTour();
+    finish();
+  }, [finish]);
+
+  // Kit buyer declined the walkthrough at this same offer: flag the Soul
+  // Interview to run instead once the app mounts, then finish onboarding
+  // normally. This is the other of the two mutually-exclusive branches off
+  // the starterKit step (see src/lib/soul.ts's header, launch path 2).
+  const handleDeclineTour = useCallback(() => {
+    requestSoulInterview();
     finish();
   }, [finish]);
 
@@ -344,7 +357,7 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
               First time in? Let me give you the quick tour and show you around the deck. Takes about 30 seconds.
             </p>
             <div className="onb__actions onb__actions--pair">
-              <button type="button" className="onb__btn onb__btn--ghost" onClick={finish}>
+              <button type="button" className="onb__btn onb__btn--ghost" onClick={handleDeclineTour}>
                 No thanks, I'll explore
               </button>
               <button type="button" className="onb__btn onb__btn--primary" onClick={handleTakeTour}>

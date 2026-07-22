@@ -138,6 +138,19 @@ body::after {
   transform: none;
 }
 
+/* DashboardTour (src/components/tour/DashboardTour.tsx) tags <body> with
+   .tour-active for its full lifetime. Every live 3D Blubber on the page is a
+   Flubber3D canvas (data-flubber-3d) — hero panel, pet screen, agent avatars,
+   whatever's mounted behind the tour's veil — and there's no single wrapper
+   to hide since they're ordinary DOM nodes scattered per-screen, not one
+   overlay. This one rule reaches all of them at once. visibility:hidden, not
+   display:none, so no layout reflow while the tour repositions its keyhole
+   every step; the mascot simply isn't there to look at until the class comes
+   off on tour close. */
+body.tour-active [data-flubber-3d] {
+  visibility: hidden;
+}
+
 /* BackgroundField removed (LANE 7). These rules kept for reference only if
    the component ever re-mounts. The breathing wash above + the AmbientGlow
    2D-canvas mote layer now provide the living green base; per-panel slime

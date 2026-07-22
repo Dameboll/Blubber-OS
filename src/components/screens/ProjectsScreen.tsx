@@ -66,6 +66,7 @@ import FlubberCharacter from '../FlubberCharacter';
 import { Panel, Skeleton, SkeletonText, StatChip } from '../ui';
 import { useSession } from '../../context/SessionProvider';
 import { humanizeSlug } from '../../lib/humanize';
+import { getProjectIcon } from '../../lib/project-icon';
 import { assignPlates, platePath, type ProjectPlate } from '../../lib/project-plates';
 import {
   ProjectCard,
@@ -231,6 +232,10 @@ function ProjectListRow({ project, selected, now, onSelect, plate }: ProjectList
   const { meta, state } = useProjectMeta(project.rootLabel, project.rawName);
   const facts = metaFacts(state, meta, now);
   const plateStyle = plate ? ({ '--card-plate-url': `url('${platePath(plate)}')` } as CSSProperties) : undefined;
+  // Same deterministic name -> icon heuristic as the grid tile (ProjectCard,
+  // src/lib/project-icon.ts) — shown inline next to the title here since the
+  // list row has no portrait corner to badge.
+  const TypeIcon = getProjectIcon(project.rawName);
   return (
     <button
       type="button"
@@ -242,6 +247,7 @@ function ProjectListRow({ project, selected, now, onSelect, plate }: ProjectList
       <ProjectThumb root={project.rootLabel} name={project.rawName} size={40} />
       <span className="project-list-row__main">
         <span className="project-list-row__title-line">
+          <TypeIcon size={13} className="project-list-row__type-icon" aria-hidden="true" />
           <span className="project-list-row__title">{project.name}</span>
         </span>
         <span className="project-list-row__desc">{project.rootLabel}</span>

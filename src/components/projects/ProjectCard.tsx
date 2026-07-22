@@ -22,6 +22,7 @@ import { Clock, Database, FileText, Star } from 'lucide-react';
 import type { FlubberExpression } from '../FlubberCharacter';
 import Flubber3D from '../Flubber3D';
 import { humanizeSlug } from '../../lib/humanize';
+import { getProjectIcon } from '../../lib/project-icon';
 import { platePath, type ProjectPlate } from '../../lib/project-plates';
 
 // ---------------------------------------------------------------------------
@@ -229,6 +230,10 @@ export function ProjectCard({ project, selected, starred, now, onSelect, thumbSi
   // in-flow, non-positioned content automatically, so no content markup
   // below needs touching or an explicit z-index of its own.
   const plateStyle = plate ? ({ '--card-plate-url': `url('${platePath(plate)}')` } as CSSProperties) : undefined;
+  // Deterministic keyword-heuristic icon from the folder's real name (see
+  // src/lib/project-icon.ts) — a small honest type hint, not a random pick;
+  // the same folder always gets the same badge.
+  const TypeIcon = getProjectIcon(project.rawName);
   return (
     <button
       type="button"
@@ -239,6 +244,9 @@ export function ProjectCard({ project, selected, starred, now, onSelect, thumbSi
     >
       <header className="project-card__portrait">
         <ProjectThumb root={project.rootLabel} name={project.rawName} expression={THUMB_EXPRESSION} size={thumbSize} />
+        <span className="project-card__type-badge" aria-hidden="true">
+          <TypeIcon size={12} />
+        </span>
       </header>
 
       <h4 className="project-card__title">

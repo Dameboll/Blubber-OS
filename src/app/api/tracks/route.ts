@@ -12,12 +12,17 @@
  *          playlist that referenced it.
  *
  * Response shape (GET):
- *   { tracks: [{ id: string, title: string, file: string, sizeBytes: number }] }
+ *   { tracks: [{ id, title, file, sizeBytes, artist?, album?, hasArt }] }
  *
  * - `file` is the filename only (e.g. "midnight-drive.mp3"). The player
  *   fetches actual audio bytes from `/api/audio/<file>` — see the note in
  *   MusicPlayer.tsx about the static-serving requirement.
- * - `title` is the filename with its extension stripped, no ID3 parsing.
+ * - `title` is the ID3 TIT2 tag when a track has one (mp3 only), otherwise
+ *   the filename with its extension stripped.
+ * - `artist`/`album` come from ID3 TPE1/TALB when present — omitted (not
+ *   fabricated) when a track has no tag or isn't an mp3.
+ * - `hasArt` tells the client whether `/api/cover/<id>` has anything to
+ *   serve (auto-extracted or custom-uploaded) — see cover-art-store.ts.
  * - `id` is the filename itself (stable, unique within the folder).
  *
  * Music files are USER CONTENT — never touched by /api/reset.
@@ -27,12 +32,16 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { removeTrackEverywhere } from "@/server/playlist-store";
+import { deleteCustomCover, getTracksMetadata } from "@/server/cover-art-store";
 
 export interface Track {
   id: string;
   title: string;
   file: string;
   sizeBytes: number;
+  artist?: string;
+  album?: string;
+  hasArt: boolean;
 }
 
 const MUSIC_DIR = path.join(process.cwd(), "music");
@@ -91,21 +100,34 @@ async function resolveAvailableFilename(base: string, ext: string): Promise<stri
   return `${base}-${Date.now()}${ext}`;
 }
 
+/** Pre-enrichment shape — just what we need to ask cover-art-store for
+ *  cached/extracted metadata, kept separate from the public Track type so
+ *  mtimeMs (an internal staleness key) never leaks into the API response. */
+interface RawEntry {
+  id: string;
+  title: string;
+  file: string;
+  sizeBytes: number;
+  mtimeMs: number;
+}
+
 export async function GET() {
   try {
     await fs.mkdir(MUSIC_DIR, { recursive: true });
 
     const entries = await fs.readdir(MUSIC_DIR, { withFileTypes: true });
 
-    const tracks: Track[] = await Promise.all(
+    const rawTracks: RawEntry[] = await Promise.all(
       entries
         .filter((entry) => entry.isFile())
         .filter((entry) => AUDIO_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
         .map(async (entry) => {
           let sizeBytes = 0;
+          let mtimeMs = 0;
           try {
             const stat = await fs.stat(path.join(MUSIC_DIR, entry.name));
             sizeBytes = stat.size;
+            mtimeMs = stat.mtimeMs;
           } catch {
             // Vanished between readdir and stat — report 0 rather than fail
             // the whole list.
@@ -115,9 +137,39 @@ export async function GET() {
             title: titleFromFilename(entry.name),
             file: entry.name,
             sizeBytes,
+            mtimeMs,
           };
         })
     );
+
+    // ID3 metadata + cover-art extraction (mp3 only, cached — see
+    // cover-art-store.ts). Batched into one call so a folder full of new
+    // tracks doesn't do N sequential index read/write round trips.
+    const metaMap = await getTracksMetadata(
+      rawTracks.map((t) => ({
+        trackId: t.id,
+        filePath: path.join(MUSIC_DIR, t.file),
+        sizeBytes: t.sizeBytes,
+        mtimeMs: t.mtimeMs,
+        isMp3: path.extname(t.file).toLowerCase() === ".mp3",
+      }))
+    );
+
+    const tracks: Track[] = rawTracks.map((t) => {
+      const meta = metaMap.get(t.id);
+      const tagTitle = meta?.title?.trim();
+      return {
+        id: t.id,
+        // A real ID3 title beats the filename-derived fallback; an empty/
+        // missing tag keeps the honest filename-based title as before.
+        title: tagTitle ? tagTitle : t.title,
+        file: t.file,
+        sizeBytes: t.sizeBytes,
+        artist: meta?.artist,
+        album: meta?.album,
+        hasArt: meta?.hasArt ?? false,
+      };
+    });
 
     tracks.sort((a, b) => a.title.localeCompare(b.title));
 
@@ -172,6 +224,7 @@ export async function POST(request: NextRequest) {
       title: titleFromFilename(filename),
       file: filename,
       sizeBytes: bytes.length,
+      hasArt: false, // fresh upload — ID3 extraction happens lazily on the next GET /api/tracks
     };
 
     return NextResponse.json({ track });
@@ -208,6 +261,12 @@ export async function DELETE(request: NextRequest) {
     // File is already gone — don't fail the request over a cleanup issue,
     // but do surface it in logs so a stray playlist reference is debuggable.
     console.error(`[/api/tracks] playlist cleanup failed for ${id}:`, error);
+  }
+
+  try {
+    await deleteCustomCover("track", id);
+  } catch (error) {
+    console.error(`[/api/tracks] custom cover cleanup failed for ${id}:`, error);
   }
 
   return NextResponse.json({ ok: true });

@@ -593,6 +593,36 @@ export default function AppShell({
   const tip = useRotating(TIPS, 10000);
   const quote = useRotating(QUOTES, 14000);
 
+  // Settings > Notifications > "Blubber Tips" controls whether the rotating
+  // tip card renders at all. Seeded from the same persisted /api/prefs blob
+  // SettingsScreen writes, then kept live via the 'blubber:tips-pref'
+  // CustomEvent SettingsScreen dispatches on toggle (no shared store needed
+  // for one boolean). Defaults to visible, matching prefs-store's DEFAULTS.
+  const [tipsEnabled, setTipsEnabled] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/prefs')
+      .then((res) => (res.ok ? (res.json() as Promise<{ prefs?: { notifyBlubberTips?: boolean } }>) : null))
+      .then((data) => {
+        if (!cancelled && typeof data?.prefs?.notifyBlubberTips === 'boolean') {
+          setTipsEnabled(data.prefs.notifyBlubberTips);
+        }
+      })
+      .catch(() => {
+        // Pref fetch failing just leaves the card visible (the default).
+      });
+    const onTipsPref = (e: Event) => {
+      const detail = (e as CustomEvent<{ enabled?: boolean }>).detail;
+      if (typeof detail?.enabled === 'boolean') setTipsEnabled(detail.enabled);
+    };
+    window.addEventListener('blubber:tips-pref', onTipsPref);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('blubber:tips-pref', onTipsPref);
+    };
+  }, []);
+
   return (
     <div className={['blubber-shell', className].filter(Boolean).join(' ')}>
       <aside className="blubber-shell__sidebar">
@@ -680,17 +710,19 @@ export default function AppShell({
           </button>
         </div>
 
-        <div className="blubber-shell__tip">
-          {/* Glossy MID 3D flubber (was the flat FlubberCharacter — which is
-              FROZEN and only stays imported for the topbar user chip). tier="mid"
-              keeps the shiny clearcoat-goo material at this 44px size instead of
-              auto-flattening to micro. */}
-          <Flubber3D expression="happy" size={44} tier="mid" className="blubber-shell__tip-flubber" />
-          <div className="blubber-shell__tip-copy">
-            <span className="blubber-shell__tip-label">Blubber Tip</span>
-            <p>{tip}</p>
+        {tipsEnabled && (
+          <div className="blubber-shell__tip">
+            {/* Glossy MID 3D flubber (was the flat FlubberCharacter — which is
+                FROZEN and only stays imported for the topbar user chip). tier="mid"
+                keeps the shiny clearcoat-goo material at this 44px size instead of
+                auto-flattening to micro. */}
+            <Flubber3D expression="happy" size={44} tier="mid" className="blubber-shell__tip-flubber" />
+            <div className="blubber-shell__tip-copy">
+              <span className="blubber-shell__tip-label">Blubber Tip</span>
+              <p>{tip}</p>
+            </div>
           </div>
-        </div>
+        )}
       </aside>
 
       <div className="blubber-shell__main">

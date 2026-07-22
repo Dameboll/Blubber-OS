@@ -790,6 +790,18 @@ export default function SettingsScreen() {
     document.documentElement.style.setProperty('--core-accent', ui.accentColor);
   }, [ui.accentColor]);
 
+  // Live-sync the sidebar "Blubber Tip" card: AppShell seeds its own copy of
+  // this pref from /api/prefs on boot, but while both components are mounted
+  // the toggle should take effect immediately — this event bridges the two
+  // without a shared store. Guarded on prefsSync so the mount-time default
+  // (true) never fires before the persisted value has loaded.
+  useEffect(() => {
+    if (typeof window === 'undefined' || prefsSync === 'loading') return;
+    window.dispatchEvent(
+      new CustomEvent('blubber:tips-pref', { detail: { enabled: notifications.notifyBlubberTips } }),
+    );
+  }, [notifications.notifyBlubberTips, prefsSync]);
+
   // -------------------------------------------------------------------------
   // Real Voice rail wiring (Lane V contract) — see the import comment at the
   // top of this file. getVoiceConfig()/setVoiceConfig() are wrapped in
@@ -1345,10 +1357,6 @@ export default function SettingsScreen() {
                   label="Milestone crossings"
                 />
               </SettingRow>
-              {/* Persisted and real, but not yet wired to actually hide
-                  AppShell.tsx's rotating "Blubber Tip" sidebar card — that
-                  component lives outside this screen's ownership. See the
-                  file header + task limitations for the gap. */}
               <SettingRow icon={Lightbulb} label="Blubber Tips" description="Show the rotating Blubber Tip card in the sidebar.">
                 <Toggle
                   checked={notifications.notifyBlubberTips}

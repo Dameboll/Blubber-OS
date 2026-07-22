@@ -20,6 +20,13 @@ test.describe('Settings — Replay Setup', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
     await page.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: 'Settings' }).click();
+    // Settings is tabbed now (General/Appearance/…/Advanced) and
+    // OnboardingSettingsSection moved under the Advanced tab — see
+    // SettingsScreen.tsx's activeTab === 'advanced' block.
+    await page
+      .getByRole('navigation', { name: 'Settings sections' })
+      .getByRole('button', { name: 'Advanced' })
+      .click();
   });
 
   test('Replay Setup resets onboarding + intro so both re-show on next load', async ({ page, request }) => {

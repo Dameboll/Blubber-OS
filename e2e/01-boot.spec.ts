@@ -64,6 +64,12 @@ test.describe('Fresh-state boot', () => {
   }) => {
     await resetFirstRun(request);
     await page.emulateMedia({ reducedMotion: 'reduce' });
+    // The auto-skip fires its POST /api/intro fire-and-forget during page
+    // load (best-effort by design — see IntroCinematic.tsx's completeIntro),
+    // so arm the wait before goto and await it before asserting persistence.
+    const introPost = page.waitForResponse(
+      (res) => res.url().includes('/api/intro') && res.request().method() === 'POST',
+    );
     await page.goto('/');
 
     // The cinematic overlay must never mount at all under reduced motion --
@@ -81,6 +87,7 @@ test.describe('Fresh-state boot', () => {
 
     // And the intro really was marked seen server-side, not just skipped
     // client-side for this one page load.
+    expect((await introPost).status()).toBe(200);
     const introState = await (await request.get('/api/intro')).json();
     expect(introState.seen).toBe(true);
   });

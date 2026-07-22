@@ -29,7 +29,15 @@ test.describe('IntroCinematic hardening', () => {
     const introOverlay = page.locator('.intro-cinematic');
     await expect(introOverlay).toBeVisible();
 
-    await page.keyboard.press('Enter');
+    // completeIntro() fires its POST /api/intro fire-and-forget (best-effort
+    // by design — see IntroCinematic.tsx), so wait for that response to land
+    // before asserting the flag persisted; checking GET /api/intro while the
+    // POST is still in flight is a race, not a regression.
+    const [introPostRes] = await Promise.all([
+      page.waitForResponse((res) => res.url().includes('/api/intro') && res.request().method() === 'POST'),
+      page.keyboard.press('Enter'),
+    ]);
+    expect(introPostRes.status()).toBe(200);
     await expect(introOverlay).toBeHidden();
     await expect(page.getByRole('dialog', { name: 'Welcome to Blubber' })).toBeVisible();
 
@@ -67,6 +75,12 @@ test.describe('IntroCinematic hardening', () => {
       };
     });
 
+    // The auto-skip's POST /api/intro is fire-and-forget during page load
+    // (see IntroCinematic.tsx's completeIntro) — arm the wait before goto so
+    // the persistence assertion below never races it.
+    const introPost = page.waitForResponse(
+      (res) => res.url().includes('/api/intro') && res.request().method() === 'POST',
+    );
     await page.goto('/');
 
     // The cinematic overlay must never mount at all -- same contract as the
@@ -80,6 +94,7 @@ test.describe('IntroCinematic hardening', () => {
     expect(webglCreations).toEqual([]);
 
     // And it was marked seen server-side, exactly like the OS-level path.
+    expect((await introPost).status()).toBe(200);
     const introState = await (await request.get('/api/intro')).json();
     expect(introState.seen).toBe(true);
   });

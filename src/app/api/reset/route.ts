@@ -19,6 +19,7 @@ import * as brainStore from "../../../server/brain-store";
 import { resetOnboardingState } from "../../../server/onboarding-store";
 import { resetIntroState } from "../../../server/intro-store";
 import { resetKitInstallState } from "../../../server/kit-store";
+import { resetWorkspaceConnected } from "../../../server/connected-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,6 +42,10 @@ export async function POST() {
     resetOnboardingState();
     resetIntroState();
     resetKitInstallState();
+    // "Fresh out the box" also means the workspace is no longer connected —
+    // stats fall back to the bundled placeholder dataset until the user scans
+    // + injects again during the replayed onboarding.
+    resetWorkspaceConnected();
     return NextResponse.json({ ok: true, baseline });
   } catch (err) {
     console.error("[api/reset] reset failed:", err);

@@ -201,3 +201,98 @@ export function getDemoProjectRoots(): DemoProjectRoot[] {
     projects: label === "HOBBY" ? names : [],
   }));
 }
+
+// ---------------------------------------------------------------------------
+// Live-dashboard demo shapes (leak fix, 2026-07-21): with only the four
+// original routes gated, the dashboard's Live Usage meter, sidebar agents,
+// and weekly recap still streamed the REAL machine's numbers into a
+// "Demo Mode" session. These variants keep every dashboard surface on
+// fixture data. All numbers are modest fiction, drifting gently with
+// wall-clock time (same convention as getDemoSystemStats above) so demo
+// screenshots don't look frozen.
+// ---------------------------------------------------------------------------
+
+/** /api/usage-window — {fiveHour, weekly, today, breakdown:{...}} */
+export function getDemoUsageWindow() {
+  const minute = Math.floor(Date.now() / 60_000);
+  const drift = (minute % 7) * 1_800; // creeps upward a little each minute
+  const win = (totalTokens: number) => ({
+    totalTokens,
+    tokensIn: Math.round(totalTokens * 0.04),
+    tokensOut: Math.round(totalTokens * 0.13),
+    cacheTokens: Math.round(totalTokens * 0.83),
+  });
+  return {
+    fiveHour: 412_000 + drift,
+    weekly: 8_640_000 + drift,
+    today: 1_236_000 + drift,
+    breakdown: {
+      fiveHour: win(412_000 + drift),
+      weekly: win(8_640_000 + drift),
+      today: win(1_236_000 + drift),
+    },
+  };
+}
+
+/** /api/usage-limits — {session_pct, weekly_pct, session_resets, stale} */
+export function getDemoUsageLimits() {
+  return {
+    session_pct: 18,
+    weekly_pct: 34,
+    session_resets: null,
+    stale: false,
+  };
+}
+
+/** /api/agents — {agents: [{file, name, description}]} shape (AgentSummary).
+ * Reuses the fixture's top-agents names so the sidebar and the Top Agents
+ * panel tell the same story. */
+export function getDemoAgentList() {
+  const { topAgents } = loadDataset();
+  return topAgents.map((a) => ({
+    file: `${a.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.md`,
+    name: a.name,
+    description: a.specialty,
+  }));
+}
+
+/** /api/weekly — {dailyTrend, topAgents, topSkills, totals} */
+export function getDemoWeekly() {
+  const { topAgents } = loadDataset();
+  const today = new Date();
+  const dailyTrend = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (6 - i));
+    // A believable weekly rhythm: lighter weekend, heavier midweek.
+    const weights = [0.6, 1.1, 1.4, 1.2, 1.5, 0.9, 0.7];
+    return {
+      date: d.toISOString().slice(0, 10),
+      totalTokens: Math.round(1_236_000 * weights[i]),
+    };
+  });
+  const named = topAgents.map((a) => ({ name: a.name, totalTokens: a.taskCount * 42_000 }));
+  return {
+    dailyTrend,
+    topAgents: named,
+    topSkills: [
+      { name: "frontend-design", totalTokens: 310_000 },
+      { name: "git-workflow", totalTokens: 180_000 },
+      { name: "verify-before-done", totalTokens: 120_000 },
+    ],
+    totals: {
+      totalTokens: dailyTrend.reduce((s, d) => s + d.totalTokens, 0),
+      tokensIn: 340_000,
+      tokensOut: 1_080_000,
+    },
+  };
+}
+
+/** /api/live (SSE) — one gentle synthetic usage tick for the meter to render.
+ * Shape mirrors UsagePayload: {tokensInDelta, tokensOutDelta, totalToday}. */
+export function getDemoLiveTick() {
+  return {
+    tokensInDelta: 120,
+    tokensOutDelta: 640,
+    totalToday: getDemoUsageWindow().today,
+  };
+}

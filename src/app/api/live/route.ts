@@ -5,6 +5,8 @@
 // used for PTY sessions.
 
 import { liveUsageWatcher, type UsagePayload } from "../../../server/live-usage-watcher";
+import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { getDemoLiveTick } from "../../../server/demo-dataset";
 
 // This route depends on live server state (fs polling + in-memory
 // EventEmitter) and must never be static-optimized or edge-bundled.
@@ -15,8 +17,27 @@ function encodeUsageEvent(payload: UsagePayload): string {
   return `event: usage\ndata: ${JSON.stringify(payload)}\n\n`;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const encoder = new TextEncoder();
+
+  // Demo Mode: never subscribe to the real live-usage watcher (that's the
+  // visiting machine's actual token burn). One synthetic tick so the meter
+  // renders, then a quiet stream.
+  if (isDemoModeRequest(request)) {
+    const demoStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(encodeUsageEvent(getDemoLiveTick())));
+      },
+    });
+    return new Response(demoStream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+      },
+    });
+  }
+
   let cleanup: (() => void) | null = null;
 
   const stream = new ReadableStream({

@@ -5,13 +5,20 @@
 import { NextResponse } from "next/server";
 import { ensureIndexed } from "../../../server/log-indexer";
 import { getWindowTotals } from "../../../server/db";
+import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { getDemoUsageWindow } from "../../../server/demo-dataset";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const WEEK_HOURS = 24 * 7;
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Demo Mode must never leak the real machine's token burn (this was the
+  // most visible leak: a "Demo Mode" dashboard showing real 5h/weekly totals).
+  if (isDemoModeRequest(request)) {
+    return NextResponse.json(getDemoUsageWindow());
+  }
   try {
     ensureIndexed();
 

@@ -222,6 +222,23 @@ app.on("window-all-closed", () => {
 app.on("before-quit", () => {
   quitting = true;
   if (serverProcess && !serverProcess.killed) {
-    serverProcess.kill();
+    if (process.platform === "win32") {
+      // With `shell: true`, serverProcess.pid is the cmd.exe wrapper —
+      // .kill() takes out the wrapper and ORPHANS the node server under it,
+      // which then squats on port 3000 and breaks every future launch (and
+      // any in-app full-page reload, e.g. demo mode's ?demo=1 reload, once
+      // the orphan finally dies). taskkill /T fells the whole tree.
+      try {
+        require("node:child_process").execFileSync(
+          "taskkill",
+          ["/PID", String(serverProcess.pid), "/T", "/F"],
+          { stdio: "ignore" },
+        );
+      } catch {
+        /* already gone */
+      }
+    } else {
+      serverProcess.kill();
+    }
   }
 });

@@ -14,6 +14,8 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { getDemoUsageLimits } from "../../../server/demo-dataset";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -142,7 +144,13 @@ function writeCache(cache: CacheShape, previous: CacheShape | null): void {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Demo Mode: fixed fiction, never the real plan percentages (and never a
+  // reason to touch the real OAuth token path at all).
+  if (isDemoModeRequest(request)) {
+    return NextResponse.json(getDemoUsageLimits());
+  }
+
   const cache = readCache();
   const now = Date.now();
 

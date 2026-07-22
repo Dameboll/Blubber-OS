@@ -11,6 +11,8 @@
 import { NextResponse } from "next/server";
 import { ensureIndexed } from "../../../server/log-indexer";
 import { getDailyTotals, getTopByCategory, getOverallTotals } from "../../../server/db";
+import { isDemoModeRequest } from "../../../lib/demo-mode";
+import { getDemoWeekly } from "../../../server/demo-dataset";
 
 // Depends on live filesystem state (the ~/.claude/projects transcripts) and
 // a local SQLite file -- never statically optimize or edge-bundle this.
@@ -20,7 +22,12 @@ export const runtime = "nodejs";
 const TRAILING_DAYS = 7;
 const TOP_N = 5;
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Demo Mode: fixture recap, never the real transcript rollup.
+  if (isDemoModeRequest(request)) {
+    return NextResponse.json(getDemoWeekly());
+  }
+
   try {
     ensureIndexed();
 

@@ -56,6 +56,33 @@ Verified against a PRODUCTION build + real prod server, not dev (dev doesn't cod
   --use-gl=angle, compare MEDIAN frame ms across screens (avg is noise), never trust headless fps
   for this 3D app.
 
+## Polish pass — music/tour/projects/settings (2026-07-22, verified 15/15 headed-GPU)
+- MUSIC LIBRARY backdrop now shows: `.mps-library` was missing `z-index`/`isolation` so the
+  blurred studio.webp `::before` escaped its stacking context (the app's own `.mps-rail .panel`
+  comment says this is mandatory). Added stacking context + made `.mps-library-rail` translucent
+  so the room reads through.
+- TOUR readable: veil was near-black `oklch(6%/0.68)` + 10px blur → dropped to `oklch(8%/0.40)`
+  + 4px. App behind is dim-but-legible, spotlight ring + guide Flubber pop. (The app's 3D was
+  already hidden via `body.tour-active [data-flubber-3d]`; that was never the darkness.)
+- PROJECT ICONS: Dashboard mini (MiniProjects) still used the old random folder-image ProjectThumb
+  → now uses the same deterministic `getProjectIcon()` type-icon the Projects screen grid uses.
+  Deleted ProjectThumb (only renderer was the mini). Projects placeholders = the not-connected
+  demo path (working as designed); real folders show when workspace_connected is set.
+- SETTINGS TRUTH PASS (big): every visible control is now real. Removed Agents tab (no config
+  layer) + Notifications tab (folded Blubber Tips into General). Cut all dead controls (Language,
+  Startup/Auto-Launch/Tray, entire Token&Usage + System Integration panels, Sarcasm, Emote,
+  Music Reactivity, Quest/Milestone notifs, Export/Clear Cache, Local Data Only). Final tabs:
+  General/Appearance/Blubber/Shortcuts/Advanced. Voice moved under Blubber (with the mascot).
+- NEW WIRING (a real settings knob = a consumer): app-wide PREFS APPLIER in AppShell applies from
+  /api/prefs on load AND a unified `'blubber:prefs'` CustomEvent on change (fixed latent bug:
+  accent/glow only applied while Settings was open). It drives: accent (--core-accent), glow
+  (--blubber-glow multiplier on --glow-shadow in globals.css), animation speed
+  (gsap.globalTimeline.timeScale + data-motion-speed), time format (src/lib/time-format.ts →
+  live clock + terminal label), sound effects (blubber-voice setSoundEffectsEnabled gates the
+  celebration riff). prefs-store UiPrefs trimmed to real fields + timeFormat('12h'/'24h').
+  VERIFIED live: applier applies all app-wide, prefs round-trip persists timeFormat + drops dead
+  fields, music backdrop renders, tour veil lightened, no old thumbnails.
+
 ## Launch decisions (locked)
 - Free shell stays SILENT about the Starter Kit — no in-app upsell, ever. The landing page
   (blubber-site) is the funnel; all downloads route through it, so the kit pitch already

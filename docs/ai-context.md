@@ -83,6 +83,19 @@ Verified against a PRODUCTION build + real prod server, not dev (dev doesn't cod
   VERIFIED live: applier applies all app-wide, prefs round-trip persists timeFormat + drops dead
   fields, music backdrop renders, tour veil lightened, no old thumbnails.
 
+## Favicon + glossy floating mascot (2026-07-22, verified headed-GPU)
+- FAVICON: src/app/icon.png = the site's dripping slime "BL" (was a brighter balloon-BL). Next
+  auto-serves it.
+- FloatingBlubber (src/components/FloatingBlubber.tsx/.css): glossy transparent Blubber
+  (public/blubber-glossy.png, bubbles+pool baked) animated by CSS transform/opacity only — bob +
+  tilt + squash-stretch (transform-origin 50% 90%) + a breathing green glow puddle,
+  prefers-reduced-motion guarded. Used STRICTLY in onboarding + tour (as <FloatingBlubber>) and the
+  intro cinematic (asset swap + crop fix, keeps GSAP entrance).
+- HARD RULE (Dame, emphatic): NEVER touch the in-app 3D Flubber (FlubberHome/Flubber3D/flubber3d
+  host/dais/AgentPoolWorld/avatars/Virtual Pet) without explicit ask — it's hard-won. The glossy
+  static mascot is ONLY for the pre-app/overlay spots where the 3D is absent. See memory
+  dame-protective-of-3d-flubber. Soul-interview badge left on blubber-hero.png (not in scope).
+
 ## Launch decisions (locked)
 - Free shell stays SILENT about the Starter Kit — no in-app upsell, ever. The landing page
   (blubber-site) is the funnel; all downloads route through it, so the kit pitch already

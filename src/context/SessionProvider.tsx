@@ -100,7 +100,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useLiveUsage, type LiveUsageState } from '../hooks/useLiveUsage';
-import { wsClient } from '../lib/ws-client';
+import { wsClient, type ResumeSpec } from '../lib/ws-client';
 import { classifyOutput, stripAnsi } from '../lib/terminal-signals';
 import { narrate } from '../lib/flubber3d/narration';
 import { DEV_ROOT } from '../lib/dev-root';
@@ -177,7 +177,7 @@ export interface TabControlHandle {
   activateTab: (id: string) => void;
   /** Spawn a real PTY tab through TabBar's own openTab. Returns the new tab
    * id, or null if TabBar is momentarily unavailable. */
-  openTab: (title: string, cwd: string, initialPrompt?: string) => string | null;
+  openTab: (title: string, cwd: string, initialPrompt?: string, resume?: ResumeSpec) => string | null;
   /** Kill + drop a tab through TabBar's own closeTab. */
   closeTab: (id: string) => void;
 }
@@ -230,6 +230,10 @@ export interface SessionState {
   /** Really spawns a PTY tab cd'd into the project and switches to the
    * Terminal screen. One click, zero dialogs — see file header. */
   openProjectInTab: (root: string, name: string) => void;
+  /** Really spawns a PTY tab at an explicit cwd with an optional initial
+   * scaffold prompt and/or resume directive, then switches to Terminal. Powers
+   * the Agent Synthesizer and the dashboard resume-session offer. */
+  openTabWith: (opts: { title: string; cwd: string; initialPrompt?: string; resume?: ResumeSpec }) => void;
   /** Really kills the PTY behind `id` via the shared wsClient singleton and
    * marks the mirrored session exited immediately. */
   closeTab: (id: string) => void;
@@ -302,6 +306,7 @@ const INERT_SESSION: SessionState = {
   setActiveTab: () => {},
   openTab: () => {},
   openProjectInTab: () => {},
+  openTabWith: () => {},
   closeTab: () => {},
 };
 
@@ -446,15 +451,22 @@ export function SessionProvider({ children, onRequestTerminalNav }: SessionProvi
   }, []);
 
   /** Spawn queued while the Terminal screen was unmounted — fired the moment
-   * TabBar's handle registers, so open-project is one click from anywhere. */
-  const pendingSpawnRef = useRef<{ title: string; cwd: string } | null>(null);
+   * TabBar's handle registers, so open-project is one click from anywhere.
+   * Carries the full spawn args (initialPrompt + resume) so a queued Agent
+   * Synthesizer / resume-session open replays exactly, not as a bare tab. */
+  const pendingSpawnRef = useRef<{
+    title: string;
+    cwd: string;
+    initialPrompt?: string;
+    resume?: ResumeSpec;
+  } | null>(null);
 
   const registerTabControl = useCallback((handle: TabControlHandle | null) => {
     tabControlRef.current = handle;
     if (handle && pendingSpawnRef.current) {
-      const { title, cwd } = pendingSpawnRef.current;
+      const { title, cwd, initialPrompt, resume } = pendingSpawnRef.current;
       pendingSpawnRef.current = null;
-      handle.openTab(title, cwd);
+      handle.openTab(title, cwd, initialPrompt, resume);
     }
   }, []);
 
@@ -473,12 +485,12 @@ export function SessionProvider({ children, onRequestTerminalNav }: SessionProvi
   }, []);
 
   const spawnOrQueue = useCallback(
-    (title: string, cwd: string) => {
+    (title: string, cwd: string, initialPrompt?: string, resume?: ResumeSpec) => {
       const handle = tabControlRef.current;
       if (handle) {
-        handle.openTab(title, cwd);
+        handle.openTab(title, cwd, initialPrompt, resume);
       } else {
-        pendingSpawnRef.current = { title, cwd };
+        pendingSpawnRef.current = { title, cwd, initialPrompt, resume };
       }
       onRequestTerminalNav?.();
     },
@@ -494,6 +506,18 @@ export function SessionProvider({ children, onRequestTerminalNav }: SessionProvi
     (root: string, name: string) => {
       spawnOrQueue(name, `${DEV_ROOT}\\${root}\\${name}`);
       narrate(`Opening ${name}.`, { mood: 'focused' });
+    },
+    [spawnOrQueue],
+  );
+
+  /** General spawn used by surfaces that need a specific cwd + an initial
+   * scaffold prompt and/or a resume directive — the Agent Synthesizer (opens a
+   * `claude` authoring session) and the dashboard "resume your open session"
+   * offer (opens the external project's cwd with `--continue`). Same
+   * spawn-or-queue plumbing as openTab/openProjectInTab; navigates to Terminal. */
+  const openTabWith = useCallback(
+    (opts: { title: string; cwd: string; initialPrompt?: string; resume?: ResumeSpec }) => {
+      spawnOrQueue(opts.title, opts.cwd, opts.initialPrompt, opts.resume);
     },
     [spawnOrQueue],
   );
@@ -800,6 +824,7 @@ export function SessionProvider({ children, onRequestTerminalNav }: SessionProvi
       setActiveTab,
       openTab,
       openProjectInTab,
+      openTabWith,
       closeTab,
     }),
     [
@@ -819,6 +844,7 @@ export function SessionProvider({ children, onRequestTerminalNav }: SessionProvi
       setActiveTab,
       openTab,
       openProjectInTab,
+      openTabWith,
       closeTab,
     ],
   );

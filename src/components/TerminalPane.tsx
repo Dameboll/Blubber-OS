@@ -23,7 +23,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
-import { wsClient, type ServerMessage } from '../lib/ws-client';
+import { wsClient, type ServerMessage, type ResumeSpec } from '../lib/ws-client';
 import './TerminalPane.css';
 
 export interface TerminalPaneProps {
@@ -31,6 +31,9 @@ export interface TerminalPaneProps {
   cwd: string;
   /** Typed + submitted into the PTY automatically by the server after spawn. */
   initialPrompt?: string;
+  /** Optional resume directive — appends `--continue` / `--resume <id>` to the
+   *  spawned `claude` so the tab picks up an existing session. */
+  resume?: ResumeSpec;
   /** Panes stay mounted when inactive (display:none) so the PTY keeps running. */
   active: boolean;
   onExit?: (code: number) => void;
@@ -100,7 +103,7 @@ function greenify(s: string): string {
   return s;
 }
 
-export default function TerminalPane({ sessionId, cwd, initialPrompt, active, onExit }: TerminalPaneProps) {
+export default function TerminalPane({ sessionId, cwd, initialPrompt, resume, active, onExit }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -179,7 +182,7 @@ export default function TerminalPane({ sessionId, cwd, initialPrompt, active, on
     // travel over the same socket, so call order here fixes wire order.
     if (!spawnedOnceRef.current) {
       spawnedOnceRef.current = true;
-      wsClient.spawn(sessionId, cwd, initialPrompt);
+      wsClient.spawn(sessionId, cwd, initialPrompt, resume);
     }
     fitIfVisible();
 

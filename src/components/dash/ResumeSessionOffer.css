@@ -1,0 +1,131 @@
+/* ResumeSessionOffer — slim, dismissible "resume your open session" pill,
+   fixed bottom-right so it never disturbs the dashboard's tuned grid. Only its
+   own box takes pointer events; the rest of the screen stays fully interactive. */
+
+.resume-offer {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(420px, calc(100vw - 40px));
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--bg-elevated, oklch(23% 0.01 159)) 92%, transparent);
+  border: 1px solid var(--border-glow, oklch(87% 0.29 142 / 28%));
+  box-shadow: 0 10px 32px oklch(0% 0 0 / 45%);
+  backdrop-filter: blur(8px);
+  animation: resume-offer-in 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes resume-offer-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.resume-offer__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: color-mix(in oklab, var(--core-accent, oklch(74% 0.2 151)) 20%, transparent);
+  color: var(--core-accent-bright, oklch(87% 0.29 142));
+}
+
+.resume-offer__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.resume-offer__lead {
+  font-size: 0.85rem;
+  line-height: 1.3;
+  color: var(--text-primary, oklch(95% 0 0));
+}
+
+.resume-offer__lead strong {
+  color: var(--core-accent-bright, oklch(87% 0.29 142));
+  font-weight: 700;
+}
+
+.resume-offer__sub {
+  font-size: 0.72rem;
+  color: var(--text-secondary, oklch(65% 0 0));
+}
+
+.resume-offer__continue {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--core-accent, oklch(74% 0.2 151));
+  color: oklch(12% 0.04 151);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 160ms ease, transform 160ms ease;
+}
+
+.resume-offer__continue:hover {
+  filter: brightness(1.08);
+}
+
+.resume-offer__continue:active {
+  transform: translateY(1px);
+}
+
+.resume-offer__continue:focus-visible {
+  outline: 2px solid var(--core-accent-bright, oklch(87% 0.29 142));
+  outline-offset: 2px;
+}
+
+.resume-offer__dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary, oklch(65% 0 0));
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.resume-offer__dismiss:hover {
+  background: color-mix(in oklab, var(--text-secondary, oklch(65% 0 0)) 16%, transparent);
+  color: var(--text-primary, oklch(95% 0 0));
+}
+
+.resume-offer__dismiss:focus-visible {
+  outline: 2px solid var(--core-accent, oklch(74% 0.2 151));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resume-offer {
+    animation-duration: 0.01ms;
+  }
+  .resume-offer__continue,
+  .resume-offer__dismiss {
+    transition-duration: 0.01ms;
+  }
+}

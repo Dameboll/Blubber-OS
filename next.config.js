@@ -36,6 +36,12 @@ const nextConfig = {
     // location; otherwise this resolves to <home>/Development on whatever
     // machine actually runs the app.
     NEXT_PUBLIC_BLUBBER_DEV_ROOT: process.env.BLUBBER_DEV_ROOT || path.join(os.homedir(), 'Development'),
+    // Portable ~/.claude path, inlined into both bundles the same way (see
+    // src/lib/claude-dir.ts). The Agent Synthesizer opens a `claude` authoring
+    // session cd'd here so new agents/skills land in the real ~/.claude tree.
+    // Always <home>/.claude regardless of the dev-root override, since that's
+    // where the CLI reads/writes config; override with BLUBBER_CLAUDE_DIR.
+    NEXT_PUBLIC_BLUBBER_CLAUDE_DIR: process.env.BLUBBER_CLAUDE_DIR || path.join(os.homedir(), '.claude'),
   },
 };
 

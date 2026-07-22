@@ -1,0 +1,141 @@
+/* AgentSynthesizer — kit-only "describe an agent/skill and build it" panel.
+   Shares the .acc-log-panel /bg/syslog.webp UFO plate (applied by AgentsScreen);
+   this file only styles the inner controls, in the app's green-slime palette. */
+
+.synth-panel .panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.synth__lead {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-secondary, oklch(65% 0 0));
+}
+
+/* Agent / Skill segmented toggle */
+.synth__toggle {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--bg-primary, oklch(7% 0 0));
+  border: 1px solid var(--border-glow, oklch(87% 0.29 142 / 22%));
+}
+
+.synth__toggle-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary, oklch(65% 0 0));
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.synth__toggle-btn:hover {
+  color: var(--text-primary, oklch(95% 0 0));
+}
+
+.synth__toggle-btn--on {
+  background: color-mix(in oklab, var(--core-accent, oklch(74% 0.2 151)) 22%, transparent);
+  color: var(--core-accent-bright, oklch(87% 0.29 142));
+}
+
+.synth__toggle-btn:focus-visible {
+  outline: 2px solid var(--core-accent, oklch(74% 0.2 151));
+  outline-offset: 2px;
+}
+
+/* Description input */
+.synth__input {
+  width: 100%;
+  resize: vertical;
+  min-height: 68px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-glow, oklch(87% 0.29 142 / 22%));
+  background: var(--bg-primary, oklch(7% 0 0));
+  color: var(--text-primary, oklch(95% 0 0));
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.synth__input::placeholder {
+  color: color-mix(in oklab, var(--text-secondary, oklch(65% 0 0)) 80%, transparent);
+}
+
+.synth__input:focus-visible {
+  outline: none;
+  border-color: var(--core-accent, oklch(74% 0.2 151));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--core-accent, oklch(74% 0.2 151)) 20%, transparent);
+}
+
+/* Synthesize action */
+.synth__actions {
+  display: flex;
+}
+
+.synth__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--core-accent, oklch(74% 0.2 151));
+  color: oklch(12% 0.04 151);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  cursor: pointer;
+  transition: filter 160ms ease, opacity 160ms ease, transform 160ms ease;
+}
+
+.synth__btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.synth__btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.synth__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.synth__btn:focus-visible {
+  outline: 2px solid var(--core-accent-bright, oklch(87% 0.29 142));
+  outline-offset: 2px;
+}
+
+.synth__notice {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--core-accent-bright, oklch(87% 0.29 142));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .synth__toggle-btn,
+  .synth__btn {
+    transition-duration: 0.01ms;
+  }
+}

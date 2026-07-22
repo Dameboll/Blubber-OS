@@ -54,7 +54,7 @@ import {
 import TerminalPane from './TerminalPane';
 import { type AgentInfo } from './AgentCard';
 import { VoiceButton } from './VoiceButton';
-import { wsClient } from '../lib/ws-client';
+import { wsClient, type ResumeSpec } from '../lib/ws-client';
 import { DEV_ROOT } from '../lib/dev-root';
 import './TabBar.css';
 
@@ -92,6 +92,9 @@ interface Tab {
   title: string;
   cwd: string;
   initialPrompt?: string;
+  /** Optional resume directive, forwarded to TerminalPane -> wsClient.spawn so
+   *  this tab's `claude` picks up an existing session (`--continue`/`--resume`). */
+  resume?: ResumeSpec;
   exited: boolean;
 }
 
@@ -110,7 +113,7 @@ export interface TabBarHandle {
   /** Same action a tab-strip click performs: make `id` the active tab (no-op if it doesn't exist). */
   activateTab: (id: string) => void;
   /** Same action the launcher performs: spawn a real PTY tab at `cwd` and focus it. Returns the new tab id. */
-  openTab: (title: string, cwd: string, initialPrompt?: string) => string;
+  openTab: (title: string, cwd: string, initialPrompt?: string, resume?: ResumeSpec) => string;
   /** Same action the tab close button performs: kill the PTY and drop the tab. */
   closeTab: (id: string) => void;
 }
@@ -251,9 +254,9 @@ const TabBar = forwardRef<TabBarHandle, TabBarProps>(function TabBar({ onTabsCha
     return chosenRoot?.folders[0]?.path ?? chosenRoot?.path ?? FALLBACK_CWD;
   }, [projectRoots]);
 
-  const openTab = useCallback((title: string, cwd: string, initialPrompt?: string) => {
+  const openTab = useCallback((title: string, cwd: string, initialPrompt?: string, resume?: ResumeSpec) => {
     const id = createTabId();
-    setTabs((prev) => [...prev, { id, title, cwd, initialPrompt, exited: false }]);
+    setTabs((prev) => [...prev, { id, title, cwd, initialPrompt, resume, exited: false }]);
     setActiveTabId(id);
     setPickerOpen(false);
     return id;
@@ -495,6 +498,7 @@ const TabBar = forwardRef<TabBarHandle, TabBarProps>(function TabBar({ onTabsCha
             sessionId={tab.id}
             cwd={tab.cwd}
             initialPrompt={tab.initialPrompt}
+            resume={tab.resume}
             active={tab.id === activeTabId}
             onExit={() => markExited(tab.id)}
           />

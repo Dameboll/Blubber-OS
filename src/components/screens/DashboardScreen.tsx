@@ -27,7 +27,8 @@
  * VIEW-TAB MINIS (each a real per-section glance in the left preview band —
  * switching tabs never changes the screen height, LAW 2):
  *     - Terminal — the live terminal preview via the anchor portal.
- *     - Agents — the real spawned-agent roster (GET /api/spawned).
+ *     - Agents — the self-fetching Activity Feed (real GET /api/recent, the
+ *       same live skill/agent run feed the Agents screen shows).
  *     - Projects — the real project folders (dash/MiniProjects, self-fetching).
  *     - Chat — Quick Chat, a separate Claude session (dash/QuickChat).
  *     - Memory / Analytics — real bubbles / bars (dash/MiniMemory,
@@ -69,11 +70,12 @@ import {
 } from 'lucide-react';
 import FlubberCharacter from '../FlubberCharacter';
 import FlubberHome from '../FlubberHome';
-import AgentAvatar from '../AgentAvatar';
 import QuickChat from '../dash/QuickChat';
 import MiniMemory from '../dash/MiniMemory';
 import MiniAnalytics from '../dash/MiniAnalytics';
 import MiniProjects from '../dash/MiniProjects';
+import ActivityFeedPanel from '../dash/ActivityFeedPanel';
+import ResumeSessionOffer from '../dash/ResumeSessionOffer';
 import LiveUsageMeter from '../dash/LiveUsageMeter';
 import { useDashboardTerminalAnchor } from '../PersistentTerminalHost';
 import { Panel, StatChip } from '../ui';
@@ -96,16 +98,6 @@ import '../../styles/dashboard-cohesion.css';
 interface DailyPoint {
   date: string;
   totalTokens: number;
-}
-
-/** Mirrors src/server/spawned-store.ts's SpawnedAgent shape — the Agents tab
- * mini's roster comes straight from GET /api/spawned, the same store the Agent
- * Control Center reads. */
-interface SpawnedAgent {
-  id: string;
-  name: string;
-  purpose: string;
-  createdAt: string;
 }
 
 interface WeeklyData {
@@ -164,18 +156,6 @@ function weekdayLabel(dateStr: string): string {
   return parsed.toLocaleDateString('en-US', { weekday: 'short' });
 }
 
-/** Real "time ago" for a real event timestamp (ISO). */
-function formatRelTime(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return '';
-  const mins = Math.max(0, Math.floor((Date.now() - then) / 60_000));
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
-}
-
 // ---------------------------------------------------------------------------
 // Local hooks
 // ---------------------------------------------------------------------------
@@ -207,41 +187,6 @@ function useWeeklyData(): { data: WeeklyData | null; state: FetchState } {
   }, []);
 
   return { data, state };
-}
-
-/** Fetches the real spawned-agent roster from GET /api/spawned (the same store
- * the Agent Control Center reads/writes) and re-polls so the Agents tab mini's
- * count stays live. Empty until an agent is actually spawned. */
-function useSpawnedAgents(pollMs: number): { agents: SpawnedAgent[]; state: FetchState } {
-  const [agents, setAgents] = useState<SpawnedAgent[]>([]);
-  const [state, setState] = useState<FetchState>('loading');
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = () => {
-      fetch('/api/spawned')
-        .then((res) => {
-          if (!res.ok) throw new Error(`spawned fetch failed: ${res.status}`);
-          return res.json() as Promise<{ agents?: SpawnedAgent[] }>;
-        })
-        .then((json) => {
-          if (cancelled) return;
-          setAgents(Array.isArray(json?.agents) ? json.agents : []);
-          setState('ready');
-        })
-        .catch(() => {
-          if (!cancelled) setState('error');
-        });
-    };
-    load();
-    const id = setInterval(load, pollMs);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, [pollMs]);
-
-  return { agents, state };
 }
 
 // NOTE: this screen no longer polls /api/system itself. SessionProvider already
@@ -285,7 +230,6 @@ export default function DashboardScreen({ className }: DashboardScreenProps) {
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [activeTab, setActiveTab] = useState<TabConfig['id']>('terminal');
-  const spawned = useSpawnedAgents(15_000);
   // Anchor-portal registration for the Terminal tab tile (PersistentTerminalHost
   // measures this ref's real rect and portals the SAME live terminal instance
   // on top of it while this tab is active — see that file's header).
@@ -455,62 +399,15 @@ export default function DashboardScreen({ className }: DashboardScreenProps) {
             </div>
           </div>
         ) : activeTab === 'agents' ? (
-          // Agents tab mini — a live glance at the real spawned-agent roster
-          // (GET /api/spawned), the same store the Agent Control Center reads.
-          <div className="dashboard-tabmini">
-            <div className="dashboard-tabmini__head">
-              <span className="dashboard-tabmini__head-icon">
-                <Bot size={14} aria-hidden="true" />
-              </span>
-              <span className="dashboard-tabmini__head-label">Spawned Agents</span>
-              <span className="dashboard-tabmini__head-count">
-                {spawned.state === 'loading' ? '—' : spawned.agents.length}
-              </span>
-            </div>
-            <div className="dashboard-tabmini__body">
-              {spawned.state === 'loading' && <p className="dashboard-tabmini__empty">Loading roster…</p>}
-              {spawned.state === 'error' && (
-                <p className="dashboard-tabmini__empty">Couldn&rsquo;t load the roster.</p>
-              )}
-              {spawned.state === 'ready' && spawned.agents.length === 0 && (
-                <p className="dashboard-tabmini__empty">
-                  No agents spawned yet — deploy a squad from the Agents screen.
-                </p>
-              )}
-              {spawned.state === 'ready' && spawned.agents.length > 0 && (
-                <div className="dashboard-tabmini__list" data-flubber-avoid="true">
-                  {[...spawned.agents]
-                    .reverse()
-                    .slice(0, 6)
-                    .map((agent) => (
-                      <div key={agent.id} className="dashboard-tabmini__row">
-                        <AgentAvatar
-                          name={agent.name}
-                          description={agent.purpose}
-                          size={24}
-                          tier="mid"
-                          className="dashboard-tabmini__avatar"
-                        />
-                        <span className="dashboard-tabmini__row-main">
-                          <span className="dashboard-tabmini__row-name">{agent.name}</span>
-                          <span className="dashboard-tabmini__row-sub">{agent.purpose}</span>
-                        </span>
-                        <span className="dashboard-tabmini__row-time">{formatRelTime(agent.createdAt)}</span>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
-            <button
-              type="button"
-              className="dashboard-tabmini__foot"
-              onClick={() =>
-                showHint('The full Agent Control Center lives in the Agents screen — head over from the sidebar.')
-              }
-            >
-              Open Agents →
-            </button>
-          </div>
+          // Agents tab — the self-fetching Activity Feed (real GET /api/recent),
+          // the same live skill/agent run feed the Agents screen shows. Sits in
+          // the left cell of the midrow next to the always-present Live Usage
+          // pill; "View Full Activity" points at the Agents screen.
+          <ActivityFeedPanel
+            onViewFull={() =>
+              showHint('The full activity feed lives on the Agents screen — head over from the sidebar.')
+            }
+          />
         ) : activeTab === 'files' ? (
           // Projects tab — real 8-most-recent grid, sorted by real doc mtime.
           // See dash/MiniProjects.tsx.
@@ -551,6 +448,10 @@ export default function DashboardScreen({ className }: DashboardScreenProps) {
         />
       </div>
 
+      {/* "Pick up your open Claude session here?" — a slim, dismissible,
+          position:fixed offer (all builds). Self-fetching; renders nothing
+          unless a fresh session in another project is detected. */}
+      <ResumeSessionOffer />
     </div>
   );
 }

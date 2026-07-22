@@ -13,6 +13,7 @@
 
 import os from "node:os";
 import * as pty from "node-pty";
+import type { ResumeSpec } from "../lib/ws-client";
 
 const isWindows = os.platform() === "win32";
 
@@ -28,6 +29,10 @@ export interface SpawnSessionOptions {
   cwd: string;
   /** Optional prompt text to type + submit once the session is up. */
   initialPrompt?: string;
+  /** Optional resume directive — appends `--continue` / `--resume <id>` to the
+   *  `claude` launch args so the tab picks up an existing session (see
+   *  buildLaunchCommand). Absent = a fresh session. */
+  resume?: ResumeSpec;
   cols?: number;
   rows?: number;
   onData: (data: string) => void;
@@ -55,13 +60,39 @@ const sessions = new Map<string, TrackedSession>();
  * POSIX: launch the user's shell in login+interactive mode and have it run
  * `claude`, so PATH/nvm/shell rc files resolve exactly like a real terminal.
  */
-function buildLaunchCommand(): { file: string; args: string[] } {
-  if (isWindows) {
-    const comspec = process.env.ComSpec || "cmd.exe";
-    return { file: comspec, args: ["/d", "/s", "/c", "claude"] };
+// A Claude session id is a UUID the CLI itself emits — never user-typed. Still,
+// validate it strictly before it reaches a launch arg (defense in depth), so a
+// malformed value can't inject shell metacharacters on the POSIX path.
+const SESSION_ID_RE = /^[A-Za-z0-9._-]{1,128}$/;
+
+function buildLaunchCommand(resume?: ResumeSpec): { file: string; args: string[] } {
+  // Extra `claude` flags that resume an existing session. `--continue` picks up
+  // the latest session in this cwd; `--resume <id>` targets a specific one.
+  const claudeArgs: string[] = [];
+  if (resume?.mode === "continue") {
+    claudeArgs.push("--continue");
+  } else if (resume?.mode === "session") {
+    if (SESSION_ID_RE.test(resume.id)) {
+      claudeArgs.push("--resume", resume.id);
+    } else {
+      // Bad id — fall back to a fresh session rather than launch anything
+      // derived from an untrusted string. Loud, never silent.
+      console.error(`[pty-manager] ignoring resume: invalid session id ${JSON.stringify(resume.id)}`);
+    }
   }
+
+  if (isWindows) {
+    // cmd.exe with `claude` + its flags as SEPARATE argv tokens (node-pty quotes
+    // each) — never a single interpolated command string.
+    const comspec = process.env.ComSpec || "cmd.exe";
+    return { file: comspec, args: ["/d", "/s", "/c", "claude", ...claudeArgs] };
+  }
+  // Login+interactive shell so PATH/nvm/rc resolve exactly like a real terminal,
+  // but pass claude's flags through "$@" as separate positional args rather than
+  // interpolating them into the -lc script string — so no arg (even a rogue
+  // session id) can break out into shell command context.
   const shell = process.env.SHELL || "/bin/bash";
-  return { file: shell, args: ["-lc", "claude"] };
+  return { file: shell, args: ["-lc", 'claude "$@"', "claude", ...claudeArgs] };
 }
 
 /**
@@ -70,14 +101,14 @@ function buildLaunchCommand(): { file: string; args: string[] } {
  * reconnecting client can't orphan a second process.
  */
 export function spawnSession(opts: SpawnSessionOptions): void {
-  const { sessionId, cwd, initialPrompt, cols, rows, onData, onExit, onSpawned } = opts;
+  const { sessionId, cwd, initialPrompt, resume, cols, rows, onData, onExit, onSpawned } = opts;
 
   if (sessions.has(sessionId)) {
     onSpawned?.();
     return;
   }
 
-  const { file, args } = buildLaunchCommand();
+  const { file, args } = buildLaunchCommand(resume);
 
   let proc: pty.IPty;
   try {

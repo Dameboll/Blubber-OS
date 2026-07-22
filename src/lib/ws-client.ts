@@ -10,8 +10,14 @@
  * Do not diverge from the message shapes below without updating both sides.
  */
 
+/** How a spawned tab should resume an existing Claude session, threaded all
+ *  the way down to pty-manager's `claude` launch args: `continue` appends
+ *  `--continue` (resume the latest session in that cwd), `session` appends
+ *  `--resume <id>` (a specific, non-latest session). Absent = a fresh session. */
+export type ResumeSpec = { mode: "continue" } | { mode: "session"; id: string };
+
 export type ClientMessage =
-  | { type: "spawn"; sessionId: string; cwd: string; initialPrompt?: string }
+  | { type: "spawn"; sessionId: string; cwd: string; initialPrompt?: string; resume?: ResumeSpec }
   | { type: "input"; sessionId: string; data: string }
   | { type: "resize"; sessionId: string; cols: number; rows: number }
   | { type: "kill"; sessionId: string };
@@ -210,8 +216,8 @@ class WsClient {
     this.dispatch(message);
   }
 
-  spawn(sessionId: string, cwd: string, initialPrompt?: string): void {
-    this.dispatch({ type: "spawn", sessionId, cwd, initialPrompt });
+  spawn(sessionId: string, cwd: string, initialPrompt?: string, resume?: ResumeSpec): void {
+    this.dispatch({ type: "spawn", sessionId, cwd, initialPrompt, resume });
   }
 
   input(sessionId: string, data: string): void {

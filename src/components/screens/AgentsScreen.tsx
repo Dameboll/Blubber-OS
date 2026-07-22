@@ -75,12 +75,14 @@ import FlubberHome, { type FlubberPlaymateHandle } from '../FlubberHome';
 import AgentWorkstation from '../AgentWorkstation';
 import TopAgentsPanel from '../dash/TopAgentsPanel';
 import ActivityFeedPanel from '../dash/ActivityFeedPanel';
+import AgentSynthesizer from '../agents/AgentSynthesizer';
 import { AgentPoolWorld, type PoolControls } from '../pool/AgentPoolWorld';
 import HandoffOverlay, { type HandoffOverlayHandle } from '../agents/HandoffOverlay';
 import Workfloor, { type WorkfloorBayView } from '../agents/Workfloor';
 import { useFlubberBrainState } from '../FlubberBrainProvider';
 import { Panel } from '../ui';
 import { useAgentSpawn } from '../../hooks/useAgentSpawn';
+import { useKitInstalled } from '../../hooks/useKitInstalled';
 import { useSession } from '../../context/SessionProvider';
 import { narrate } from '../../lib/flubber3d/narration';
 import { activityFromExpression, activityFromRealEvent, type FlubberActivity } from '../../lib/flubber-activity';
@@ -889,6 +891,10 @@ export default function AgentsScreen({ className }: AgentsScreenProps) {
   // guessed. Null when no terminal tab is open or its cwd isn't a known
   // project root (see SessionProvider.deriveProjectIdentity).
   const { sessions, activeSessionId, isWorking } = useSession();
+  // Starter-Kit gate (mirrors RecommendedPlugins): kit build gets the Agent
+  // Synthesizer in the rail slot; free build keeps the Activity Feed. null while
+  // the check is in flight → treat as free (render the Activity Feed).
+  const kitInstalled = useKitInstalled();
   const activeProjectName = useMemo(
     () => sessions.find((s) => s.id === activeSessionId)?.projectName ?? null,
     [sessions, activeSessionId],
@@ -1805,7 +1811,14 @@ export default function AgentsScreen({ className }: AgentsScreenProps) {
 
         <TopAgentsPanel className="acc-perf-panel" avoidRoam />
 
-        <ActivityFeedPanel className="acc-log-panel" avoidRoam />
+        {/* Kit build → Agent Synthesizer (describe an agent/skill, Blubber
+            builds it). Free build → the Activity Feed. Both keep the
+            acc-log-panel class so the /bg/syslog.webp UFO plate is identical. */}
+        {kitInstalled ? (
+          <AgentSynthesizer className="acc-log-panel" avoidRoam />
+        ) : (
+          <ActivityFeedPanel className="acc-log-panel" avoidRoam />
+        )}
         </div>
       </div>
 

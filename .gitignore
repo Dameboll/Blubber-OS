@@ -26,3 +26,4 @@ dist-electron/
 test-results/
 playwright-report/
 blob-report/
+.claude-session/

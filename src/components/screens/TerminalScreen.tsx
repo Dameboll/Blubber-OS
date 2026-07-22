@@ -257,8 +257,8 @@ export default function TerminalScreen({ className, compact }: TerminalScreenPro
   useEffect(() => {
     registerTabControl({
       activateTab: (id: string) => tabBarRef.current?.activateTab(id),
-      openTab: (title: string, cwd: string, initialPrompt?: string) =>
-        tabBarRef.current?.openTab(title, cwd, initialPrompt) ?? null,
+      openTab: (title, cwd, initialPrompt, resume) =>
+        tabBarRef.current?.openTab(title, cwd, initialPrompt, resume) ?? null,
       closeTab: (id: string) => tabBarRef.current?.closeTab(id),
     });
     return () => registerTabControl(null);

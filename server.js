@@ -157,12 +157,13 @@ app.prepare().then(() => {
 
       switch (msg.type) {
         case "spawn": {
-          const { sessionId, cwd, initialPrompt } = msg;
+          const { sessionId, cwd, initialPrompt, resume } = msg;
           ownedSessions.add(sessionId);
           spawnSession({
             sessionId,
             cwd,
             initialPrompt,
+            resume,
             onData: (data) => send({ type: "output", sessionId, data }),
             onExit: (code) => {
               send({ type: "exit", sessionId, code });

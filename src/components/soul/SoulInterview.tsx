@@ -40,6 +40,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { SOUL_QUESTIONS } from '../../lib/soul-questions';
 import { speak } from '../../lib/blubber-voice';
+import FloatingBlubber from '../FloatingBlubber';
 import './SoulInterview.css';
 
 type Phase = 'intro' | 'question' | 'done';
@@ -132,8 +133,7 @@ export default function SoulInterview({ onClose }: SoulInterviewProps) {
       <div className="soul__veil" aria-hidden="true" />
 
       <div className="soul__card">
-        {/* eslint-disable-next-line @next/next/no-img-element -- static /public asset, app-wide convention */}
-        <img className="soul__blubber" src="/blubber-hero.png" alt="" aria-hidden="true" />
+        <FloatingBlubber size={132} className="soul__blubber" />
 
         {phase === 'intro' && (
           <div className="soul__bubble">

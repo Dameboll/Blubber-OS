@@ -38,25 +38,10 @@
 
 /* Same treatment as DashboardTour's escort Blubber: art's own landscape
    aspect, no circle amputation, slow bob. */
+/* Now a <FloatingBlubber> (glossy transparent Blubber, owns its own float +
+   glow + squash-stretch). This class only holds it in the flex row. */
 .soul__blubber {
-  width: 148px;
-  height: 90px;
   flex-shrink: 0;
-  border-radius: 16px;
-  object-fit: cover;
-  border: 1px solid var(--border-glow, oklch(30% 0.02 160));
-  box-shadow: 0 0 32px oklch(74% 0.2 151 / 0.35);
-  animation: soul-bob 3.2s ease-in-out infinite;
-}
-
-@keyframes soul-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
 }
 
 .soul__bubble {

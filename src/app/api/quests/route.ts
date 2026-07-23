@@ -16,9 +16,22 @@ import { claimQuest, getQuestState } from '../../../server/quest-store';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+// Short module-scope TTL cache: getQuestState() fires ~10 separate SQLite COUNT
+// queries, and this route is polled every 60s from the pet screen. A ~15s TTL
+// absorbs mounts/double-effects cheaply. POST (claimQuest) clears it so a claim
+// is reflected immediately rather than waiting out the window.
+const CACHE_TTL_MS = 15_000;
+let cache: { at: number; payload: ReturnType<typeof getQuestState> } | null = null;
+
 export async function GET() {
   try {
-    return NextResponse.json(getQuestState());
+    const now = Date.now();
+    if (cache && now - cache.at < CACHE_TTL_MS) {
+      return NextResponse.json(cache.payload);
+    }
+    const payload = getQuestState();
+    cache = { at: now, payload };
+    return NextResponse.json(payload);
   } catch (err) {
     console.error('[api/quests] GET failed:', err);
     return NextResponse.json({ error: 'Failed to read quest state' }, { status: 500 });
@@ -35,6 +48,7 @@ export async function POST(request: Request) {
     if (!result.ok) {
       return NextResponse.json({ error: result.reason }, { status: 409 });
     }
+    cache = null; // a claim changed state — don't serve the pre-claim snapshot
     return NextResponse.json({ awarded: result.awarded, state: result.state });
   } catch (err) {
     console.error('[api/quests] POST failed:', err);

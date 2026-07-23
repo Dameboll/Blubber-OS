@@ -24,14 +24,33 @@ export const runtime = "nodejs";
 const TOP_N = 5;
 const RANGES = new Set(["daily", "weekly", "alltime"]);
 
+// Module-scope TTL cache, same precedent as /api/agents and /api/insights.
+// This route is polled every 5s from AgentsScreen AND fetched from the Dashboard
+// Top Agents panel; each uncached call ran a real SQLite aggregate. An ~8s TTL
+// (just over the client cadence) collapses that to one query per range per
+// window. Keyed by range + connection state so connecting a workspace can't
+// serve a stale placeholder past the TTL.
+const CACHE_TTL_MS = 8000;
+const cache = new Map<string, { at: number; payload: { agents: NamedCount[]; range: string } }>();
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const rangeParam = searchParams.get("range") ?? "weekly";
     const range = RANGES.has(rangeParam) ? rangeParam : "weekly";
+    const connected = isWorkspaceConnected();
 
-    if (!isWorkspaceConnected()) {
-      return NextResponse.json({ agents: getDemoTopAgents(range as DemoTopAgentsRange), range });
+    const cacheKey = `${range}:${connected ? 1 : 0}`;
+    const now = Date.now();
+    const hit = cache.get(cacheKey);
+    if (hit && now - hit.at < CACHE_TTL_MS) {
+      return NextResponse.json(hit.payload);
+    }
+
+    if (!connected) {
+      const payload = { agents: getDemoTopAgents(range as DemoTopAgentsRange), range };
+      cache.set(cacheKey, { at: now, payload });
+      return NextResponse.json(payload);
     }
 
     ensureIndexed();
@@ -45,7 +64,9 @@ export async function GET(request: Request) {
       agents = getTopByCategory("agent", TOP_N, 7);
     }
 
-    return NextResponse.json({ agents, range });
+    const payload = { agents, range };
+    cache.set(cacheKey, { at: now, payload });
+    return NextResponse.json(payload);
   } catch (err) {
     console.error("[api/top-agents] failed to load top agents:", err);
     return NextResponse.json({ error: "Failed to load top agents", agents: [] }, { status: 500 });

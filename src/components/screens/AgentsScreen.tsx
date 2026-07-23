@@ -1779,6 +1779,7 @@ export default function AgentsScreen({ className }: AgentsScreenProps) {
                 onVignette={handlePoolVignette}
                 isWorking={isWorking}
                 onHeroGrab={handleHeroGrab}
+                recentEvents={recent.events}
                 onControlsReady={(controls) => {
                   poolControlsRef.current = controls;
                 }}

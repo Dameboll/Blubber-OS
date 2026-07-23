@@ -100,6 +100,10 @@ export interface AgentPoolWorldProps {
   /** Receives the break-only +1 / EMPTY POOL controls so the caller can render
    *  the buttons (AgentsScreen owns them). Null on unmount. */
   onControlsReady?: (controls: PoolControls | null) => void;
+  /** Recent activity events (from AgentsScreen's own /api/recent poll) used to
+   *  set ambient pool energy. Passed down instead of a second identical fetch —
+   *  AgentsScreen already polls this endpoint on the same screen. */
+  recentEvents?: { ts: string }[];
 }
 
 // Pool holds a small calm cluster (design call 2026-07-20: "lessen the pool,
@@ -109,7 +113,6 @@ const MAX_LIVE = 5;
 const RESIDENT_SIZE = 44;
 const RESIDENT_TIER: FlubberTier = 'mid'; // shiny clearcoat-goo jelly (LANE M)
 const BALL_SIZE = 11;
-const RECENT_POLL_MS = 10_000;
 const ENERGY_WINDOW_MS = 5 * 60_000; // events within 5 min count as "recent"
 
 // PERF (load-time fix, docs/plans/booger-eradication-2026-07-20.md Phase 2):
@@ -140,6 +143,7 @@ export function AgentPoolWorld({
   isWorking = false,
   onHeroGrab,
   onControlsReady,
+  recentEvents,
 }: AgentPoolWorldProps) {
   const scheduler = useMemo(() => createPoolScheduler(), []);
 
@@ -259,29 +263,18 @@ export function AgentPoolWorld({
   }, []);
 
   // ── ambient energy: real recent activity → livelier pool ──────────────────
+  // Derived from AgentsScreen's own /api/recent poll (passed via recentEvents),
+  // not a second fetch — this pool only ever renders inside AgentsScreen, which
+  // already polls that endpoint on the same screen. Recomputes whenever the
+  // events prop changes.
   useEffect(() => {
-    let cancelled = false;
-    const load = () => {
-      fetch(`/api/recent?limit=10`)
-        .then((res) => (res.ok ? (res.json() as Promise<{ events?: { ts: string }[] }>) : null))
-        .then((json) => {
-          if (cancelled || !json) return;
-          const now = Date.now();
-          const recent = (json.events ?? []).filter((e) => {
-            const t = new Date(e.ts).getTime();
-            return !Number.isNaN(t) && now - t < ENERGY_WINDOW_MS;
-          }).length;
-          scheduler.setEnergy(recent === 0 ? 0.12 : Math.min(1, recent / 6));
-        })
-        .catch(() => {});
-    };
-    load();
-    const id = window.setInterval(load, RECENT_POLL_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [scheduler]);
+    const now = Date.now();
+    const recent = (recentEvents ?? []).filter((e) => {
+      const t = new Date(e.ts).getTime();
+      return !Number.isNaN(t) && now - t < ENERGY_WINDOW_MS;
+    }).length;
+    scheduler.setEnergy(recent === 0 ? 0.12 : Math.min(1, recent / 6));
+  }, [scheduler, recentEvents]);
 
   // ── break-only controls handed up to the caller ───────────────────────────
   const addOne = useCallback(() => {

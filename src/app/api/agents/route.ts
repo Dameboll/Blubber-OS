@@ -104,22 +104,29 @@ async function readRoster(): Promise<AgentSummary[]> {
 
   const mdFiles = entries.filter((entry) => entry.isFile() && entry.name.endsWith(".md"));
 
-  const agents: AgentSummary[] = [];
-  for (const entry of mdFiles) {
-    const filePath = path.join(AGENTS_DIR, entry.name);
-    try {
-      const content = await fs.readFile(filePath, "utf-8");
-      const { name, description } = parseFrontmatter(content);
-      agents.push({
-        name: name ?? entry.name.replace(/\.md$/, ""),
-        description: description ?? "",
-        file: entry.name,
-      });
-    } catch (err) {
-      console.error(`[api/agents] failed to parse ${entry.name}:`, err);
-    }
-  }
+  // Read every agent .md in PARALLEL — a machine with the full ECC library can
+  // have 150+ files here, and a sequential await-per-file cold load stalled the
+  // roster for seconds on first paint (the TTL cache only helps AFTER that).
+  // Promise.all collapses it to roughly one file-read's latency.
+  const settled = await Promise.all(
+    mdFiles.map(async (entry): Promise<AgentSummary | null> => {
+      const filePath = path.join(AGENTS_DIR, entry.name);
+      try {
+        const content = await fs.readFile(filePath, "utf-8");
+        const { name, description } = parseFrontmatter(content);
+        return {
+          name: name ?? entry.name.replace(/\.md$/, ""),
+          description: description ?? "",
+          file: entry.name,
+        };
+      } catch (err) {
+        console.error(`[api/agents] failed to parse ${entry.name}:`, err);
+        return null;
+      }
+    }),
+  );
 
+  const agents: AgentSummary[] = settled.filter((a): a is AgentSummary => a !== null);
   agents.sort((a, b) => a.name.localeCompare(b.name));
 
   return agents;

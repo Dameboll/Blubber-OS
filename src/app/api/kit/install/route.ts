@@ -41,7 +41,7 @@ import os from "node:os";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { markKitInstalled, hasInstalledKit, getKitInstalledAt } from "../../../../server/kit-store";
-import { writeKitMarker } from "../../../../server/kit-marker";
+import { writeKitMarker, readKitMarker } from "../../../../server/kit-marker";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -181,7 +181,17 @@ function stepError(
 }
 
 export async function GET() {
-  return NextResponse.json({ installed: hasInstalledKit(), installedAt: getKitInstalledAt() });
+  // Source of truth for "is the Starter Kit on this machine" is the filesystem
+  // marker (~/.claude/.blubber-kit.json), not just this app's SQLite flag: the
+  // marker lives WITH the installed kit files, survives the app's own DB being
+  // reset/re-created (a fresh packaged install has an empty DB), and is what the
+  // onboarding scan already keys off. So a marker present == kit installed, even
+  // if this install's DB never recorded the flag. Fall back to the DB flag when
+  // there's no marker (older installs that predate the marker write).
+  const marker = readKitMarker();
+  const installed = marker !== null || hasInstalledKit();
+  const installedAt = marker?.installedAt ?? getKitInstalledAt();
+  return NextResponse.json({ installed, installedAt });
 }
 
 export async function POST(request: Request) {

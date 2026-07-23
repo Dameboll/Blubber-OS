@@ -69,7 +69,17 @@ function startServer() {
   const serverEntry = path.join(appRoot, "server.js");
   const { spawn } = require("node:child_process");
 
-  const runAsElectronNode = process.env.BLUBBER_ELECTRON_SPAWN_AS_NODE === "1";
+  // A packaged install must be self-contained: a beginner buyer has no
+  // guarantee of a system `node` on PATH, and the server can't boot without
+  // one, so onboarding (which runs INSIDE the app) could never rescue it.
+  // Electron's own binary IS a Node runtime (ELECTRON_RUN_AS_NODE=1), and it
+  // always ships with the app — so packaged builds always spawn through it.
+  // Native modules (better-sqlite3/node-pty) are rebuilt against Electron's
+  // ABI before packaging via `npm run rebuild:electron` (npmRebuild:false in
+  // electron-builder.yml keeps those already-correct binaries untouched).
+  // The env override still forces this mode for a dev smoke-test of the path.
+  const runAsElectronNode =
+    app.isPackaged || process.env.BLUBBER_ELECTRON_SPAWN_AS_NODE === "1";
   const env = {
     ...process.env,
     PORT: String(PORT),

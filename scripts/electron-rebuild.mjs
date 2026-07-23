@@ -38,13 +38,23 @@
  * `postinstall` step must never brick the app it's attached to.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, copyFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.dirname(scriptDir);
+
+// Only better-sqlite3 is a classic (V8-ABI) addon that must be recompiled for
+// Electron's Node ABI. node-pty 1.x ships N-API prebuilds (prebuilds/win32-x64/
+// pty.node + conpty.node), which are ABI-stable and load unchanged under both
+// system Node and Electron — recompiling it is not just unnecessary, it FAILS
+// on Windows (its winpty dep's GetCommitHash.bat build step is broken from an
+// npm tarball), which used to abort the whole rebuild and revert better-sqlite3
+// too. So the Electron rebuild targets better-sqlite3 only; node-pty keeps its
+// prebuilt binary. `npm rebuild` in the restore path still no-ops safely on it.
+const ELECTRON_REBUILD_MODULES = ["better-sqlite3"];
 const NATIVE_MODULES = ["better-sqlite3", "node-pty"];
 
 async function main() {
@@ -62,11 +72,49 @@ async function main() {
   await rebuild({
     buildPath: projectRoot,
     electronVersion,
-    onlyModules: NATIVE_MODULES,
+    onlyModules: ELECTRON_REBUILD_MODULES,
   });
 
+  // @electron/rebuild writes better-sqlite3's Electron-ABI binary to
+  // bin/<platform>-<arch>-<abi>/better-sqlite3.node but LEAVES the stale
+  // system-Node binary in build/Release/better_sqlite3.node. better-sqlite3's
+  // loader resolves build/Release FIRST, so at runtime under Electron the
+  // server dlopen's the wrong ABI (NODE_MODULE_VERSION 137 vs 148) and every
+  // DB route 500s. Overwrite build/Release with the freshly built Electron-ABI
+  // binary (the newest bin/*/better-sqlite3.node) so the loader gets the right
+  // one. Without this the packaged app boots but its whole database layer dies.
+  syncElectronBinaryIntoBuildRelease("better-sqlite3");
+
   console.log(
-    `[electron-rebuild] better-sqlite3 + node-pty rebuilt for Electron ${electronVersion}`,
+    `[electron-rebuild] better-sqlite3 rebuilt for Electron ${electronVersion} ` +
+      `(node-pty uses its N-API prebuild, no recompile needed)`,
+  );
+}
+
+/**
+ * Copy the freshly built Electron-ABI binary from better-sqlite3's bin/
+ * output dir over build/Release/better_sqlite3.node, which better-sqlite3's
+ * loader resolves first. The correct binary is the most-recently-modified
+ * bin/<platform>-<arch>-<abi>/better-sqlite3.node (just written by rebuild()).
+ */
+function syncElectronBinaryIntoBuildRelease(moduleName) {
+  const moduleRoot = path.join(projectRoot, "node_modules", moduleName);
+  const binRoot = path.join(moduleRoot, "bin");
+  const target = path.join(moduleRoot, "build", "Release", "better_sqlite3.node");
+  if (!existsSync(binRoot)) return;
+
+  let newest = null;
+  for (const dir of readdirSync(binRoot)) {
+    const candidate = path.join(binRoot, dir, "better-sqlite3.node");
+    if (!existsSync(candidate)) continue;
+    const mtime = statSync(candidate).mtimeMs;
+    if (!newest || mtime > newest.mtime) newest = { path: candidate, mtime };
+  }
+  if (!newest) return;
+
+  copyFileSync(newest.path, target);
+  console.log(
+    `[electron-rebuild] synced ${path.relative(moduleRoot, newest.path)} -> build/Release (Electron ABI)`,
   );
 }
 

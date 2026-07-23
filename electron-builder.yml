@@ -30,12 +30,27 @@
 appId: com.dameos.blubber
 productName: Blubber
 
+# asar MUST be false. electron/main.js spawns the real server.js as a child
+# process (Electron-as-node) and Next.js reads its production build (.next-build),
+# src/, and node_modules from real files on disk at runtime — none of that works
+# from inside an app.asar archive, and getAppRoot() points the child's cwd at a
+# real resources/app/ directory that only exists when asar is off. With asar on
+# (the electron-builder default), the packaged app throws ENOENT spawning the
+# server and the window never loads.
+asar: false
+
 directories:
   output: dist-electron
   buildResources: build
 
 files:
   - "!.next/**"
+  # .remember/ is a dev session-memory tool that writes/deletes a transient
+  # tmp/save.lock mid-run; electron-builder's glob raced it and crashed with
+  # ENOENT. Never part of the shipped app.
+  - "!.remember/**"
+  - "!.claude-session/**"
+  - "!docs/**"
   - "!.next-soak/**"
   - "!.next-verify/**"
   - "!dist-electron/**"

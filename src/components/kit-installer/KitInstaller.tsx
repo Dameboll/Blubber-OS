@@ -34,9 +34,10 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, FolderInput, Loader2, Package, Sparkles, XCircle } from 'lucide-react';
+import { CheckCircle2, FolderInput, FolderSearch, Loader2, Package, ShoppingBag, Sparkles, XCircle } from 'lucide-react';
 import { Panel } from '../ui';
 import { requestTour } from '../../lib/tour';
+import { pickFolder, isElectron, SHOPIFY_KIT_URL } from '../../lib/native';
 import './KitInstaller.css';
 
 type KitStep = 'manifest' | 'claudeMd' | 'agents' | 'skills' | 'commands' | 'structure';
@@ -146,9 +147,26 @@ export default function KitInstaller() {
       });
   }, [kitPath, phase]);
 
+  // Native OS folder picker (packaged app only) so a buyer doesn't have to
+  // hand-type the path to their downloaded kit. Falls back to the text field
+  // in a plain browser tab where the picker isn't available.
+  const handleBrowse = useCallback(async () => {
+    const picked = await pickFolder('Select your extracted Starter Kit folder');
+    if (picked) setKitPath(picked);
+  }, []);
+
+  // Sends the user to the Shopify checkout in their real browser (Electron's
+  // setWindowOpenHandler routes window.open to openExternal). Buying is how a
+  // free user gets the kit files; possession of those files IS the unlock.
+  const handleBuy = useCallback(() => {
+    window.open(SHOPIFY_KIT_URL, '_blank', 'noopener,noreferrer');
+  }, []);
+
   const isInstalling = phase === 'installing';
   const narration = result?.narration ?? null;
   const stepsCompleted = result?.stepsCompleted ?? [];
+  const showBuy = !probe?.installed && phase !== 'installing';
+  const canBrowse = isElectron();
 
   return (
     <Panel title="Starter Kit" className="kit-installer-panel">
@@ -158,6 +176,19 @@ export default function KitInstaller() {
           Point this at your extracted Starter Kit folder to install your CLAUDE.md, agents, skills, and
           project structure onto this machine.
         </p>
+
+        {showBuy && (
+          <div className="kit-installer__buy">
+            <p className="kit-installer__buy-copy">
+              Don&apos;t have the Starter Kit yet? Get it and Blubber sets up your whole workspace —
+              CLAUDE.md, agents, skills, and folder structure — for you.
+            </p>
+            <button type="button" className="kit-installer__buy-btn" onClick={handleBuy}>
+              <ShoppingBag size={15} aria-hidden="true" />
+              Get the Starter Kit
+            </button>
+          </div>
+        )}
 
         {probe?.installed && phase !== 'installing' && (
           <p className="kit-installer__already">
@@ -181,6 +212,17 @@ export default function KitInstaller() {
               spellCheck={false}
             />
           </div>
+          {canBrowse && (
+            <button
+              type="button"
+              className="kit-installer__browse"
+              onClick={handleBrowse}
+              disabled={isInstalling}
+            >
+              <FolderSearch size={14} aria-hidden="true" />
+              Browse
+            </button>
+          )}
           <button
             type="button"
             className="kit-installer__btn"

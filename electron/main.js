@@ -35,7 +35,7 @@
 
 const path = require("node:path");
 const http = require("node:http");
-const { app, BrowserWindow, dialog, shell: electronShell } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, shell: electronShell } = require("electron");
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const HOST = "127.0.0.1";
@@ -47,6 +47,19 @@ const POLL_TIMEOUT_MS = 15000;
 let serverProcess = null;
 let mainWindow = null;
 let quitting = false;
+
+// Native "choose a folder" dialog for the renderer (see electron/preload.js).
+// Powers both "point Blubber at a workspace" and "install the Starter Kit from
+// the folder you downloaded from Shopify". Returns the chosen absolute path, or
+// null on cancel. openDirectory only — never a file, never multi-select.
+ipcMain.handle("blubber:pick-folder", async (_event, options) => {
+  const result = await dialog.showOpenDialog(mainWindow ?? undefined, {
+    title: options?.title || "Choose a folder",
+    properties: ["openDirectory"],
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
 
 /**
  * Project root that contains server.js and everything it needs (src/,

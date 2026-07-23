@@ -1,15 +1,21 @@
 /**
  * electron/preload.js
  *
- * Intentionally minimal. The renderer loads the exact same Next.js UI as
- * any browser tab hitting http://127.0.0.1:<port> -- it talks to the app
- * over normal fetch()/WebSocket calls and has no reason to reach into
- * Node or Electron APIs directly. contextIsolation + sandbox are both on
- * (see main.js webPreferences), and nodeIntegration is off, so nothing is
- * exposed here.
+ * Bridges the one native capability the renderer can't do over plain fetch:
+ * opening the OS "choose a folder" dialog. Everything else (external links,
+ * data) still goes through window.open / normal fetch. contextIsolation is on
+ * and nodeIntegration is off, so this is the ONLY surface exposed to the page —
+ * a single, named, promise-returning function, no raw ipcRenderer or Node.
  *
- * This file exists so main.js has a concrete preload script to point at,
- * and as the one place to add a `contextBridge.exposeInMainWorld(...)`
- * call later if a real native-integration need ever comes up (native
- * notifications, file-system dialogs, etc). Until then: no-op.
+ * window.blubberNative.pickFolder({ title }) -> Promise<string | null>
+ *   Resolves to the chosen absolute directory path, or null if the user
+ *   cancelled. In a plain browser tab window.blubberNative is undefined, so
+ *   callers must handle its absence and fall back (e.g. a manual path input).
  */
+
+const { contextBridge, ipcRenderer } = require("electron");
+
+contextBridge.exposeInMainWorld("blubberNative", {
+  isElectron: true,
+  pickFolder: (options) => ipcRenderer.invoke("blubber:pick-folder", options ?? {}),
+});

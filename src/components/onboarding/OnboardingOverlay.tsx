@@ -32,9 +32,15 @@
  *   empty      → ~/.claude exists but is untouched. "Clean slate" message,
  *                one button straight through to the dashboard.
  *   notfound   → no ~/.claude at all. Terse: what's missing, a "Scan again"
- *                button, and a quiet text link out to install Claude Code
- *                manually. Nothing else — no install-for-you flow, no demo
- *                escape hatch (that flow is Starter-Kit-gated; see
+ *                button, a quiet text link out to install Claude Code
+ *                manually, and — critically — a ghost "Look around first"
+ *                that walks straight into the dashboard on the placeholder
+ *                dataset, exactly like `empty` does. This branch used to be a
+ *                hard dead end (scan-or-leave, no third option); a fresh-box
+ *                smoke test proved that ships a modal cage to every new user
+ *                who hasn't set up Claude Code yet, which is most of them.
+ *                Still no install-for-you flow here — that one is
+ *                Starter-Kit-gated (see
  *                src/app/api/onboarding/install-claude/route.ts, left intact
  *                but unhooked from this overlay).
  *   summary    → one card of real machine stats confirming the inject
@@ -96,7 +102,8 @@ const STEP_NARRATION: Partial<Record<Step, string>> = {
     "A live shell over the Claude Code sessions already running on this machine — sessions, agents, token burn, real. No account, no setup wizard, no tutorial. You already know how this works.",
   found:
     "There's real Claude Code history on this machine already. Blubber can index it right now — sessions, agents, token usage — so the dashboard opens with your actual work instead of an empty room.",
-  notfound: 'Blubber is a shell over Claude Code. Set it up, then come back and scan again.',
+  notfound:
+    "Blubber is a shell over Claude Code — you'll want it installed to get the real numbers. Look around in the meantime, and scan again once it's set up.",
   summary: 'Real numbers, off this machine, right now.',
 };
 
@@ -327,8 +334,14 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
         {step === 'notfound' && (
           <>
             <h2 className="onb__title onb__title--sm">No Claude Code workspace found at ~/.claude.</h2>
-            <p className="onb__body">Blubber is a shell over Claude Code. Set it up, then come back and scan again.</p>
-            <div className="onb__actions">
+            <p className="onb__body">
+              Blubber is a shell over Claude Code — you'll want it installed to get the real numbers. Look around in the
+              meantime, and scan again once it's set up.
+            </p>
+            <div className="onb__actions onb__actions--pair">
+              <button type="button" className="onb__btn onb__btn--ghost" onClick={finishOrOfferTour}>
+                Look around first
+              </button>
               <button type="button" className="onb__btn onb__btn--primary" onClick={runDetect}>
                 Scan again
               </button>

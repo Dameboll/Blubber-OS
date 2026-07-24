@@ -41,12 +41,29 @@ test.describe('Onboarding — detect branches', () => {
     await page.getByRole('button', { name: 'Scan my workspace' }).click();
 
     await expect(page.getByRole('heading', { name: 'No Claude Code workspace found at ~/.claude.' })).toBeVisible();
-    // Primary: re-scan (no in-app installer or demo-mode escape hatch on Free).
+    // Primary: re-scan (still no in-app installer on Free).
     await expect(page.getByRole('button', { name: 'Scan again' })).toBeVisible();
     // Quiet text link out to install it manually — never forced.
     const installLink = page.getByRole('link', { name: 'claude.com/claude-code' });
     await expect(installLink).toBeVisible();
     await expect(installLink).toHaveAttribute('href', 'https://claude.com/claude-code');
+  });
+
+  // Regression guard. This branch shipped as a modal cage: scan-again (which
+  // fails forever on a machine with no Claude Code) or a link out, and nothing
+  // else. A fresh-box smoke test in Windows Sandbox walled the app off at first
+  // launch. The escape hatch is the fix — do not remove it.
+  test("detect 'not-found' lets the user into the app without installing Claude Code", async ({ page }) => {
+    await mockDetect(page, 'not-found');
+    await page.goto('/');
+
+    await page.getByRole('button', { name: 'Scan my workspace' }).click();
+    await expect(page.getByRole('heading', { name: 'No Claude Code workspace found at ~/.claude.' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Look around first' }).click();
+
+    // Overlay is gone and the dashboard is behind it.
+    await expect(page.getByRole('dialog', { name: 'Welcome to Blubber' })).toBeHidden();
   });
 
   test("detect 'empty' renders the clean-slate branch and completes onboarding", async ({ page }) => {

@@ -3,7 +3,13 @@
 # BEFORE the installer touches it, so a later pass/fail means something.
 
 $ErrorActionPreference = 'Continue'
-$log = "$env:USERPROFILE\Desktop\smoke-log.txt"
+
+# Write to the writable mapped folder so the log lands on the HOST disk: it
+# survives the sandbox closing, and can be tailed live from the host mid-run.
+# Falls back to the sandbox Desktop if the mapping is missing.
+$results = "$env:USERPROFILE\Desktop\results"
+$log = if (Test-Path $results) { "$results\smoke-log.txt" } else { "$env:USERPROFILE\Desktop\smoke-log.txt" }
+Set-Content -Path $log -Value '' -Encoding utf8 -ErrorAction SilentlyContinue
 
 function Say($msg, $color = 'Gray') { Write-Host $msg -ForegroundColor $color; Add-Content -Path $log -Value $msg -Encoding utf8 }
 function Check($label, $isClean, $detail) {

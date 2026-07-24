@@ -4,7 +4,10 @@
 # real DB on disk, free-shell (non-kit) flow, no system-node dependency.
 
 $ErrorActionPreference = 'Continue'
-$log = "$env:USERPROFILE\Desktop\smoke-log.txt"
+
+# Same host-mapped log the phase-1 probe wrote to (see sandbox-probe.ps1).
+$results = "$env:USERPROFILE\Desktop\results"
+$log = if (Test-Path $results) { "$results\smoke-log.txt" } else { "$env:USERPROFILE\Desktop\smoke-log.txt" }
 $fails = 0
 
 function Say($msg, $color = 'Gray') { Write-Host $msg -ForegroundColor $color; Add-Content -Path $log -Value $msg -Encoding utf8 }
@@ -76,4 +79,5 @@ Say ""
 if ($fails -eq 0) { Say "RESULT: ALL GATES PASSED — clean-machine install is sound." Green }
 else { Say "RESULT: $fails GATE(S) FAILED — see [FAIL] lines above." Red }
 Say ""
-Say "Copy this log out via clipboard: Get-Content $log | Set-Clipboard"
+Say "Log written to the host disk at tools\smoke-test\results\smoke-log.txt --"
+Say "it already survived the sandbox. Nothing to copy out."

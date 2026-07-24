@@ -15,6 +15,14 @@
       <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\smoke</SandboxFolder>
       <ReadOnly>true</ReadOnly>
     </MappedFolder>
+    <!-- WRITABLE on purpose: the only channel out of the sandbox. Scripts write
+         the log here so it lands on the host disk and survives the sandbox
+         being closed (and can be watched live from the host mid-run). -->
+    <MappedFolder>
+      <HostFolder>C:\Users\jeffh\Development\HOBBY\blubber-os\tools\smoke-test\results</HostFolder>
+      <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\results</SandboxFolder>
+      <ReadOnly>false</ReadOnly>
+    </MappedFolder>
   </MappedFolders>
   <LogonCommand>
     <Command>powershell -ExecutionPolicy Bypass -NoExit -File C:\Users\WDAGUtilityAccount\Desktop\smoke\sandbox-probe.ps1</Command>

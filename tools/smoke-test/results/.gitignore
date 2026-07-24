@@ -1,0 +1,2 @@
+# Sandbox writes smoke-log.txt here. Kept so the mapped folder always exists.
+results/*.txt

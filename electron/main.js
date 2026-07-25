@@ -31,18 +31,57 @@
 
 const path = require("node:path");
 const http = require("node:http");
+const net = require("node:net");
+const crypto = require("node:crypto");
 const { app, BrowserWindow, dialog, ipcMain, shell: electronShell } = require("electron");
 
-const PORT = parseInt(process.env.PORT || "3000", 10);
 const HOST = "127.0.0.1";
-const SERVER_URL = `http://${HOST}:${PORT}`;
 
 const POLL_INTERVAL_MS = 300;
 const POLL_TIMEOUT_MS = 15000;
 
+// Per-launch identity nonce. Passed to server.js via env; /__blubber-health
+// must echo it back before the window opens. This is what stops Blubber from
+// ever rendering an unrelated local dev server that happens to own the port.
+const startupNonce = crypto.randomBytes(16).toString("hex");
+
+// Resolved at startup (see resolveFreePort) — dev keeps 3000 for muscle
+// memory, packaged runs take any free loopback port so a customer's own
+// dev tools on 3000 can never collide with Blubber.
+let PORT = parseInt(process.env.PORT || "3000", 10);
+let SERVER_URL = `http://${HOST}:${PORT}`;
+
 let serverProcess = null;
 let mainWindow = null;
 let quitting = false;
+
+// Second launches focus the existing window instead of starting a second
+// server (which would either die on the busy port or double every process).
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
+/** Ask the OS for a currently-free loopback port (listen on 0, read the
+ * assignment, close). The tiny race between close and server.js binding is
+ * acceptable — a loss surfaces as the existing EADDRINUSE error path. */
+function resolveFreePort() {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once("error", reject);
+    probe.listen(0, HOST, () => {
+      const assigned = probe.address().port;
+      probe.close(() => resolve(assigned));
+    });
+  });
+}
 
 // Native "choose a folder" dialog for the renderer (see electron/preload.js).
 // Powers both "point Blubber at a workspace" and "install the Starter Kit from
@@ -92,6 +131,21 @@ function startServer() {
   const env = {
     ...process.env,
     PORT: String(PORT),
+    // Identity nonce — server.js echoes this from /__blubber-health and the
+    // window only opens on an exact match (see waitForBlubberServer).
+    BLUBBER_STARTUP_NONCE: startupNonce,
+    // Durable customer-data locations OUTSIDE the install directory (the
+    // uninstaller removes the install dir; before this, it deleted every
+    // database, preference, playlist, and uploaded track with it — see
+    // src/server/app-dirs.ts + data-migrate.ts). Music is deliberately NOT
+    // under userData: Electron guidance warns against large media there
+    // because some systems back that folder up.
+    ...(app.isPackaged
+      ? {
+          BLUBBER_DATA_DIR: path.join(app.getPath("userData"), "blubber-data"),
+          BLUBBER_MUSIC_DIR: path.join(app.getPath("music"), "Blubber"),
+        }
+      : {}),
     NODE_ENV: app.isPackaged
       ? "production"
       : process.env.NODE_ENV || "development",
@@ -149,19 +203,44 @@ function startServer() {
   });
 }
 
-/** Poll SERVER_URL until it answers, or give up after timeoutMs. */
-function waitForServer(url, timeoutMs) {
+/**
+ * Poll /__blubber-health until it returns OUR app identity ({app:"blubber"}
+ * with this launch's exact nonce), or give up after timeoutMs. Any response
+ * that answers but is NOT Blubber (wrong body, wrong nonce) fails
+ * immediately — that means something else owns the port and retrying can
+ * never succeed. Before this check, the shell opened its window for ANY
+ * HTTP response, so a customer's unrelated dev server on the same port got
+ * rendered inside Blubber's window.
+ */
+function waitForBlubberServer(baseUrl, timeoutMs) {
   const start = Date.now();
+  const healthUrl = `${baseUrl}/__blubber-health`;
   return new Promise((resolve, reject) => {
     const attempt = () => {
-      const req = http.get(url, (res) => {
-        res.resume();
-        resolve();
+      const req = http.get(healthUrl, (res) => {
+        let body = "";
+        res.on("data", (chunk) => (body += chunk));
+        res.on("end", () => {
+          try {
+            const parsed = JSON.parse(body);
+            if (parsed.app === "blubber" && parsed.nonce === startupNonce) {
+              resolve();
+              return;
+            }
+          } catch {
+            /* fall through to identity failure */
+          }
+          reject(
+            new Error(
+              `Something that isn't this Blubber instance answered on ${baseUrl}.`,
+            ),
+          );
+        });
       });
       req.on("error", () => {
         if (Date.now() - start >= timeoutMs) {
           reject(
-            new Error(`Server did not respond at ${url} within ${timeoutMs}ms`),
+            new Error(`Server did not respond at ${healthUrl} within ${timeoutMs}ms`),
           );
           return;
         }
@@ -175,12 +254,13 @@ function waitForServer(url, timeoutMs) {
 
 async function createWindow() {
   try {
-    await waitForServer(SERVER_URL, POLL_TIMEOUT_MS);
+    await waitForBlubberServer(SERVER_URL, POLL_TIMEOUT_MS);
   } catch (err) {
     dialog.showErrorBox(
       "Blubber failed to start",
-      `Could not reach the local server at ${SERVER_URL}.\n\n${err.message}\n\n` +
-        `Check that nothing else is already using port ${PORT}.`,
+      `Blubber's background server didn't come up correctly.\n\n${err.message}\n\n` +
+        `Try restarting the app. If it keeps happening, restart your computer ` +
+        `so any stuck Blubber process is cleared.`,
     );
     app.quit();
     return;
@@ -225,7 +305,20 @@ async function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  if (!hasSingleInstanceLock) return; // second instance — already quitting
+
+  // Packaged runs never assume 3000 is free — any of the customer's own dev
+  // tools may hold it. Dev keeps the fixed port unless PORT overrides it.
+  if (app.isPackaged && !process.env.PORT) {
+    try {
+      PORT = await resolveFreePort();
+      SERVER_URL = `http://${HOST}:${PORT}`;
+    } catch (err) {
+      console.error("[electron] free-port probe failed, using default:", err);
+    }
+  }
+
   startServer();
   createWindow();
 

@@ -68,9 +68,12 @@ export async function POST(request: Request) {
     if (!cloudOk) {
       console.warn('[api/waitlist] falling back to local SQLite for:', email);
       addWaitlistEmail(email);
+      // Honest response: the signup is saved on THIS machine only, not yet in
+      // the hosted list. The UI must not claim full enrollment.
+      return NextResponse.json({ ok: true, queued: true });
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, queued: false });
   } catch (err) {
     console.error('[api/waitlist] POST failed:', err);
     return NextResponse.json({ error: 'Failed to join the waitlist' }, { status: 500 });

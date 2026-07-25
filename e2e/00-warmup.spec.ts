@@ -32,6 +32,7 @@
  */
 
 import { test, expect, type APIRequestContext, type APIResponse } from 'playwright/test';
+import { authedPost } from './helpers';
 
 /**
  * One warm request with retry on TRANSPORT errors only (ECONNRESET etc.) —
@@ -124,8 +125,9 @@ test.describe('Warm-up + API smoke', () => {
     // Compiles /api/waitlist AND pins the server-side EMAIL_RE contract
     // (src/app/api/waitlist/route.ts) directly — a malformed email is
     // rejected before the Supabase call is ever attempted, so this inserts
-    // nothing anywhere.
-    const bad = await warmRequest(request, 'post', '/api/waitlist', { email: 'not-an-email-address' });
+    // nothing anywhere. Auth header required: mutations without it are 401
+    // by design (see server.js's mutation gate + e2e/helpers.ts authedPost).
+    const bad = await authedPost(request, '/api/waitlist', { email: 'not-an-email-address' });
     expect(bad.status()).toBe(400);
     expect(((await bad.json()) as { error?: string }).error).toBe('Enter a valid email address.');
 

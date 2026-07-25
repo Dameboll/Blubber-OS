@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+import { DATA_DIR } from "./app-dirs";
 const STORE_PATH = path.join(DATA_DIR, "voice-config.json");
 
 export type VoiceStyle = "bubbly" | "deep" | "squeaky" | "robo";

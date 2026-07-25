@@ -33,16 +33,18 @@ import { spawn } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import * as quickchatStore from "../../../server/quickchat-store";
+import { resolveSpawnCwd } from "../../../server/resolve-path";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const RUN_TIMEOUT_MS = 120_000;
 
-// Model is configurable so non-Max users (no Opus access) aren't hard-broken and
-// the pinned id can't age out silently. QUICKCHAT_MODEL="default" (or empty)
-// omits --model entirely and lets the user's CLI default answer.
-const QUICKCHAT_MODEL = process.env.QUICKCHAT_MODEL ?? "claude-opus-4-8";
+// Model is configurable, but the shipped default omits --model entirely and
+// lets the customer's own CLI default answer — pinning a specific Opus id
+// hard-breaks any customer whose plan doesn't include that model. Set
+// QUICKCHAT_MODEL to a real model id to pin one deliberately.
+const QUICKCHAT_MODEL = process.env.QUICKCHAT_MODEL ?? "default";
 
 function buildCommand(resumeId: string | null): { file: string; args: string[] } {
   const claudeArgs = ["-p"];
@@ -132,7 +134,10 @@ function runClaudeOneShot(message: string, resumeId: string | null): Promise<One
     delete childEnv.CLAUDECODE;
 
     const child = spawn(file, args, {
-      cwd: path.join(os.homedir(), 'Development', 'general'),
+      // Falls back to the deepest existing ancestor (ultimately the home dir)
+      // — a fresh machine has no ~/Development/general and a missing cwd
+      // would fail the spawn outright.
+      cwd: resolveSpawnCwd(path.join(os.homedir(), "Development", "general")),
       windowsHide: true,
       env: childEnv,
     });

@@ -49,7 +49,11 @@ export default function AcademyScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: trimmed }),
       });
-      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        queued?: boolean;
+        error?: string;
+      };
 
       if (!res.ok || !json.ok) {
         setState('error');
@@ -58,7 +62,13 @@ export default function AcademyScreen() {
       }
 
       setState('success');
-      setMessage("You're on the list — we'll email you the moment Academy opens.");
+      // `queued` = the signup only reached this machine's local store (cloud
+      // unreachable) — say so honestly instead of claiming full enrollment.
+      setMessage(
+        json.queued
+          ? "Saved on this device — we couldn't reach the cloud just now, so submit again next time you're online to make sure you're counted."
+          : "You're on the list — we'll email you the moment Academy opens.",
+      );
     } catch {
       setState('error');
       setMessage("Couldn't reach the server. Check your connection and try again.");

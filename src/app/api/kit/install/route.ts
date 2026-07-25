@@ -165,6 +165,80 @@ function claudeDir(): string {
   return path.join(os.homedir(), ".claude");
 }
 
+/**
+ * Join `relative` under `base` ONLY if the result stays inside `base`.
+ * Rejects absolute paths and any ".." traversal — a tampered manifest must
+ * never be able to read from or write to anywhere outside its own kit
+ * folder / the intended destination tree. Returns null on violation.
+ */
+function containedJoin(base: string, relative: string): string | null {
+  if (!relative || path.isAbsolute(relative)) return null;
+  const resolvedBase = path.resolve(base);
+  const resolved = path.resolve(resolvedBase, relative);
+  const rel = path.relative(resolvedBase, resolved);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) return null;
+  return resolved;
+}
+
+/** Top-level entries of a source dir that already exist in dest — these are
+ * the customer's own files the copy would overwrite. */
+function findConflicts(srcDir: string, destDir: string): string[] {
+  if (!fs.existsSync(srcDir) || !fs.existsSync(destDir)) return [];
+  const destNames = new Set(fs.readdirSync(destDir));
+  return fs.readdirSync(srcDir).filter((name) => destNames.has(name));
+}
+
+interface BackupPlan {
+  backupDir: string;
+  /** dest path -> backup path, for exact restore */
+  entries: Array<{ original: string; saved: string }>;
+}
+
+/** Copy every file/folder the install would overwrite into a timestamped
+ * backup folder BEFORE the first write. Throws on any failure — the caller
+ * must treat that as a hard abort with nothing yet modified. */
+function backupConflicts(
+  claudeMdConflict: boolean,
+  dirConflicts: Array<{ destDir: string; label: string; names: string[] }>,
+): BackupPlan {
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const backupDir = path.join(claudeDir(), `.blubber-kit-backup-${stamp}`);
+  const entries: BackupPlan["entries"] = [];
+  fs.mkdirSync(backupDir, { recursive: true });
+
+  if (claudeMdConflict) {
+    const original = path.join(claudeDir(), "CLAUDE.md");
+    const saved = path.join(backupDir, "CLAUDE.md");
+    fs.copyFileSync(original, saved);
+    entries.push({ original, saved });
+  }
+  for (const { destDir, label, names } of dirConflicts) {
+    for (const name of names) {
+      const original = path.join(destDir, name);
+      const saved = path.join(backupDir, label, name);
+      fs.mkdirSync(path.dirname(saved), { recursive: true });
+      fs.cpSync(original, saved, { recursive: true });
+      entries.push({ original, saved });
+    }
+  }
+  return { backupDir, entries };
+}
+
+/** Put every backed-up original back over whatever a failed install left
+ * behind. Best-effort per entry; reports whether everything went back. */
+function restoreBackup(plan: BackupPlan): boolean {
+  let allRestored = true;
+  for (const { original, saved } of plan.entries) {
+    try {
+      fs.cpSync(saved, original, { recursive: true, force: true });
+    } catch (err) {
+      allRestored = false;
+      console.error(`[api/kit/install] restore failed for ${original}:`, err);
+    }
+  }
+  return allRestored;
+}
+
 /** Every failure path returns the same honest shape: which step failed, what
  * had already genuinely completed before it, and a specific message — never
  * a generic "install failed". `narration` is included whenever the manifest
@@ -224,93 +298,147 @@ export async function POST(request: Request) {
     );
   }
 
+  // --- VALIDATE EVERYTHING BEFORE WRITING ANYTHING -------------------------
+  // Path containment (a tampered manifest can't escape the kit folder or the
+  // destination trees) + source existence, all checked up front so a bad kit
+  // aborts with the customer's machine completely untouched.
+  const claudeMdSrc = containedJoin(kitPath, manifest.claudeMdSource);
+  const agentsSrc = containedJoin(kitPath, manifest.agentsSource);
+  const skillsSrc = containedJoin(kitPath, manifest.skillsSource);
+  const commandsSrc = containedJoin(kitPath, manifest.commandsSource);
+  if (!claudeMdSrc || !agentsSrc || !skillsSrc || !commandsSrc) {
+    return stepError(
+      "manifest",
+      [],
+      "manifest source paths must be relative paths inside the kit folder (no absolute paths, no '..')",
+      400,
+    );
+  }
+  const structureRoot = containedJoin(developmentRoot(), manifest.projectStructure.rootFolderName);
+  if (!structureRoot) {
+    return stepError(
+      "manifest",
+      [],
+      "projectStructure.rootFolderName must be a plain folder name (no absolute paths, no '..')",
+      400,
+    );
+  }
+  for (const sub of manifest.projectStructure.subfolders) {
+    if (sub.trim() && !containedJoin(structureRoot, sub)) {
+      return stepError(
+        "manifest",
+        [],
+        `projectStructure subfolder "${sub}" escapes the project root (no absolute paths, no '..')`,
+        400,
+      );
+    }
+  }
+  const missingSources = [
+    { label: "claudeMdSource", p: claudeMdSrc },
+    { label: "agentsSource", p: agentsSrc },
+    { label: "skillsSource", p: skillsSrc },
+    { label: "commandsSource", p: commandsSrc },
+  ].filter(({ p }) => !fs.existsSync(p));
+  if (missingSources.length > 0) {
+    return stepError(
+      "manifest",
+      [],
+      `kit is missing source file(s)/folder(s): ${missingSources.map((s) => s.label).join(", ")}`,
+      400,
+    );
+  }
+
+  // --- CONFLICT SCAN + BACKUP BEFORE FIRST WRITE ---------------------------
+  // Everything the copy would overwrite (the customer's own CLAUDE.md,
+  // same-name agents/skills/commands) is copied into a timestamped backup
+  // folder first. Backup failure = hard abort with nothing modified; any
+  // later write failure auto-restores every backed-up original.
+  const claudeMdDest = path.join(claudeDir(), "CLAUDE.md");
+  const dirConflicts = [
+    { destDir: path.join(claudeDir(), "agents"), label: "agents", names: findConflicts(agentsSrc, path.join(claudeDir(), "agents")) },
+    { destDir: path.join(claudeDir(), "skills"), label: "skills", names: findConflicts(skillsSrc, path.join(claudeDir(), "skills")) },
+    { destDir: path.join(claudeDir(), "commands"), label: "commands", names: findConflicts(commandsSrc, path.join(claudeDir(), "commands")) },
+  ];
+  const claudeMdConflict = fs.existsSync(claudeMdDest);
+  const hasConflicts = claudeMdConflict || dirConflicts.some((d) => d.names.length > 0);
+
+  let backup: BackupPlan | null = null;
+  if (hasConflicts) {
+    try {
+      backup = backupConflicts(claudeMdConflict, dirConflicts);
+    } catch (err) {
+      return stepError(
+        "manifest",
+        [],
+        `could not back up your existing Claude files, so nothing was installed: ${(err as Error).message}`,
+        500,
+        manifest.narration,
+      );
+    }
+  }
+
   const stepsCompleted: KitStep[] = [];
 
-  // Step 1 — CLAUDE.md
-  try {
-    const src = path.join(kitPath, manifest.claudeMdSource);
-    const dest = path.join(claudeDir(), "CLAUDE.md");
-    fs.mkdirSync(claudeDir(), { recursive: true });
-    fs.copyFileSync(src, dest);
-    stepsCompleted.push("claudeMd");
-  } catch (err) {
+  /** Shared failure path for the write steps: restore every backed-up
+   * original, then report both the failure and the restore outcome. */
+  const failAndRestore = (step: KitStep, message: string) => {
+    const restored = backup ? restoreBackup(backup) : true;
     return stepError(
-      "claudeMd",
+      step,
       stepsCompleted,
-      `failed to install CLAUDE.md: ${(err as Error).message}`,
+      `${message}${backup ? (restored ? " Your previous Claude files were restored from backup." : ` Restore was incomplete — your originals are preserved in ${backup.backupDir}.`) : ""}`,
       500,
       manifest.narration,
     );
+  };
+
+  // Step 1 — CLAUDE.md
+  try {
+    fs.mkdirSync(claudeDir(), { recursive: true });
+    fs.copyFileSync(claudeMdSrc, claudeMdDest);
+    stepsCompleted.push("claudeMd");
+  } catch (err) {
+    return failAndRestore("claudeMd", `failed to install CLAUDE.md: ${(err as Error).message}.`);
   }
 
   // Step 2 — agents/
   try {
-    const src = path.join(kitPath, manifest.agentsSource);
-    const dest = path.join(claudeDir(), "agents");
-    fs.cpSync(src, dest, { recursive: true });
+    fs.cpSync(agentsSrc, path.join(claudeDir(), "agents"), { recursive: true });
     stepsCompleted.push("agents");
   } catch (err) {
-    return stepError(
-      "agents",
-      stepsCompleted,
-      `failed to install agents: ${(err as Error).message}`,
-      500,
-      manifest.narration,
-    );
+    return failAndRestore("agents", `failed to install agents: ${(err as Error).message}.`);
   }
 
   // Step 3 — skills/
   try {
-    const src = path.join(kitPath, manifest.skillsSource);
-    const dest = path.join(claudeDir(), "skills");
-    fs.cpSync(src, dest, { recursive: true });
+    fs.cpSync(skillsSrc, path.join(claudeDir(), "skills"), { recursive: true });
     stepsCompleted.push("skills");
   } catch (err) {
-    return stepError(
-      "skills",
-      stepsCompleted,
-      `failed to install skills: ${(err as Error).message}`,
-      500,
-      manifest.narration,
-    );
+    return failAndRestore("skills", `failed to install skills: ${(err as Error).message}.`);
   }
 
   // Step 4 — commands/  (the kit's slash-commands, e.g. /landing-page,
   // /ship-check). Copied to ~/.claude/commands/ so Claude Code picks them up
   // as user-scoped slash commands exactly like agents/skills above.
   try {
-    const src = path.join(kitPath, manifest.commandsSource);
-    const dest = path.join(claudeDir(), "commands");
-    fs.cpSync(src, dest, { recursive: true });
+    fs.cpSync(commandsSrc, path.join(claudeDir(), "commands"), { recursive: true });
     stepsCompleted.push("commands");
   } catch (err) {
-    return stepError(
-      "commands",
-      stepsCompleted,
-      `failed to install commands: ${(err as Error).message}`,
-      500,
-      manifest.narration,
-    );
+    return failAndRestore("commands", `failed to install commands: ${(err as Error).message}.`);
   }
 
   // Step 5 — projectStructure folders, under the same portable Development
   // root every other real filesystem feature in this codebase already uses.
   try {
-    const structureRoot = path.join(developmentRoot(), manifest.projectStructure.rootFolderName);
     fs.mkdirSync(structureRoot, { recursive: true });
     for (const sub of manifest.projectStructure.subfolders) {
       if (!sub.trim()) continue;
-      fs.mkdirSync(path.join(structureRoot, sub), { recursive: true });
+      const subPath = containedJoin(structureRoot, sub);
+      if (subPath) fs.mkdirSync(subPath, { recursive: true });
     }
     stepsCompleted.push("structure");
   } catch (err) {
-    return stepError(
-      "structure",
-      stepsCompleted,
-      `failed to create project structure: ${(err as Error).message}`,
-      500,
-      manifest.narration,
-    );
+    return failAndRestore("structure", `failed to create project structure: ${(err as Error).message}.`);
   }
 
   markKitInstalled();
@@ -333,12 +461,21 @@ export async function POST(request: Request) {
     ok: true,
     stepsCompleted,
     narration: manifest.narration,
+    // Honest overwrite report: what customer files the install replaced, and
+    // where the pre-install originals live. Empty/null on a clean machine.
+    conflicts: {
+      claudeMd: claudeMdConflict,
+      agents: dirConflicts[0].names,
+      skills: dirConflicts[1].names,
+      commands: dirConflicts[2].names,
+    },
+    backupDir: backup?.backupDir ?? null,
     installedTo: {
-      claudeMd: path.join(claudeDir(), "CLAUDE.md"),
+      claudeMd: claudeMdDest,
       agents: path.join(claudeDir(), "agents"),
       skills: path.join(claudeDir(), "skills"),
       commands: path.join(claudeDir(), "commands"),
-      projectStructure: path.join(developmentRoot(), manifest.projectStructure.rootFolderName),
+      projectStructure: structureRoot,
     },
   });
 }

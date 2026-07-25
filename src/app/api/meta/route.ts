@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import os from "node:os";
 import path from "node:path";
 import pkg from "../../../../package.json";
+import { DATA_DIR } from "../../../server/app-dirs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   return NextResponse.json({
     version: pkg.version,
-    dataDir: path.join(process.cwd(), "data"),
+    dataDir: DATA_DIR,
     claudeProjectsDir: path.join(os.homedir(), ".claude", "projects"),
   });
 }

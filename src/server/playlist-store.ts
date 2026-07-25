@@ -15,7 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+import { DATA_DIR } from "./app-dirs";
 const STORE_PATH = path.join(DATA_DIR, "playlists.json");
 
 export interface Playlist {

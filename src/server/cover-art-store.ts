@@ -32,7 +32,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { readId3Tags } from "./id3-parser";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+import { DATA_DIR } from "./app-dirs";
 const COVER_DIR = path.join(DATA_DIR, "cover-art");
 const CUSTOM_DIR = path.join(COVER_DIR, "custom");
 const INDEX_PATH = path.join(COVER_DIR, "index.json");

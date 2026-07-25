@@ -24,7 +24,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 
-const MUSIC_DIR = path.join(process.cwd(), "music");
+import { MUSIC_DIR } from "../../../../server/app-dirs";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".mp3": "audio/mpeg",

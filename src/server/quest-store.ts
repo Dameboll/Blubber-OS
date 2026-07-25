@@ -43,7 +43,7 @@ import type Database from 'better-sqlite3';
 import { getPetState } from './pet-store';
 import { db as usageDb, getStatsBaseline, getSinceBaselineTotals } from './db';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+import { DATA_DIR } from './app-dirs';
 const STORE_PATH = path.join(DATA_DIR, 'quests.json');
 
 export const QUEST_LEVEL_CAP = 55;

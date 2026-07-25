@@ -31,12 +31,18 @@ import AppShell, { type NavId } from '../components/AppShell';
 import AmbientGlow from '../components/AmbientGlow';
 import IntroCinematic from '../components/IntroCinematic';
 import { consumeTourPending, TOUR_EVENT } from '../lib/tour';
+import { installFetchAuth } from '../lib/api-auth';
 import { consumeSoulPending, SOUL_EVENT } from '../lib/soul';
 import { FlubberBrainProvider } from '../components/FlubberBrainProvider';
 // Dashboard is the always-first screen, so it stays a static import — it must
 // be in the initial chunk for the fastest possible first paint.
 import DashboardScreen from '../components/screens/DashboardScreen';
 import './page.css';
+
+// Auth-token fetch wrapper must exist before ANY screen (onboarding included)
+// fires its first /api mutation — server.js now rejects unauthenticated
+// state-changing requests (see src/lib/api-auth.ts). Idempotent.
+installFetchAuth();
 
 // The other 8 screens each mount only when their nav item is selected, and
 // exactly one screen is ever mounted at a time. Statically importing them all

@@ -56,9 +56,17 @@ files:
   # ENOENT. Never part of the shipped app.
   - "!.remember/**"
   - "!.claude-session/**"
+  - "!.claude/**"
+  - "!.playwright-mcp/**"
   - "!docs/**"
   - "!.next-soak/**"
   - "!.next-verify/**"
+  # Next's on-disk build cache — ~280 MiB of webpack/turbopack intermediates
+  # the production server never reads. Shipping it tripled installer size.
+  - "!.next-build/cache/**"
+  # Dev-only TypeScript route stubs (typed-routes support) — never loaded at
+  # runtime, and they embed the build machine's absolute source paths.
+  - "!.next-build/types/**"
   - "!dist-electron/**"
   - "!data/**"
   - "!music/**"
@@ -69,6 +77,17 @@ files:
   - "!blob-report/**"
   - "!scripts/**"
   - "!supabase/**"
+  # Dev/test tooling and metadata with no runtime role. tools/ holds the
+  # clean-machine smoke-test harness; .env.local ships nothing secret TODAY
+  # but packaging it at all is a standing secret-leak risk (.env.example
+  # documents the public values instead). NOTE: src/ deliberately STAYS in
+  # the package — server.js loads src/server/*.ts through ts-node at runtime
+  # (pty-manager, data-migrate), so excluding source would break the app.
+  - "!tools/**"
+  - "!.env.local"
+  - "!.env*.local"
+  - "!tsconfig.tsbuildinfo"
+  - "!BLUBBER-LAUNCH-READINESS-AUDIT-AND-PLAN.md"
   - "!package-lock.json"
 
 # electron-builder defaults to rebuilding native deps (better-sqlite3,

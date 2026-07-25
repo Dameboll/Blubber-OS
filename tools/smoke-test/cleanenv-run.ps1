@@ -78,6 +78,18 @@ if ($ready) {
             Check "GET $api" $false $_.Exception.Message
         }
     }
+
+    # The branch a real buyer lands on. A virgin profile has neither ~/.claude
+    # nor an installed binary, so this must be 'not-found' with kit=false --
+    # which is exactly why the in-app installer cannot be kit-gated (the marker
+    # lives inside ~/.claude). The overlay offers "Install it for me" here.
+    try {
+        $d = (Invoke-WebRequest -Uri 'http://127.0.0.1:3000/api/onboarding/detect' -UseBasicParsing -TimeoutSec 10).Content | ConvertFrom-Json
+        Check 'detect -> not-found' ($d.status -eq 'not-found') "status '$($d.status)'"
+        Check 'detect -> kit false'  (-not $d.kit)               "kit '$($d.kit)' (gate impossible here)"
+    } catch {
+        Check 'detect reachable' $false $_.Exception.Message
+    }
 }
 
 Say ""

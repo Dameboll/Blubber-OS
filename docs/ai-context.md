@@ -1,8 +1,69 @@
 # Blubber OS — AI Context
-# Last sync: 2026-07-22 ~13:00 ET (session: e2e green + tips wire-up + fresh-start verify)
+# Last sync: 2026-07-25 ~03:00 ET (session: clean-machine smoke test → 4 real first-run bugs fixed)
 
-## Current state (branch fix/e2e-suite-green, all committed)
-Launch-shaped. HEAD e5ce295 — E2E SUITE GREEN 17/17 (full clean pass, prod build passes). Freeze tags: freeze-pre-launch-split, freeze-pre-polish-batch, freeze-pre-voice-settings (rollback points).
+## Current state (branch chore/smoke-test-harness, pushed, HEAD 9aa2c67)
+Launch-shaped. E2E 20/20 green (was 17, +3 across two sessions). Installer rebuilt 2026-07-25
+at 222.9MB with all of this session's fixes packaged and verified present inside the .exe.
+Freeze tags: freeze-pre-launch-split, freeze-pre-polish-batch, freeze-pre-voice-settings.
+
+## First-run path — rebuilt this session (2026-07-25)
+The whole "buyer opens the app on a machine that isn't Dame's" path was broken in four
+separate places. All four were found by actually simulating a clean machine, not by reading code.
+
+- **npm→native installer.** /api/onboarding/install-claude ran `npm install -g
+  @anthropic-ai/claude-code`, justified in its own comment by "node + npm are already present on
+  any machine that can run this app". FALSE since the app went self-contained — the packaged
+  build ships its own runtime, proven by launching it with node AND npm absent from PATH. So on
+  exactly the clean machine that route exists for, it failed at step one. Now runs Anthropic's
+  official native installer (irm .../install.ps1 | iex on Windows, curl|bash elsewhere), which
+  has no Node dependency at all. Commands are passed whole in `cmd` with empty `args` because
+  stream-command spawns with shell:true — splitting a `|` across argv breaks it.
+- **detect was blind to a fresh install.** It only checked ~/.claude, which Claude Code creates
+  on first RUN, not at install. The native installer writes ~/.local/bin/claude +
+  ~/.local/share/claude. So a SUCCESSFUL install still reported 'not-found' and dumped the user
+  back on the same screen. Now hasInstalledBinary() probes those paths and
+  installed-but-never-run reads as 'empty'.
+- **Nothing called the install route.** It was written as Starter-Kit-gated and wired to no UI,
+  so kit buyers got the identical link-and-good-luck screen as free users. Now wired into the
+  notfound branch for everyone, streaming the installer's real stdout/stderr into the card,
+  cancellable, errors verbatim with a retry.
+- **First index froze the app on "Injecting…"** — see next section.
+
+## Indexer event-loop fix (2026-07-25, HEAD 9aa2c67)
+Dame clicked "Inject my setup" on his own machine and the overlay hung forever. Not a hang —
+a blocked event loop. ensureIndexed() wrapped the walk in setImmediate and its doc claimed it
+"runs off the request path"; setImmediate only DEFERS a sync block, it does not break it up.
+runIndexer is sync fs + sync JSON.parse + sync SQLite start to finish, so it pinned the single
+Node thread for the entire walk and the server answered NOTHING. The overlay POSTs inject then
+fetches /api/system before advancing — that second request couldn't be served.
+Dame's history: 2284 transcripts / 2.17 GB.
+- runIndexerYielding() drains the walk with yields; ensureIndexed calls it. All 8 callers are
+  fire-and-forget so nothing else changed.
+- indexFile() takes a byte cap + returns hadMoreBytes, so one huge transcript is consumed in
+  bounded slices. Per-file yielding alone was NOT enough — a measured cold index still stalled
+  one request 14.8s inside a lone 155MB file. Safe because the offset only ever advances to the
+  end of the last FULL line, exactly what resuming a partial read needs; a line longer than the
+  cap falls back to an uncapped read rather than spinning forever.
+- Measured on the real 2.17GB, cold DB, production build, polling /api/system throughout:
+  per-file yield = max 14.80s / median 0.13s; with slicing = **max 0.49s / median 0.14s**,
+  0 failures both runs. Resulting usage.db 27.0MB in BOTH runs — same data, so slicing neither
+  drops nor double-counts.
+
+## Clean-machine testing (2026-07-25)
+- **Windows Sandbox still UNPROVEN.** Three boots, zero bytes ever reached the host. Found and
+  fixed one real bug: the writable results folder was tools/smoke-test/results, a CHILD of
+  tools/smoke-test which is mapped ReadOnly — nested mappings do NOT override, the read-only
+  parent wins and every write inside failed silently. Moved to tools/smoke-results (sibling) and
+  added a boot marker so a future failure distinguishes "LogonCommand never fired" from "the
+  probe ran and found problems". Still never reported after the fix. The host cannot execute
+  inside a sandbox, so diagnosing further needs someone to LOOK at that desktop.
+- **tools/smoke-test/cleanenv-run.ps1 is what actually worked.** Host-side: strips
+  node/npm/claude/git from PATH, points USERPROFILE at an empty dir, silent-installs the real
+  .exe to a temp dir, cold-launches, polls for HTTP 200, hits the core APIs, asserts the detect
+  branch, dumps what landed in the fresh profile. 17/17 PASS on the shipped build; cold launch
+  to 200 in 9.1s. Does NOT cover: SmartScreen, installer UX, shortcut icon, GPU/3D, uninstall.
+- Verified on a virgin profile: detect → 'not-found', kit → false. That kit:false is the
+  receipt for why the installer can't be kit-gated (below).
 
 ## Product architecture (LOCKED philosophy)
 - ONE codebase, two tiers. Kit marker file (~/.claude/.blubber-kit.json) = the paywall switch.
@@ -100,6 +161,11 @@ Verified against a PRODUCTION build + real prod server, not dev (dev doesn't cod
 - Free shell stays SILENT about the Starter Kit — no in-app upsell, ever. The landing page
   (blubber-site) is the funnel; all downloads route through it, so the kit pitch already
   happened before the app is ever opened. (Dame, 2026-07-22)
+- **The in-app Claude Code installer is NOT kit-gated, and cannot be.** The kit marker lives at
+  ~/.claude/.blubber-kit.json — INSIDE the directory whose absence defines the notfound branch.
+  So `kit` is always false there and a gated button could never render on the one screen it
+  exists for. This is a structural fact, not a pricing preference: gating it would hide it from
+  exactly the people who paid. (2026-07-25)
 
 ## Known open items (pre-launch)
 1. ~~E2E suite~~ DONE 2026-07-22: 17/17 green. Fixes were all spec-side: 05 clicks Advanced tab
@@ -115,11 +181,29 @@ Verified against a PRODUCTION build + real prod server, not dev (dev doesn't cod
    does NOT move baseline. Ground-truthed via direct usage.db queries (table is `events`,
    not usage_events). Real data/ restored after.
 5. Voice unheard-tested beyond Dame ("robot noises" — hence muted default).
+7. **UNSIGNED .exe** — SmartScreen "unrecognized app" warning on every buyer's first install.
+   Needs an Authenticode cert (OV ~$200/yr, or EV for instant reputation) wired via
+   win.certificateFile + CSC_KEY_PASSWORD, or Azure Trusted Signing. Still the biggest open
+   launch gate.
+8. **Windows Sandbox harness never reported** (2026-07-25). Mapping bug fixed, still silent.
+   Everything it uniquely covers (SmartScreen wording, installer UI branding, shortcut icon,
+   3D on a non-dev GPU, uninstall) remains UNVERIFIED on a clean machine.
+9. **"Install it for me" never clicked by a human.** The route, the stream, the detect flip and
+   the UI are all proven, but the actual native installer was deliberately NOT executed — it
+   would stomp Dame's working Claude Code setup. Needs one click in the temp/clean profile.
 6. ~~Landing page URL for Academy~~ RESOLVED 2026-07-22 (Dame's call): no Academy exists yet,
    so there is no external link at all — the locked screen with the email waitlist IS the
    launch state. Verified: no dead/clickable-to-nowhere button anywhere in src.
 
 ## Gotchas
+- **NATIVE MODULE ABI IS A TOGGLE, NOT A STATE.** better-sqlite3 can only be built for ONE
+  runtime at a time. `npm run build` / `node server.js` / playwright need SYSTEM node
+  (`npm run rebuild:system-node`); `npm run electron:build` and the packaged app need ELECTRON
+  (`npm run rebuild:electron`). Wrong one = `NODE_MODULE_VERSION 148 vs 137` and every API route
+  500s while the server still prints "Blubber ready" — so it LOOKS up and isn't. Cost real time
+  this session twice. Always rebuild:electron as the LAST step before packaging.
+- A readiness probe that hits an API route can't distinguish "server down" from "server up but
+  every route 500s". Probe, then read the actual status code before concluding anything.
 - Pre-write slop hook blocks CSS animating layout props — transform/opacity/filter only.
 - Dame's machine has reduce-effects ON → intro skips instantly, onboarding video gated on OS pref only.
 - First-run replay: delete app_meta keys onboarding_seen_v1/intro_seen_v1 (+workspace_connected_v1) in data/usage.db.

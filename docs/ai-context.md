@@ -1,7 +1,56 @@
 # Blubber OS — AI Context
-# Last sync: 2026-07-25 ~11:40 ET (FROZEN — usage limit hit; session: launch-blocker sprint, all 5 audit blockers fixed, v0.1.1 built+verified)
+# Last sync: 2026-07-25 ~19:55 ET (v0.1.1 LAUNCHED — paid delivery and live storefront verified)
 
-## ===== FREEZE POINT — RESUME HERE =====
+## ===== v0.1.1 LAUNCH COMPLETE — DO NOT REPEAT =====
+# Safety backup:
+#   C:\Users\jeffh\Development\HOBBY\_backups\blubber-launch-preflight-20260725-174933
+# Protected app data: all 12 files in data/ still match the preflight backup byte-for-byte.
+#
+# APP / GITHUB
+# - PR #2 squash-merged into main as 01dce8e445a35094ce1a3f7d75d5367cd92300f3.
+# - Tag v0.1.1 points to that merge commit. Original fix branch was not deleted.
+# - Release: https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.1
+# - Installer: Blubber.Setup.0.1.1.exe, 196,697,154 bytes (187.6 MB)
+# - SHA256: 0A8DA228E3CA82A6937B078828C285FC031BE244A2CA382A70E2357CCAF0055B
+# - Release asset HEAD followed to HTTP 200 with the exact expected byte count.
+# - release.ps1 passed all 7 stages: typecheck, fresh build, path scrub, Electron ABI rebuild,
+#   native load, packaging/hygiene, checksum.
+# - Final clean-profile harness: all checks passed; cold server ready in 12.8s with no
+#   Node/npm/Claude/Git or prior profile. The in-app official Claude installer then installed
+#   Claude 2.1.220 inside the disposable profile, detect moved to "empty", the UI rendered
+#   "Clean slate", and v0.1.1 opened. All disposable processes were closed afterward.
+#
+# SHOPIFY / PAID DELIVERY
+# - Store: Blubber OS at https://flubberos.myshopify.com
+# - Product: Blubber Starter Kit, $39.99, active, digital/no shipping.
+# - Exact ZIP attached through Shopify Digital Products:
+#   Blubber-Starter-Kit-1.1.0.zip, 84,427 bytes,
+#   SHA256=225C8AC7642C1D3FAAB8BCABAD6A6E3372C24142D633E766883D7FFAE7B3AD45
+# - No-charge full purchase rehearsal completed as order #1001. Shopify marked the order paid
+#   and fulfilled; Digital Products reported the delivery email DELIVERED; the customer page
+#   showed the exact file and the Download Now action started a download.
+# - Temporary 100% test discount was expired immediately after its one use.
+# - Refund, automated privacy, terms, and contact policies are public and linked in checkout.
+# - Live theme Blubber OS #188479111535 was pushed successfully.
+# - Final live checkout rehearsal reached the payment page at USD $39.99 with the exact product.
+#
+# STOREFRONT SOURCE
+# - C:\Users\jeffh\Development\HOBBY\blubber-site is clean at local commit ff75d57
+#   (feat: publish Blubber launch storefront). This repo currently has no Git remote.
+# - Public collection Download for Windows points directly to the verified v0.1.1 asset.
+# - Live copy/art/counts are accurate: 10 agents, 10 skills, 8 commands, 4 guides.
+# - Footer says Apache-2.0; legacy MIT storefront badge and v0.1.0 link are gone.
+#
+# ACCEPTED EARLY-ACCESS LIMITATION
+# - The Windows installer is not code-signed. SmartScreen may show "unrecognized app";
+#   the README and GitHub release both explain More info -> Run anyway.
+#
+# DEFERRED POST-LAUNCH
+# - Authenticode signing, auto-updater, waitlist outbox retry, GitHub Actions release gate,
+#   CSP hardening, and the onboarding custom-folder issue remain post-launch work.
+## ===== END v0.1.1 LAUNCH COMPLETE =====
+
+## ===== HISTORICAL PRE-LAUNCH FREEZE (completed 2026-07-25) =====
 # Engineering is DONE and verified. Nothing on the code side is half-finished.
 # PR #2 open: https://github.com/Dameboll/Blubber-OS/pull/2
 #   branch fix/launch-blockers-v0.1.1 (pushed), commits 941fe14 + b3bb5dc on top of main da02dba
@@ -33,7 +82,7 @@
 # - Untracked on purpose (public repo — do NOT commit): data/, docs/screenshots/,
 #   BLUBBER-LAUNCH-READINESS-AUDIT-AND-PLAN.md
 # - Clean-env harness pins PORT=3000 (packaged app otherwise picks a random free port)
-## ===== END FREEZE POINT =====
+## ===== END HISTORICAL PRE-LAUNCH FREEZE =====
 
 ## Current state (branch fix/launch-blockers-v0.1.1, commits 941fe14 + b3bb5dc, NOT yet pushed/merged)
 All 5 launch blockers from BLUBBER-LAUNCH-READINESS-AUDIT-AND-PLAN.md fixed and verified:

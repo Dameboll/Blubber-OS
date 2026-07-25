@@ -1,8 +1,13 @@
-# CODEX HANDOFF — Blubber OS v0.1.1 Launch Finish
-# Written: 2026-07-25 15:30 EDT by Claude Code session
+# CODEX HANDOFF — Blubber OS v0.1.1 Launch Complete
+# Updated: 2026-07-25 19:55 EDT by Codex
 # Read this + docs/ai-context.md before touching anything.
+#
+# STATUS: LAUNCHED. The paid delivery gate, GitHub release, live Shopify theme,
+# public policies, clean-profile app path, and final checkout rehearsal all passed.
+# Do not repeat the launch sequence. See the completion block at the top of
+# docs/ai-context.md for exact commits, hashes, order evidence, and deferred work.
 
-## Current state
+## Historical pre-launch state (complete)
 
 - Branch: `fix/launch-blockers-v0.1.1` (main branch: `main`). PR #1 already merged earlier; this branch has the follow-up fixes.
 - Latest commits: `b3bb5dc` (survive missing Music known-folder + fail loudly on startup errors), `941fe14` (launch blockers 1-5 + fail-closed release pipeline), `da02dba` (clean-machine first-run path + smoke test harness).
@@ -18,7 +23,7 @@
 6. Release pipeline is fail-closed (`release.ps1`) — a failed step aborts the release instead of shipping a broken installer.
 7. better-sqlite3 ABI toggle handled: the module builds for system Node OR Electron, never both. Rebuild order matters — wrong ABI 500s every route. E2e was green post-ABI-rebuild.
 
-## Remaining work (in order)
+## Historical launch checklist (complete)
 
 ### 1. Commit / clean the stragglers on disk
 - Modified: `docs/ai-context.md` (session log update — commit it).

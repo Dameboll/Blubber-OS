@@ -8,13 +8,28 @@
 // aborts this request mid-run — request.signal fires, the child is killed, the
 // stream ends (see stream-command.ts's abort handling).
 //
-// COMMAND CHOICE: `npm install -g @anthropic-ai/claude-code`. npm is used
-// rather than the native curl|bash / irm|iex one-liners on purpose — Blubber's
-// own server.js is spawned with system `node` (see electron/main.js), so node +
-// npm are already present on any machine that can run this app, and npm avoids
-// piping a remote script straight into a shell (which AV / locked-down machines
-// frequently block). If a future build wants the native installer, swap the
-// single step below for the platform-specific command.
+// COMMAND CHOICE: Anthropic's official NATIVE installer, per
+// https://code.claude.com/docs/en/setup ("Native Install (Recommended)").
+//
+// This used to run `npm install -g @anthropic-ai/claude-code`, justified by the
+// claim that "node + npm are already present on any machine that can run this
+// app, because Blubber's own server.js is spawned with system node". That was
+// true once. It is FALSE for the shipped build: electron/main.js runs server.js
+// through Electron-as-node and the packaged app bundles its own runtime, which
+// is the entire point of the self-contained installer — a fresh-environment
+// smoke test confirmed the app launches fine with node AND npm absent from
+// PATH. So on exactly the machine this route exists to serve (a clean box with
+// no Claude Code), npm did not exist and the install failed at the first step.
+// Worse, it failed for Starter Kit buyers, since this flow is kit-gated.
+//
+// The native installer has no Node dependency at all — it drops a prebuilt
+// binary in ~/.local/bin and self-updates from there. Costs: it does pipe a
+// remote script into a shell, which some locked-down/AV setups block. That is
+// an acceptable trade against "guaranteed failure on a clean machine", and a
+// blocked download surfaces as real stderr in the stream the user is watching.
+//
+// npm remains the documented fallback for anyone who already has Node 22+ and
+// would rather use it; it is not what we run for them.
 
 import { NextResponse } from "next/server";
 import { runCommandStream, type StreamStep } from "../../../../server/stream-command";
@@ -22,17 +37,34 @@ import { runCommandStream, type StreamStep } from "../../../../server/stream-com
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const STEPS: StreamStep[] = [
-  {
-    label: "Installing Claude Code (npm i -g @anthropic-ai/claude-code)",
-    cmd: "npm",
-    args: ["install", "-g", "@anthropic-ai/claude-code"],
-  },
-];
+// Both commands are passed whole in `cmd` with empty `args` on purpose:
+// stream-command spawns with `shell: true`, so the string is handed to the
+// platform shell intact and the pipe is interpreted by that shell. Splitting a
+// `|` across argv would either be escaped into a literal or, on Windows, be
+// eaten by cmd.exe before PowerShell ever saw it.
+function installStep(): StreamStep {
+  if (process.platform === "win32") {
+    // Invoke PowerShell explicitly — spawn(shell:true) uses cmd.exe on Windows,
+    // where `irm`/`iex` do not exist. Inner double quotes keep the pipe inside
+    // the -Command payload. -NoProfile so a user's broken profile can't fail
+    // the install; -ExecutionPolicy Bypass because the default Restricted
+    // policy blocks the downloaded script on stock Windows.
+    return {
+      label: "Installing Claude Code (official Windows installer)",
+      cmd: 'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://claude.ai/install.ps1 | iex"',
+      args: [],
+    };
+  }
+  return {
+    label: "Installing Claude Code (official installer)",
+    cmd: "curl -fsSL https://claude.ai/install.sh | bash",
+    args: [],
+  };
+}
 
 export async function POST(request: Request) {
   try {
-    const stream = runCommandStream(STEPS, request.signal);
+    const stream = runCommandStream([installStep()], request.signal);
     return new Response(stream, {
       headers: {
         "Content-Type": "application/x-ndjson; charset=utf-8",

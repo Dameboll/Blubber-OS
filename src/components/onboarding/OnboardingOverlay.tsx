@@ -31,12 +31,26 @@
  *                `summary`.
  *   empty      → ~/.claude exists but is untouched. "Clean slate" message,
  *                one button straight through to the dashboard.
- *   notfound   → no ~/.claude at all. Terse: what's missing, a "Scan again"
- *                button, and a quiet text link out to install Claude Code
- *                manually. Nothing else — no install-for-you flow, no demo
- *                escape hatch (that flow is Starter-Kit-gated; see
- *                src/app/api/onboarding/install-claude/route.ts, left intact
- *                but unhooked from this overlay).
+ *   notfound   → no ~/.claude at all. Offers, in order: "Install it for me"
+ *                (runs the official installer via
+ *                /api/onboarding/install-claude, streaming its REAL output
+ *                into the card, cancellable mid-run), a ghost "Look around
+ *                first" that walks straight into the dashboard on the
+ *                placeholder dataset exactly like `empty` does, "Scan again",
+ *                and a quiet text link for anyone who'd rather do it by hand.
+ *                This branch used to be a hard dead end (scan-or-leave, no
+ *                third option); a fresh-box smoke test proved that ships a
+ *                modal cage to every new user who hasn't set up Claude Code
+ *                yet, which is most of them.
+ *
+ *                The install flow is deliberately NOT Starter-Kit-gated, and
+ *                cannot be: the kit marker lives at ~/.claude/.blubber-kit.json
+ *                (see server/kit-marker.ts), inside the directory whose absence
+ *                defines this branch — so `kit` is always false here and a
+ *                gated button could never render on the one screen it exists
+ *                for. It was previously written as kit-gated and simply wired
+ *                to nothing, which meant kit buyers and free users got the
+ *                identical link-and-good-luck screen.
  *   summary    → one card of real machine stats confirming the inject
  *                actually did something, then a final continue.
  *
@@ -57,6 +71,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type DragEvent } from 'react';
 import { gsap } from 'gsap';
 import { isReduceEffectsActive } from '../../lib/reduce-effects';
+import { readInstallStream } from '../../lib/install-stream';
 import { requestTour } from '../../lib/tour';
 import { requestSoulInterview } from '../../lib/soul';
 import { speak } from '../../lib/blubber-voice';
@@ -85,6 +100,10 @@ export interface OnboardingOverlayProps {
 
 const MIN_DETECT_DISPLAY_MS = 550;
 
+// Cap the retained installer output. The installer is short, but a stuck
+// download retrying could stream indefinitely and this array re-renders.
+const MAX_INSTALL_LOG_LINES = 200;
+
 // Blubber "narrates" a handful of steps out loud in blubber-speak (see
 // src/lib/blubber-voice.ts) — the same body copy shown on screen, chopped
 // into blips rather than read as TTS. Only the steps with real narration
@@ -96,7 +115,8 @@ const STEP_NARRATION: Partial<Record<Step, string>> = {
     "A live shell over the Claude Code sessions already running on this machine — sessions, agents, token burn, real. No account, no setup wizard, no tutorial. You already know how this works.",
   found:
     "There's real Claude Code history on this machine already. Blubber can index it right now — sessions, agents, token usage — so the dashboard opens with your actual work instead of an empty room.",
-  notfound: 'Blubber is a shell over Claude Code. Set it up, then come back and scan again.',
+  notfound:
+    "Blubber is a shell over Claude Code — you'll want it installed to get the real numbers. Look around in the meantime, and scan again once it's set up.",
   summary: 'Real numbers, off this machine, right now.',
 };
 
@@ -118,6 +138,16 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
   const [kitDetected, setKitDetected] = useState(false);
   const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
+
+  // Live install state for the `notfound` branch's "Install it for me" flow.
+  // installLog holds the real stdout/stderr coming off the installer child —
+  // nothing here is simulated, and installError is set only from a genuine
+  // non-zero exit or stream error.
+  const [installing, setInstalling] = useState(false);
+  const [installLog, setInstallLog] = useState<string[]>([]);
+  const [installError, setInstallError] = useState<string | null>(null);
+  const installAbortRef = useRef<AbortController | null>(null);
+  const logRef = useRef<HTMLPreElement | null>(null);
 
   // Fade/rise the card in on every step change — the one animation beat this
   // overlay uses. Skipped entirely under prefers-reduced-motion.
@@ -162,6 +192,60 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
 
     setStep(status === 'found' ? 'found' : status === 'empty' ? 'empty' : 'notfound');
   }, []);
+
+  // Runs the official Claude Code installer and streams its real output into
+  // the card. On success it re-runs the scan, which now recognises an
+  // installed-but-never-run binary (see api/onboarding/detect) and moves the
+  // user to `empty` instead of dropping them back on this same screen.
+  const handleInstallClaude = useCallback(async () => {
+    const ctrl = new AbortController();
+    installAbortRef.current = ctrl;
+    setInstalling(true);
+    setInstallError(null);
+    setInstallLog([]);
+
+    const append = (text: string) => {
+      const lines = text.split('\n').map((l) => l.trimEnd()).filter(Boolean);
+      if (lines.length) setInstallLog((prev) => [...prev, ...lines].slice(-MAX_INSTALL_LOG_LINES));
+    };
+
+    let ok = false;
+    try {
+      await readInstallStream('/api/onboarding/install-claude', ctrl.signal, (ev) => {
+        if (ev.type === 'step') append(ev.label);
+        else if (ev.type === 'stdout' || ev.type === 'stderr') append(ev.data);
+        else if (ev.type === 'error') setInstallError(ev.message);
+        else if (ev.type === 'done') ok = ev.ok;
+      });
+    } catch (err) {
+      // An abort is the user hitting Cancel, not a failure to report as one.
+      if ((err as Error).name !== 'AbortError') {
+        setInstallError((err as Error).message);
+      }
+    }
+
+    installAbortRef.current = null;
+    setInstalling(false);
+
+    if (ctrl.signal.aborted) return;
+    if (ok) {
+      await runDetect();
+    } else {
+      setInstallError((prev) => prev ?? 'Install did not finish — see the output above.');
+    }
+  }, [runDetect]);
+
+  const handleCancelInstall = useCallback(() => {
+    installAbortRef.current?.abort();
+    installAbortRef.current = null;
+    setInstalling(false);
+  }, []);
+
+  // Keep the newest installer output in view without yanking the whole page.
+  useEffect(() => {
+    const node = logRef.current;
+    if (node) node.scrollTop = node.scrollHeight;
+  }, [installLog]);
 
   const handleInject = useCallback(async () => {
     setBusy(true);
@@ -327,12 +411,44 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
         {step === 'notfound' && (
           <>
             <h2 className="onb__title onb__title--sm">No Claude Code workspace found at ~/.claude.</h2>
-            <p className="onb__body">Blubber is a shell over Claude Code. Set it up, then come back and scan again.</p>
-            <div className="onb__actions">
-              <button type="button" className="onb__btn onb__btn--primary" onClick={runDetect}>
+            <p className="onb__body">
+              Blubber is a shell over Claude Code — you'll want it installed to get the real numbers. Blubber can
+              install it for you now, or you can look around first and scan again once it's set up.
+            </p>
+
+            {(installing || installLog.length > 0) && (
+              <pre className="onb__log" ref={logRef} aria-live="polite">
+                {installLog.join('\n')}
+              </pre>
+            )}
+            {installError && <p className="onb__error">{installError}</p>}
+
+            <div className="onb__actions onb__actions--pair">
+              {installing ? (
+                <>
+                  <button type="button" className="onb__btn onb__btn--ghost" onClick={handleCancelInstall}>
+                    Cancel
+                  </button>
+                  <button type="button" className="onb__btn onb__btn--primary" disabled>
+                    Installing…
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="onb__btn onb__btn--ghost" onClick={finishOrOfferTour}>
+                    Look around first
+                  </button>
+                  <button type="button" className="onb__btn onb__btn--primary" onClick={handleInstallClaude}>
+                    {installError ? 'Try install again' : 'Install it for me'}
+                  </button>
+                </>
+              )}
+            </div>
+            {!installing && (
+              <button type="button" className="onb__btn onb__btn--ghost onb__btn--wide" onClick={runDetect}>
                 Scan again
               </button>
-            </div>
+            )}
             <a
               className="onb__link"
               href="https://claude.com/claude-code"

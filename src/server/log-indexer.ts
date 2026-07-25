@@ -281,16 +281,28 @@ function extractEventsFromLine(
 }
 
 /** Indexes a single file incrementally, returns counts of what was inserted. */
+/**
+ * Indexes the bytes appended to one transcript since its last scan.
+ *
+ * `maxBytes` caps how much is consumed in a single call. It exists because a
+ * call is one uninterrupted block of sync read + parse + insert: an unbounded
+ * pass over a 155 MB transcript froze the server for ~15s in a measured cold
+ * index. Capping is safe precisely because the offset bookkeeping already
+ * supports resuming — the offset only ever advances to the end of the last
+ * FULL line, so the next call picks up exactly where this one stopped, and
+ * `hadMoreBytes` in the return tells the caller to come back for the rest.
+ */
 function indexFile(
   filePath: string,
   project: string | null,
   knownOffset?: { lastSize: number; lastMtimeMs: number },
-): { usageCount: number; toolCount: number; hadNewData: boolean } {
+  maxBytes?: number,
+): { usageCount: number; toolCount: number; hadNewData: boolean; hadMoreBytes: boolean } {
   let stat: fs.Stats;
   try {
     stat = fs.statSync(filePath);
   } catch {
-    return { usageCount: 0, toolCount: 0, hadNewData: false };
+    return { usageCount: 0, toolCount: 0, hadNewData: false, hadMoreBytes: false };
   }
 
   const { lastSize } = knownOffset ?? getFileOffset(filePath);
@@ -304,16 +316,28 @@ function indexFile(
   }
 
   if (stat.size <= start) {
-    return { usageCount: 0, toolCount: 0, hadNewData: false };
+    return { usageCount: 0, toolCount: 0, hadNewData: false, hadMoreBytes: false };
   }
 
-  const chunk = readSliceSync(filePath, start, stat.size);
+  // Read at most maxBytes this call; anything left is picked up on the next
+  // one via the advanced offset.
+  const end = maxBytes && stat.size - start > maxBytes ? start + maxBytes : stat.size;
+  const chunk = readSliceSync(filePath, start, end);
   const lines = chunk.split("\n");
-  // The last element may be a partial line still being written -- hold it
-  // back and only advance the offset up to the end of the last full line.
+  // The last element may be a partial line still being written -- OR, when
+  // this read was capped, a line sliced mid-way through. Either way it is held
+  // back and the offset advances only to the end of the last full line, so the
+  // next pass re-reads that line from its true start.
   const trailing = lines.pop() ?? "";
   const trailingBytes = Buffer.byteLength(trailing, "utf8");
-  const consumedUpTo = stat.size - trailingBytes;
+  const consumedUpTo = end - trailingBytes;
+
+  // A capped read that consumed nothing means a single line longer than the
+  // cap. Advancing is impossible without splitting a line, so take the whole
+  // remainder in one go rather than spin forever on the same offset.
+  if (consumedUpTo <= start) {
+    return indexFile(filePath, project, knownOffset, undefined);
+  }
 
   const usageEvents: UsageEventInput[] = [];
   const toolEvents: ToolInvocationEventInput[] = [];
@@ -343,12 +367,89 @@ function indexFile(
     usageCount: usageEvents.length,
     toolCount: toolEvents.length,
     hadNewData: usageEvents.length > 0 || toolEvents.length > 0,
+    hadMoreBytes: consumedUpTo < stat.size,
   };
 }
 
 /** Runs one full incremental indexing pass across all transcript files.
  * Cheap to call on every /api/weekly request -- files with no new bytes
  * since the last scan are skipped in O(1) via the stat-size check. */
+/**
+ * Yield the event loop back to the HTTP server.
+ *
+ * setImmediate runs AFTER pending I/O callbacks, so anything already queued
+ * (an in-flight request) gets served before the walk resumes.
+ */
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
+/**
+ * Same pass as runIndexer, but pauses periodically so the process can answer
+ * requests mid-walk.
+ *
+ * Why this exists: runIndexer is entirely synchronous — sync fs reads, sync
+ * JSON parsing, sync SQLite writes — so on a large history it pins the single
+ * Node thread for its whole duration and the server answers NOTHING until it
+ * finishes. Wrapping the call in setImmediate (what ensureIndexed used to do)
+ * only defers the block, it does not break it up. On a real 2.2 GB / 2284-file
+ * ~/.claude that froze onboarding on "Injecting…" for minutes: the overlay's
+ * follow-up /api/system fetch could not be served, so the UI looked hung.
+ *
+ * Yielding per FILE is not enough on its own: sizes here span kilobytes to
+ * 155 MB, and a measured cold index still stalled one request 14.8s inside a
+ * single large transcript. So indexFile takes a byte cap and each file is
+ * drained in bounded slices, with a yield between them. That is safe because
+ * the offset bookkeeping already advances only to the end of the last full
+ * line, which is exactly what a resumable partial read needs.
+ */
+export async function runIndexerYielding(): Promise<IndexResult> {
+  const files = walkJsonlFiles(CLAUDE_PROJECTS_DIR);
+  const offsets = getAllFileOffsets();
+  const projectFor = buildProjectResolver();
+
+  let filesWithNewData = 0;
+  let usageEventsInserted = 0;
+  let toolEventsInserted = 0;
+
+  for (const file of files) {
+    const project = projectFor(file);
+    // Only the FIRST slice can use the batched offset map; later slices must
+    // re-read the offset this loop just advanced, so knownOffset is dropped.
+    let known = offsets.get(file);
+    let countedFile = false;
+
+    // Drain the file in capped slices, yielding between them, so one huge
+    // transcript can't hold the thread for the length of a full read.
+    for (;;) {
+      const { usageCount, toolCount, hadNewData, hadMoreBytes } = indexFile(file, project, known, INDEX_YIELD_BYTES);
+      known = undefined;
+
+      if (hadNewData && !countedFile) {
+        filesWithNewData += 1;
+        countedFile = true;
+      }
+      usageEventsInserted += usageCount;
+      toolEventsInserted += toolCount;
+
+      // One yield per slice. A slice is bounded by INDEX_YIELD_BYTES, so this
+      // bounds how long any request can wait behind the walk. Files smaller
+      // than the cap are one slice, so this costs one scheduler turn each —
+      // negligible against reading them.
+      await yieldToEventLoop();
+
+      if (!hadMoreBytes) break;
+    }
+  }
+
+  return {
+    filesScanned: files.length,
+    filesWithNewData,
+    usageEventsInserted,
+    toolEventsInserted,
+  };
+}
+
 export function runIndexer(): IndexResult {
   const files = walkJsonlFiles(CLAUDE_PROJECTS_DIR);
   // One query for every tracked offset instead of a SELECT per file — the walk
@@ -383,6 +484,11 @@ let lastIndexAt = 0;
 let indexing = false;
 const INDEX_THROTTLE_MS = 8_000;
 
+// Bytes to chew through before handing the event loop back. Small enough that
+// a request never waits long behind the walk, large enough that a history of
+// thousands of small transcripts doesn't pay a scheduler turn per file.
+const INDEX_YIELD_BYTES = 4 * 1024 * 1024;
+
 /**
  * Request-path-safe indexer trigger. The full walk over ~/.claude/projects
  * (a statSync per transcript across hundreds of files) is the expensive part,
@@ -401,15 +507,16 @@ export function ensureIndexed(): void {
   if (indexing || now - lastIndexAt < INDEX_THROTTLE_MS) return;
   indexing = true;
   lastIndexAt = now;
-  setImmediate(() => {
-    try {
-      runIndexer();
-    } catch (err) {
+  // Yielding variant, NOT runIndexer: a sync pass here blocks every other
+  // request for the length of the walk (see runIndexerYielding's comment).
+  // Still fire-and-forget — callers await nothing.
+  void runIndexerYielding()
+    .catch((err) => {
       console.error("[indexer] background pass failed:", err);
-    } finally {
+    })
+    .finally(() => {
       indexing = false;
-    }
-  });
+    });
 }
 
 export default runIndexer;

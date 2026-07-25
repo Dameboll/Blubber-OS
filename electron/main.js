@@ -6,31 +6,27 @@
  * spawns the real server.js as a child process and points a BrowserWindow
  * at it, same as opening http://127.0.0.1:<port> in a normal browser tab.
  *
- * NODE RUNTIME FOR THE CHILD PROCESS -- two modes, one env var:
+ * NODE RUNTIME FOR THE CHILD PROCESS -- two modes, selected by whether the
+ * app is packaged (see the `runAsElectronNode` line in startServer below):
  *
- * Default today: spawn the system `node` found on PATH, exactly like
- * `npm run dev` already does. better-sqlite3/node-pty are compiled against
- * system Node's ABI as installed by plain `npm install`, so this "just
- * works" with zero extra build tooling. This is what
- * `npm run electron:dev` actually uses out of the box.
+ * PACKAGED (always): spawn Electron's OWN binary with ELECTRON_RUN_AS_NODE=1,
+ * which makes it behave exactly like `node <script>`. A packaged install must
+ * be self-contained -- a buyer has no guarantee of a system `node` on PATH,
+ * and the server can't boot without one, so onboarding (which runs INSIDE the
+ * app) could never rescue it. Electron's binary always ships with the app.
+ * This requires better-sqlite3/node-pty to be built against Electron's Node
+ * ABI (`npm run rebuild:electron`, needs Visual Studio Build Tools on
+ * Windows); npmRebuild:false in electron-builder.yml keeps those
+ * already-correct binaries untouched during packaging.
  *
- * Future (packaged installer) mode: set BLUBBER_ELECTRON_SPAWN_AS_NODE=1
- * to instead spawn Electron's OWN binary with ELECTRON_RUN_AS_NODE=1,
- * which makes Electron's bundled binary behave exactly like `node <script>`.
- * That removes the dependency on the end user having Node.js installed at
- * all -- necessary for a real standalone installer. It requires
- * better-sqlite3/node-pty to be rebuilt against Electron's Node ABI first
- * (see scripts/electron-rebuild.mjs / `npm run rebuild:electron`), which in
- * turn requires a native build toolchain (Visual Studio Build Tools on
- * Windows) to be present -- not assumed to exist on every dev machine, so
- * it isn't the default for this scaffold pass. Once that toolchain is
- * available, flip the env var and the postinstall step does the rest.
+ * DEV (unpackaged, default): spawn the system `node` found on PATH, exactly
+ * like `npm run dev`. Set BLUBBER_ELECTRON_SPAWN_AS_NODE=1 to force the
+ * packaged path in dev for a smoke-test of that code path.
  *
- * KNOWN TRADEOFF when the future mode IS used: once better-sqlite3/node-pty
- * are rebuilt for Electron's ABI, the plain `npm run dev` / `npm start`
- * path (system `node server.js`, no Electron) will throw a
- * NODE_MODULE_VERSION mismatch until `npm run rebuild:system-node` flips
- * them back. Documented, not a bug.
+ * KNOWN TRADEOFF: after `npm run rebuild:electron`, the plain
+ * `npm run dev` / `npm start` path (system `node server.js`, no Electron)
+ * throws a NODE_MODULE_VERSION mismatch until `npm run rebuild:system-node`
+ * flips the native modules back. Documented, not a bug.
  */
 
 const path = require("node:path");

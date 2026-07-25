@@ -232,6 +232,50 @@
   color: var(--text-primary);
 }
 
+/* Full-width secondary action ("Scan again" on the notfound branch). Sits on
+   its own row under the primary pair so three actions don't crowd into one
+   line on a phone-width card. */
+.onb__btn--wide {
+  width: 100%;
+  margin-top: 10px;
+}
+
+/* Live installer output on the notfound branch. Real stdout/stderr off the
+   child process, so it has to tolerate long unbroken paths and URLs without
+   ever widening the card — hence the scroll container plus wrapping. Height is
+   capped rather than free-growing so the buttons underneath never get pushed
+   off-screen mid-install. */
+.onb__log {
+  width: 100%;
+  max-height: 160px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-glow);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Install failure. Reads as a problem without the card turning into an alarm —
+   this state is recoverable and the button next to it says "Try install again". */
+.onb__error {
+  width: 100%;
+  margin: 8px 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: oklch(70% 0.17 25);
+  text-align: left;
+}
+
 /* Quiet text link — the "do it yourself" escape hatch on the notfound
    branch. Deliberately NOT styled as a button (see .onb__btn--ghost above):
    this is a secondary, low-emphasis way out, not a competing call to action. */

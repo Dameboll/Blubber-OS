@@ -1,0 +1,39 @@
+<Configuration>
+  <VGpu>Enable</VGpu>
+  <Networking>Enable</Networking>
+  <MemoryInMB>8192</MemoryInMB>
+  <ProtectedClient>Disable</ProtectedClient>
+  <ClipboardRedirection>Enable</ClipboardRedirection>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>C:\Users\jeffh\Development\HOBBY\blubber-os\dist-electron</HostFolder>
+      <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\installer</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+    <MappedFolder>
+      <HostFolder>C:\Users\jeffh\Development\HOBBY\blubber-os\tools\smoke-test</HostFolder>
+      <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\smoke</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+    <!-- WRITABLE on purpose: the only channel out of the sandbox. Scripts write
+         the log here so it lands on the host disk and survives the sandbox
+         being closed (and can be watched live from the host mid-run).
+         MUST live OUTSIDE tools/smoke-test/. It used to be a child of that
+         folder, which is mapped ReadOnly above -- nested mappings do not
+         override, the read-only parent wins, so every write into it failed
+         silently inside the sandbox and no log ever reached the host. -->
+    <MappedFolder>
+      <HostFolder>C:\Users\jeffh\Development\HOBBY\blubber-os\tools\smoke-results</HostFolder>
+      <SandboxFolder>C:\Users\WDAGUtilityAccount\Desktop\results</SandboxFolder>
+      <ReadOnly>false</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <!-- cmd wrapper writes a boot marker to the mapped folder FIRST. If the
+         marker never lands on the host, the LogonCommand itself never fired or
+         the writable mapping did not attach - a distinct failure from "the
+         probe ran and found problems". Transcript captures probe output even
+         if the script throws before its own logging starts. -->
+    <Command>cmd.exe /c echo LOGON_FIRED &gt; C:\Users\WDAGUtilityAccount\Desktop\results\boot-marker.txt 2&gt;&amp;1 &amp; powershell -ExecutionPolicy Bypass -NoExit -Command "Start-Transcript -Path C:\Users\WDAGUtilityAccount\Desktop\results\transcript.txt -Force; &amp; C:\Users\WDAGUtilityAccount\Desktop\smoke\sandbox-probe.ps1"</Command>
+  </LogonCommand>
+</Configuration>

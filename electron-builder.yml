@@ -1,9 +1,15 @@
 # electron-builder.yml
 #
-# SCAFFOLD PASS -- Windows NSIS installer only. Mac/Linux targets, code
-# signing, and auto-update are explicitly out of scope for this stage; see
-# electron/main.js and scripts/electron-rebuild.mjs for the native-module
-# ABI notes that a real production installer build will need to account for.
+# Windows NSIS installer only. Mac/Linux targets and auto-update are out of
+# scope. Native modules ARE rebuilt against Electron's ABI for packaged builds
+# (see electron/main.js header + scripts/electron-rebuild.mjs) -- the packaged
+# app is self-contained and needs no system Node.js.
+#
+# KNOWN LAUNCH GAP: the produced .exe is UNSIGNED. Windows SmartScreen shows an
+# "unrecognized app" warning that the buyer must click through (More info > Run
+# anyway). Fixing this needs an Authenticode code-signing certificate (OV ~$200/yr,
+# or EV for instant SmartScreen reputation) wired in via a `win.certificateFile`
+# + CSC_KEY_PASSWORD, or an Azure Trusted Signing account.
 #
 # `files` is an explicit exclude list layered on electron-builder's default
 # "**/*" (all patterns here start with `!`, so the default is preserved --

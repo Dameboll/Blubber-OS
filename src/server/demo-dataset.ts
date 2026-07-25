@@ -224,7 +224,7 @@ export function getDemoUsageWindow() {
     totalTokens,
     tokensIn: Math.round(totalTokens * 0.04),
     tokensOut: Math.round(totalTokens * 0.13),
-    cacheTokens: Math.round(totalTokens * 0.83),
+    tokensCache: Math.round(totalTokens * 0.83),
   });
   return {
     fiveHour: 412_000 + drift,

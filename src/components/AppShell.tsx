@@ -37,6 +37,7 @@ import {
   Terminal,
 } from 'lucide-react';
 import gsap from 'gsap';
+import pkg from '../../package.json';
 import Flubber3D from './Flubber3D';
 import AgentAvatar from './AgentAvatar';
 import PersistentTerminalHost from './PersistentTerminalHost';
@@ -442,7 +443,7 @@ function ShellChrome({ quote, statusLabel, statusOk, activeNavId, children }: Sh
       <footer className="blubber-shell__footer">
         <span className="blubber-shell__footer-version">
           <FlaskConical size={13} aria-hidden="true" />
-          Blubber OS v1.0.0
+          Blubber OS v{pkg.version}
         </span>
         <span className="blubber-shell__footer-quote">{quote}</span>
         <span className="blubber-shell__footer-status">

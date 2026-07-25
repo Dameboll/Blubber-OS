@@ -75,6 +75,7 @@ const CORE_GET_ROUTES = [
   '/api/spawned',
   '/api/agents',
   '/api/agents-live',
+  '/api/recent-session',
   '/api/projects',
   '/api/projects/summary',
   '/api/tracks',
@@ -111,6 +112,37 @@ test.describe('Warm-up + API smoke', () => {
       const res = await warmRequest(request, 'get', route);
       expect(res.status(), `GET ${route}`).toBe(200);
     }
+
+    // A fresh isolated profile uses the placeholder usage payload. Keep its
+    // field names locked to WindowTotals so the dashboard never renders NaN.
+    const usageRes = await warmRequest(request, 'get', '/api/usage-window');
+    const usage = (await usageRes.json()) as {
+      breakdown?: Record<string, { totalTokens: number; tokensIn: number; tokensOut: number; tokensCache: number }>;
+    };
+    for (const period of ['fiveHour', 'weekly', 'today']) {
+      const split = usage.breakdown?.[period];
+      expect(split, `usage breakdown.${period}`).toBeTruthy();
+      for (const field of ['totalTokens', 'tokensIn', 'tokensOut', 'tokensCache'] as const) {
+        expect(Number.isFinite(split?.[field]), `${period}.${field} is finite`).toBe(true);
+      }
+    }
+
+    // Before onboarding connects a workspace, transcript-backed endpoints
+    // must not inspect or expose the developer's real ~/.claude sessions.
+    const liveAgentsRes = await warmRequest(request, 'get', '/api/agents-live');
+    const liveAgents = (await liveAgentsRes.json()) as {
+      running?: unknown[];
+      recent?: unknown[];
+      runningCount?: number;
+      heroSession?: { working?: boolean; activity?: unknown; lastAssistantText?: unknown };
+    };
+    expect(liveAgents.running).toEqual([]);
+    expect(liveAgents.recent).toEqual([]);
+    expect(liveAgents.runningCount).toBe(0);
+    expect(liveAgents.heroSession).toEqual({ working: false, activity: null, lastAssistantText: null });
+
+    const recentSessionRes = await warmRequest(request, 'get', '/api/recent-session');
+    expect(await recentSessionRes.json()).toEqual({ session: null });
 
     for (const route of WARM_ONLY_GET_ROUTES) {
       const res = await warmRequest(request, 'get', route);

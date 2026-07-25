@@ -35,6 +35,7 @@
 
 appId: com.dameos.blubber
 productName: Blubber
+artifactName: "${productName}.Setup.${version}.${ext}"
 
 # asar MUST be false. electron/main.js spawns the real server.js as a child
 # process (Electron-as-node) and Next.js reads its production build (.next-build),

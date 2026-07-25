@@ -112,6 +112,27 @@ function getAppRoot() {
   return path.join(__dirname, "..");
 }
 
+/**
+ * Where uploaded music lives. Preferred: the user's real Music known folder
+ * (large media shouldn't sit in userData — some systems back that up). But
+ * app.getPath("music") THROWS on profiles whose Music known folder is
+ * missing/unregistered (fresh accounts, stripped test profiles) — an
+ * uncaught throw here killed the whole packaged startup during clean-env
+ * testing. Fall back: ~/Music, then userData.
+ */
+function resolveMusicDir() {
+  try {
+    return path.join(app.getPath("music"), "Blubber");
+  } catch {
+    /* known folder missing — fall through */
+  }
+  try {
+    return path.join(app.getPath("home"), "Music", "Blubber");
+  } catch {
+    return path.join(app.getPath("userData"), "blubber-music");
+  }
+}
+
 function startServer() {
   const appRoot = getAppRoot();
   const serverEntry = path.join(appRoot, "server.js");
@@ -138,12 +159,12 @@ function startServer() {
     // uninstaller removes the install dir; before this, it deleted every
     // database, preference, playlist, and uploaded track with it — see
     // src/server/app-dirs.ts + data-migrate.ts). Music is deliberately NOT
-    // under userData: Electron guidance warns against large media there
-    // because some systems back that folder up.
+    // under userData when avoidable: Electron guidance warns against large
+    // media there because some systems back that folder up.
     ...(app.isPackaged
       ? {
           BLUBBER_DATA_DIR: path.join(app.getPath("userData"), "blubber-data"),
-          BLUBBER_MUSIC_DIR: path.join(app.getPath("music"), "Blubber"),
+          BLUBBER_MUSIC_DIR: resolveMusicDir(),
         }
       : {}),
     NODE_ENV: app.isPackaged
@@ -325,6 +346,15 @@ app.whenReady().then(async () => {
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+}).catch((err) => {
+  // Without this, a throw during startup becomes an unhandled rejection and
+  // the app sits alive-but-dead with no window and no explanation (exactly
+  // how the missing-Music-folder bug presented in clean-env testing).
+  dialog.showErrorBox(
+    "Blubber failed to start",
+    `Startup hit an unexpected error:\n\n${err instanceof Error ? err.message : String(err)}`,
+  );
+  app.quit();
 });
 
 app.on("window-all-closed", () => {

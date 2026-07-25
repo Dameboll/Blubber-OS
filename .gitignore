@@ -18,6 +18,7 @@ data/pet.db-wal
 data/pet.db-shm
 data/playlists.json
 data/brain-config.json
+data/voice-config.json
 data/spawned-agents.json
 data/quests.json
 data/cover-art/

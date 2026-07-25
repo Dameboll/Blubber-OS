@@ -105,6 +105,13 @@ import { classifyOutput, stripAnsi } from '../lib/terminal-signals';
 import { narrate } from '../lib/flubber3d/narration';
 import { DEV_ROOT } from '../lib/dev-root';
 import { formatClockTime } from '../lib/time-format';
+import { installFetchAuth } from '../lib/api-auth';
+
+// Patch window.fetch once, app-wide, so every same-origin /api mutation
+// carries the per-process auth token server.js now requires (Blocker 2's
+// localhost authorization boundary). Module scope on the client root so it
+// runs before any component's first mutation can fire.
+installFetchAuth();
 
 // ---------------------------------------------------------------------------
 // Types
@@ -504,7 +511,9 @@ export function SessionProvider({ children, onRequestTerminalNav }: SessionProvi
 
   const openProjectInTab = useCallback(
     (root: string, name: string) => {
-      spawnOrQueue(name, `${DEV_ROOT}\\${root}\\${name}`);
+      // Tilde path — the server expands "~" and normalizes separators at
+      // spawn time (src/server/resolve-path.ts), so forward slashes are safe.
+      spawnOrQueue(name, `${DEV_ROOT}/${root}/${name}`);
       narrate(`Opening ${name}.`, { mood: 'focused' });
     },
     [spawnOrQueue],

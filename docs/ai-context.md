@@ -1,7 +1,81 @@
 # Blubber OS — AI Context
-# Last sync: 2026-07-25 ~03:00 ET (session: clean-machine smoke test → 4 real first-run bugs fixed)
+# Last sync: 2026-07-25 ~11:40 ET (FROZEN — usage limit hit; session: launch-blocker sprint, all 5 audit blockers fixed, v0.1.1 built+verified)
 
-## Current state (branch chore/smoke-test-harness, pushed, HEAD 9aa2c67)
+## ===== FREEZE POINT — RESUME HERE =====
+# Engineering is DONE and verified. Nothing on the code side is half-finished.
+# PR #2 open: https://github.com/Dameboll/Blubber-OS/pull/2
+#   branch fix/launch-blockers-v0.1.1 (pushed), commits 941fe14 + b3bb5dc on top of main da02dba
+# Installer READY: dist-electron\Blubber Setup 0.1.1.exe — 187.6MB
+#   SHA256=A7CB1792BD7D6C1ACBFFCA5D2AADE26A03DE3D7B0D56979D131E60CC9021BA0B (also in dist-electron\SHA256SUMS.txt)
+# Verified: tsc clean | e2e 20/20 | clean-env harness ALL PASS on packaged exe (8.3s boot,
+#   DBs in userData\blubber-data, free-tier flow + kit gate correct on virgin profile)
+#
+# NEXT MOVES, IN ORDER (Dame's lane — no Claude needed for 1-4):
+# 1. Shopify (CORRECT Blubber admin, NOT AI Won't Save You): attach kit ZIP to variant,
+#    one real purchase -> download -> refund test.  <- ONLY remaining paid-launch blocker
+# 2. Squash-merge PR #2 -> tag v0.1.1 on the merge commit -> GitHub release -> upload
+#    installer + SHA256SUMS.txt
+# 3. Shopify theme: publish cosmetics (footer Â© encoding, policy pages via Settings->Policies,
+#    one brand name, MIT-vs-Apache wording). Flip download button ONLY after step 2 asset live.
+# 4. README: 3 missing screenshots, dead '#' kit link, installer button up top.
+# 5. Download-page copy (Early Access): "Blubber is in Windows Early Access. The installer
+#    isn't code-signed yet, so Windows SmartScreen will warn you — click More info -> Run
+#    anyway. Verify your download: SHA-256 checksum on the release page."
+#
+# DEFERRED POST-LAUNCH (on record, not forgotten): Authenticode signing, auto-updater,
+#   waitlist outbox retry, GitHub Actions release gate, CSP hardening, onboarding
+#   custom-folder flow ignoring chosen folder (audit high-priority, non-blocker).
+#
+# GOTCHAS FOR NEXT SESSION:
+# - To rebuild a release: powershell -ExecutionPolicy Bypass -File scripts\release.ps1
+#   (handles ABI both directions itself; never hand-run next build after rebuild:electron)
+# - Dev work after a release build: npm run rebuild:system-node first or every route 500s
+# - Untracked on purpose (public repo — do NOT commit): data/, docs/screenshots/,
+#   BLUBBER-LAUNCH-READINESS-AUDIT-AND-PLAN.md
+# - Clean-env harness pins PORT=3000 (packaged app otherwise picks a random free port)
+## ===== END FREEZE POINT =====
+
+## Current state (branch fix/launch-blockers-v0.1.1, commits 941fe14 + b3bb5dc, NOT yet pushed/merged)
+All 5 launch blockers from BLUBBER-LAUNCH-READINESS-AUDIT-AND-PLAN.md fixed and verified:
+1. Paths: client uses tilde tokens (src/lib/dev-root.ts = "~/Development"), server expands at
+   spawn (src/server/resolve-path.ts). next.config.js env block DELETED — nothing personal bakes
+   into bundles. Quick Chat model unpinned (CLI default), cwd falls back to existing ancestor.
+2. Auth: server.js globally requires x-blubber-token header on every non-GET /api/* (same secret
+   as WS token, shared via process.env.BLUBBER_AUTH_TOKEN) + Host/Origin validation on ALL
+   requests and the WS upgrade. Client: src/lib/api-auth.ts patches window.fetch once (installed
+   from page.tsx + SessionProvider module scope). e2e mutations go through authedPost (helpers.ts).
+3. Data: src/server/app-dirs.ts is the single source for DATA_DIR/MUSIC_DIR. Packaged runs get
+   BLUBBER_DATA_DIR=<userData>\blubber-data and BLUBBER_MUSIC_DIR=<Music>\Blubber from
+   electron/main.js (resolveMusicDir has fallback chain — app.getPath('music') THROWS on
+   profiles without a Music known-folder; that killed startup silently in clean-env test).
+   Idempotent verified migration: src/server/data-migrate.ts, marker .blubber-migration.json.
+4. Kit install (src/app/api/kit/install/route.ts): validate-all-before-write, path containment,
+   conflict scan across CLAUDE.md/agents/skills/commands, backup to
+   ~/.claude/.blubber-kit-backup-<ts> BEFORE first write, abort if backup fails, auto-restore on
+   any later failure. Response reports conflicts + backupDir. Two-tier funnel untouched.
+5. Startup: single-instance lock, dynamic free port when packaged (PORT env overrides — the
+   clean-env harness pins PORT=3000), nonce identity handshake: window opens only when
+   /__blubber-health returns {app:'blubber', nonce}. Startup throws now show an error dialog.
+
+Release pipeline: scripts/release.ps1 (fail-closed, 7 steps: typecheck → system-ABI rebuild +
+fresh build → scrub build-machine paths from .next-build (Next embeds resolvedPagePath in ~96
+files) → Electron-ABI rebuild → native load test → package → hygiene scan (forbidden files +
+jeffh grep) → checksum). electron-builder.yml now excludes .next-build/cache (~280MB),
+.next-build/types, .env.local, tools/; publisher metadata = Dame Boll; version 0.1.1.
+
+VERIFIED: tsc clean; e2e 20/20; clean-env harness ALL PASS against the packaged build
+(8.3s cold boot, APIs 200, DBs written to userData\blubber-data, kit marker absent = free flow).
+Installer: dist-electron\Blubber Setup 0.1.1.exe, 187.6MB,
+SHA256=A7CB1792BD7D6C1ACBFFCA5D2AADE26A03DE3D7B0D56979D131E60CC9021BA0B
+
+REMAINING (Dame's lane, blocks paid launch): correct Shopify admin + attach kit ZIP + one real
+purchase/download/refund test; publish theme cosmetics (download button waits for v0.1.1 asset
+live on GitHub); README screenshots + dead links; then push branch, PR, squash-merge, tag v0.1.1
+from that exact commit, upload installer + SHA256SUMS.txt to the release. Ship label: Windows
+Early Access (unsigned; SmartScreen instructions on download page). Deferred post-launch:
+Authenticode signing, auto-updater, waitlist outbox retry, GitHub Actions release gate, CSP.
+
+## Previous state (branch chore/smoke-test-harness, merged as da02dba)
 Launch-shaped. E2E 20/20 green (was 17, +3 across two sessions). Installer rebuilt 2026-07-25
 at 222.9MB with all of this session's fixes packaged and verified present inside the .exe.
 Freeze tags: freeze-pre-launch-split, freeze-pre-polish-batch, freeze-pre-voice-settings.

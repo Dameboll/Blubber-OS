@@ -37,6 +37,10 @@ $env:APPDATA     = "$profile\AppData\Roaming"
 $env:LOCALAPPDATA= "$profile\AppData\Local"
 $env:HOME        = $profile
 $env:HOMEPATH    = $profile
+# Packaged Blubber now picks a random free loopback port unless PORT is set
+# (see electron/main.js resolveFreePort) — pin it so this harness's fixed
+# http://127.0.0.1:3000 probes keep working.
+$env:PORT        = '3000'
 
 foreach ($t in 'node','npm','claude','git') {
     $c = Get-Command $t -ErrorAction SilentlyContinue

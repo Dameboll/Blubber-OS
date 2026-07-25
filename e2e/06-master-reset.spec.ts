@@ -12,14 +12,20 @@
  */
 
 import { test, expect } from 'playwright/test';
-import { markIntroSeen, markOnboardingSeen } from './helpers';
+import { authedPost, markIntroSeen, markOnboardingSeen } from './helpers';
 
 test.describe('Master reset — regression check', () => {
   test('POST /api/reset returns 200 with a fresh baseline, and the app boots cleanly after it', async ({
     page,
     request,
   }) => {
-    const res = await request.post('/api/reset');
+    // The auth boundary itself: a bare unauthenticated POST to a mutation
+    // route must be refused outright (this is the customer-safety gate that
+    // keeps a malicious webpage from driving reset/install endpoints).
+    const unauthed = await request.post('/api/reset');
+    expect(unauthed.status()).toBe(401);
+
+    const res = await authedPost(request, '/api/reset');
     expect(res.status()).toBe(200);
 
     const body = (await res.json()) as { ok: boolean; baseline: string };

@@ -1,12 +1,13 @@
 /**
- * Portable Development-root path, safe to import from CLIENT or server code.
+ * Portable Development-root path token, safe to import from CLIENT or server
+ * code.
  *
- * Server-side modules can compute this directly with
- * `path.join(os.homedir(), "Development")` (optionally overridden via the
- * BLUBBER_DEV_ROOT env var — see next.config.js). Client components ('use
- * client') can't call Node's `os.homedir()` at all, so they import this
- * constant instead: the real value is computed once, server-side, in
- * next.config.js and inlined into both bundles at build/start time via
- * `NEXT_PUBLIC_BLUBBER_DEV_ROOT` — never a hardcoded personal path.
+ * This is a TILDE PATH, not a real filesystem path. Client components can't
+ * call os.homedir(), and baking a real home path into the client bundle at
+ * build time (the old NEXT_PUBLIC_BLUBBER_DEV_ROOT approach) shipped the
+ * BUILD machine's personal paths to every customer. Instead the client only
+ * ever passes this token around; the server expands "~" to the current
+ * user's real home at the moment it touches the filesystem (see
+ * src/server/resolve-path.ts, consumed by pty-manager.ts's spawnSession).
  */
-export const DEV_ROOT = process.env.NEXT_PUBLIC_BLUBBER_DEV_ROOT || 'Development';
+export const DEV_ROOT = "~/Development";

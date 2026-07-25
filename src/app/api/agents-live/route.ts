@@ -33,6 +33,7 @@ import { ensureIndexed } from "../../../server/log-indexer";
 import { getLiveRuns, type LiveRun } from "../../../server/db";
 import { shortAgentName } from "../../../lib/agent-name";
 import { humanizeSlug } from "../../../lib/humanize";
+import { isWorkspaceConnected } from "../../../server/connected-store";
 import {
   getMainSessionActivity,
   getRunActivity,
@@ -69,6 +70,18 @@ function shapeRun(r: LiveRun, includeActivity: boolean) {
 }
 
 export async function GET() {
+  // A fresh shell has not been authorized to read ~/.claude yet. Keep every
+  // live/session field empty until onboarding explicitly connects a workspace;
+  // otherwise the placeholder Agents screen can leak text from a real session.
+  if (!isWorkspaceConnected()) {
+    return NextResponse.json({
+      running: [],
+      recent: [],
+      runningCount: 0,
+      heroSession: { working: false, activity: null, lastAssistantText: null },
+    });
+  }
+
   try {
     ensureIndexed();
     const { running, recent } = getLiveRuns();

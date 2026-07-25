@@ -14,6 +14,7 @@
 import os from "node:os";
 import * as pty from "node-pty";
 import type { ResumeSpec } from "../lib/ws-client";
+import { resolveSpawnCwd } from "./resolve-path";
 
 const isWindows = os.platform() === "win32";
 
@@ -101,7 +102,11 @@ function buildLaunchCommand(resume?: ResumeSpec): { file: string; args: string[]
  * reconnecting client can't orphan a second process.
  */
 export function spawnSession(opts: SpawnSessionOptions): void {
-  const { sessionId, cwd, initialPrompt, resume, cols, rows, onData, onExit, onSpawned } = opts;
+  const { sessionId, initialPrompt, resume, cols, rows, onData, onExit, onSpawned } = opts;
+  // Clients send portable tilde paths ("~/Development/..."), never real
+  // machine paths — expand here, and fall back to an existing ancestor so a
+  // missing folder (fresh machine) can't hard-fail the spawn.
+  const cwd = resolveSpawnCwd(opts.cwd);
 
   if (sessions.has(sessionId)) {
     onSpawned?.();

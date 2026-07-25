@@ -2,14 +2,17 @@
 
 <img src="public/brand/flubber-logo-transparent.png" width="130" alt="Blubber" />
 
-# Blubber-OS
+# Blubber OS
 
 **A living desktop companion for Claude Code.**
 
 Blubber is a 3D character who lives on your machine, watches your real Claude Code activity, and turns it into a world: live dashboards, agents at workstations, a real terminal, analytics, music, a pet. Your agent work, with a face.
 
-<!-- Dame: drop real screenshots into docs/screenshots/ with these exact names -->
-![Blubber-OS dashboard](docs/screenshots/dashboard.png)
+[Download Blubber for Windows](https://github.com/Dameboll/Blubber-OS/releases/download/v0.1.1/Blubber.Setup.0.1.1.exe) · [Get the Starter Kit](https://flubberos.myshopify.com/products/blubber-starter-kit)
+
+**v0.1.1 Early Access:** the Windows installer is not code-signed yet. Windows may show an “unrecognized app” warning; choose **More info → Run anyway** to continue.
+
+![Blubber-OS dashboard](docs/screenshots/dashboard.jpg)
 
 </div>
 
@@ -19,9 +22,9 @@ Blubber is a 3D character who lives on your machine, watches your real Claude Co
 
 Claude Code is a terminal. Powerful, but it looks like a log file. Blubber-OS is a desktop app that sits on top of your existing Claude Code setup and gives it a body.
 
-It reads the transcripts Claude Code already writes to `~/.claude/projects/` and turns them into live, real data. Nothing on screen is faked: token usage comes from your actual sessions, the activity feed comes from your actual tool calls, and the terminal tabs run the actual `claude` CLI. Blubber (the character) reacts to all of it in real time, rendered live in 3D through one shared WebGL host.
+Once you connect a workspace, it reads the transcripts Claude Code already writes to `~/.claude/projects/` and turns them into live, real data. Token usage comes from your actual sessions, the activity feed comes from your actual tool calls, and terminal tabs run the actual `claude` CLI. Before you connect, the app stays isolated and uses an obvious bundled placeholder workspace. Blubber reacts to all of it in real time, rendered live in 3D through one shared WebGL host.
 
-The Community Edition in this repo is the full app. Free, no feature gates on the shell. It assumes you already know Claude Code; it injects your existing setup and gets out of the way. If you have zero Claude Code history, Demo Mode gives you the whole tour with canned data.
+The Community Edition in this repo is the full app. Free, with no feature gates on the shell. Connect an existing Claude Code workspace for real data, start from a clean slate, or look around the bundled placeholder workspace before connecting anything.
 
 ## The screens
 
@@ -38,17 +41,21 @@ The Community Edition in this repo is the full app. Free, no feature gates on th
 | **Academy** | The in-app course. Ships locked in v1 with a waitlist. See [Paid extras](#paid-extras) below. |
 | **Settings** | General settings, reduce-effects toggle, the Starter Kit installer, replay setup, and a master reset. |
 
-<!-- Dame: more screenshots -->
-![Agents screen](docs/screenshots/agents.png)
-![Terminal](docs/screenshots/terminal.png)
+![Agents screen](docs/screenshots/agents.jpg)
 
 ## Requirements
 
-- **Windows.** Built and tested on Windows 10/11. The terminal layer has a POSIX code path, but Mac/Linux are untested and the installer target is Windows-only for now.
-- **Node.js 20+** and npm.
-- **Claude Code installed** (the `claude` CLI on your PATH) if you want real data and working terminal tabs. Not required for Demo Mode.
+- **Windows 10/11, x64.** The installer is Windows-only for now.
+- **Claude Code is optional at first launch.** If it is missing, Blubber can run the official installer for you or let you explore first.
+- **Node.js 20+ and npm are only required when building from source.** The packaged desktop installer is self-contained.
 
-## Quick start
+## Install on Windows
+
+1. [Download the v0.1.1 installer](https://github.com/Dameboll/Blubber-OS/releases/download/v0.1.1/Blubber.Setup.0.1.1.exe).
+2. Run it. During Early Access, Windows SmartScreen may require **More info → Run anyway** because the installer is not code-signed yet.
+3. Open Blubber and scan your Claude Code workspace. If Claude Code is not installed, choose **Install it for me** or **Look around first**.
+
+## Build from source
 
 ```bash
 git clone https://github.com/Dameboll/Blubber-OS.git
@@ -57,9 +64,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-That's it. No accounts, no keys, no config required for the core app.
+Open [http://localhost:3000](http://localhost:3000). No account, API key, or cloud setup is required for the core app.
 
 **If port 3000 is taken:** `PORT=3001 npm run dev` (the server will tell you the same thing if it hits the conflict).
 
@@ -71,36 +76,29 @@ npm run rebuild:system-node
 
 ### Desktop app
 
-The browser tab is the default dev experience, but a real desktop shell exists:
+The browser tab is the default development experience, but the desktop shell and fail-closed Windows release pipeline are included:
 
 ```bash
 npm run electron:dev     # run the app in an Electron window
-npm run build            # production Next.js build (required before packaging)
-npm run electron:build   # package a Windows NSIS installer into dist-electron/
+powershell -ExecutionPolicy Bypass -File scripts/release.ps1
 ```
 
-The Electron shell spawns the same `server.js` the dev script runs and points a window at it. Same app, no divergence.
+The release script type-checks, builds from scratch, switches native modules to Electron’s ABI, verifies they load, packages the NSIS installer, scans the package for private build paths, and writes a SHA-256 checksum.
 
 ## First run
 
 1. **Intro cinematic.** Blubber forms up on a small stage, once, ever. Skippable at any time, and skipped entirely under `prefers-reduced-motion`.
-2. **Inject your setup.** Blubber checks for `~/.claude` on your machine:
+2. **Scan your setup.** Blubber checks for `~/.claude` on your machine:
    - **Found with history:** one click injects it. The indexer scans your transcripts and the dashboard lights up with your real stats.
    - **Found but empty:** clean slate, straight to the dashboard. Your data shows up as you use Claude Code.
-   - **Not found:** you get a link to install Claude Code, or a button to try Demo Mode.
+   - **Not found:** run the official Claude Code installer inside Blubber, install it yourself, or look around first.
 3. **Dashboard.** From then on the app boots straight in.
 
 You can replay the whole setup flow any time from Settings.
 
-## Demo mode
+## Before you connect a workspace
 
-No Claude Code? No history? Append `?demo=1` to the URL:
-
-```
-http://localhost:3000/?demo=1
-```
-
-The whole app runs on a bundled, clearly badged demo dataset. The choice persists across reloads; `?demo=0` turns it off.
+Blubber uses a bundled placeholder dataset so a new installation has something useful to explore without reading or writing a real Claude workspace. Once you inject your setup, every stats and activity surface switches permanently to your local data.
 
 ## Configuration
 
@@ -121,7 +119,7 @@ Without them, waitlist signups fall back to a local SQLite table and everything 
 
 The app in this repo is free and complete. Two optional products exist on top of it:
 
-- **Starter Kit ($39.99).** For people new to Claude Code: a starter `CLAUDE.md`, 10 agents, 10 skills, guides, and a project folder scaffold, with a Blubber-guided install built into Settings (point it at your extracted kit folder and it installs into `~/.claude` for you). Sold on the FlubberOS store: **[Get the Starter Kit](#)** <!-- Dame: replace # with the live Shopify store URL -->
+- **Starter Kit ($39.99).** A starter `CLAUDE.md`, 10 agents, 10 skills, 8 commands, 4 guides, and a project scaffold. Extract the download, then point Settings → General → Starter Kit at the folder containing `kit-manifest.json`; Blubber backs up conflicts and installs the selected files into `~/.claude`. **[Get the Starter Kit](https://flubberos.myshopify.com/products/blubber-starter-kit).**
 - **Blubber Academy ($99 All Access tier).** A hands-on in-app course for going from "I have Claude Code installed" to actually running agents. Currently waitlist-only; it ships bundled with All Access and is never sold standalone. Join the waitlist from the Academy tab in the app.
 
 Neither is required. The Community Edition is not a trial.
@@ -133,8 +131,9 @@ This app runs a local server with a real terminal attached, so the boundaries ar
 - **Loopback only.** The server binds the literal `127.0.0.1`, not `localhost` (which can resolve elsewhere). It is unreachable from other devices on your network.
 - **Token-authed terminal socket.** The PTY WebSocket requires a per-process random token on every connection, compared with a timing-safe check. The token is handed out only through a same-origin endpoint that foreign pages cannot read, so a malicious tab in your browser cannot drive your terminal.
 - **Sessions die with the socket.** If a tab or connection disappears, its PTY sessions are killed rather than orphaned.
-- **Local data.** Stats live in SQLite files under `data/`, on your disk. The app reads your `~/.claude` transcripts to build them; it does not modify your Claude Code setup. The two exceptions are things you explicitly trigger: the terminal (which runs the real `claude` CLI) and the Starter Kit installer (which copies kit files into `~/.claude` when you point it at a kit folder).
-- **Network calls.** The only outbound call the app itself makes is the optional Academy waitlist signup (an email you typed, sent to Supabase, only if the env vars are set). Everything else is local.
+- **Local data.** Packaged builds keep mutable state in Blubber’s per-user data directory; source builds use the repo-local `data/` directory. The app reads `~/.claude` transcripts to build local SQLite indexes. It modifies your Claude setup only when you explicitly run the Starter Kit installer, and that flow backs up conflicts before copying.
+- **User-triggered actions stay explicit.** Terminal tabs run the real `claude` CLI. The optional Claude Code installer invokes the official npm package install. Store and documentation links open in your normal browser.
+- **Network calls.** Core indexing and dashboards are local. The optional Academy waitlist sends the email you enter to Supabase when the public waitlist variables are configured.
 
 ## FAQ
 

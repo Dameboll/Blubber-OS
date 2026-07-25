@@ -13,7 +13,7 @@ import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+import { DATA_DIR } from "./app-dirs";
 const DB_PATH = path.join(DATA_DIR, "usage.db");
 
 export type EventType = "usage" | "tool_invocation";

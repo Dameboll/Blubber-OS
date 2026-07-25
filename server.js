@@ -49,6 +49,11 @@ const {
   killSession,
 } = require("./src/server/pty-manager.ts");
 
+// Move any install-directory customer data to the durable per-user location
+// BEFORE any store module resolves its paths (packaged runs only — no-op in
+// dev). See src/server/data-migrate.ts for the idempotence/verify rules.
+require("./src/server/data-migrate.ts").runDataMigration();
+
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
 // The actual socket bind address (see server.listen below). Explicit IPv4
@@ -79,12 +84,53 @@ const WS_TOKEN_PATH = "/__ws-auth";
 // timing-safe comparison.
 const wsAuthToken = crypto.randomBytes(32).toString("hex");
 
+// Share the SAME secret with the Next.js request handlers running in this
+// process: every state-changing API route requires it as an
+// `x-blubber-token` header (see src/server/request-guard.ts). One secret,
+// one boundary — WS upgrade and HTTP mutations validate the identical value.
+process.env.BLUBBER_AUTH_TOKEN = wsAuthToken;
+
+// Startup identity nonce. The Electron shell generates it per launch and
+// only opens its window when /__blubber-health echoes it back — proof it's
+// talking to THIS server, not whatever unrelated dev server happens to own
+// the port (see electron/main.js). Absent in plain-browser dev runs.
+const startupNonce = process.env.BLUBBER_STARTUP_NONCE || null;
+const HEALTH_PATH = "/__blubber-health";
+const pkgVersion = require("./package.json").version;
+
 function isValidWsToken(candidate) {
   if (typeof candidate !== "string" || candidate.length === 0) return false;
   const given = Buffer.from(candidate);
   const expected = Buffer.from(wsAuthToken);
   if (given.length !== expected.length) return false;
   return crypto.timingSafeEqual(given, expected);
+}
+
+// --- Request-context validation (DNS-rebinding / cross-site hardening) ---
+// A malicious page can't read same-origin responses, but it CAN point a DNS
+// name at 127.0.0.1 and make the browser send requests whose Host header is
+// the attacker's domain. Rejecting any request whose Host isn't a plain
+// loopback address closes that hole for the entire server (Next routes
+// included). Origin is checked the same way wherever a browser sends one.
+function isTrustedHost(hostHeader) {
+  if (typeof hostHeader !== "string" || hostHeader.length === 0) return false;
+  const host = hostHeader.split(":")[0].toLowerCase();
+  return host === "127.0.0.1" || host === "localhost" || host === "[::1]";
+}
+
+function isTrustedOrigin(originHeader) {
+  // Absent Origin = same-origin navigation/fetch or a non-browser client on
+  // this machine; the token requirement still gates every mutation.
+  if (originHeader === undefined || originHeader === null || originHeader === "") return true;
+  try {
+    const parsed = new URL(originHeader);
+    return (
+      (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+      isTrustedHost(parsed.host)
+    );
+  } catch {
+    return false;
+  }
 }
 
 const app = next({ dev, hostname, port });
@@ -98,7 +144,42 @@ const nextUpgradeHandler = app.getUpgradeHandler();
 
 app.prepare().then(() => {
   const server = http.createServer((req, res) => {
+    // Whole-server Host/Origin gate — see isTrustedHost above. Rejecting
+    // here covers every Next route with zero per-route work.
+    if (!isTrustedHost(req.headers.host) || !isTrustedOrigin(req.headers.origin)) {
+      res.writeHead(403, { "Content-Type": "text/plain" });
+      res.end("Forbidden");
+      return;
+    }
     const parsedUrl = parse(req.url, true);
+    if (parsedUrl.pathname === HEALTH_PATH) {
+      // Identity handshake for the Electron shell — deliberately BEFORE Next
+      // so a foreign server on this port can never fake it by accident.
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      });
+      res.end(
+        JSON.stringify({ app: "blubber", version: pkgVersion, nonce: startupNonce }),
+      );
+      return;
+    }
+    // One shared authorization boundary for every state-changing request.
+    // Blubber's API can install software, run the Claude CLI, write into
+    // ~/.claude, and reset state — none of that may be reachable by a bare
+    // unauthenticated localhost POST (malicious webpage, curious local
+    // script). The renderer attaches the token to every mutation via the
+    // fetch wrapper in src/lib/api-auth.ts; it learns the token from the
+    // same-origin-only endpoint below, which foreign pages can never read.
+    const isMutation =
+      req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS";
+    if (isMutation && parsedUrl.pathname.startsWith("/api/")) {
+      if (!isValidWsToken(req.headers["x-blubber-token"])) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "missing or invalid auth token" }));
+        return;
+      }
+    }
     if (parsedUrl.pathname === WS_TOKEN_PATH) {
       // No CORS headers are set here on purpose: without
       // Access-Control-Allow-Origin, the browser lets the request go out but
@@ -124,7 +205,13 @@ app.prepare().then(() => {
       nextUpgradeHandler(req, socket, head);
       return;
     }
-    if (!isValidWsToken(query.token)) {
+    // Token AND browser-context checks — a correct token from an untrusted
+    // Origin is still refused (defense in depth on the command-capable PTY).
+    if (
+      !isValidWsToken(query.token) ||
+      !isTrustedHost(req.headers.host) ||
+      !isTrustedOrigin(req.headers.origin)
+    ) {
       socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
       socket.destroy();
       return;

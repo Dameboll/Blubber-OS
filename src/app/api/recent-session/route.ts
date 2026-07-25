@@ -20,6 +20,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { isWorkspaceConnected } from "../../../server/connected-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -122,6 +123,12 @@ function extractCwd(file: string): string | null {
 }
 
 export async function GET() {
+  // Do not inspect or disclose any ~/.claude transcript before the user has
+  // explicitly connected a workspace during onboarding.
+  if (!isWorkspaceConnected()) {
+    return NextResponse.json({ session: null });
+  }
+
   const appCwd = path.resolve(process.cwd());
   const candidates = listSessionsNewestFirst();
 

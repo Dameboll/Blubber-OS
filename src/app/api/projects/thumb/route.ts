@@ -27,6 +27,7 @@ import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
+import { DATA_DIR } from "../../../../server/app-dirs";
 
 const ROOT_LABELS = new Set(["ACTIVE", "HOBBY", "general", "research"]);
 
@@ -63,7 +64,7 @@ const MAX_BYTES = 12 * 1024 * 1024; // skip huge source art if anything smaller 
 const SCAN_TTL_MS = 60_000;
 
 const devRoot = path.join(os.homedir(), "Development");
-const curatedPath = path.join(process.cwd(), "data", "project-thumbs.json");
+const curatedPath = path.join(DATA_DIR, "project-thumbs.json");
 
 // -- curated picks (re-read only when the file's mtime changes) --------------
 

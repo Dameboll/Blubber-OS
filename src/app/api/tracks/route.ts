@@ -44,7 +44,7 @@ export interface Track {
   hasArt: boolean;
 }
 
-const MUSIC_DIR = path.join(process.cwd(), "music");
+import { MUSIC_DIR } from "../../../server/app-dirs";
 const AUDIO_EXTENSIONS = new Set([".mp3", ".wav", ".m4a", ".ogg"]);
 const MAX_UPLOAD_BYTES = 60 * 1024 * 1024; // 60MB
 

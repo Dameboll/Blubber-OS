@@ -1,57 +1,73 @@
 # Next Session Brief
-Written: 2026-07-25 ~03:00 ET
-For: next blubber-os session
+Written: 2026-07-26 ~13:00 ET
+For: next Blubber OS / Claude session
 
 ---
 
 ## PICK UP HERE
 
-### blubber-os — close the last unproven link in the first-run path
-**Status:** Branch `chore/smoke-test-harness`, HEAD 9aa2c67, pushed, 4 commits, no PR. E2E 20/20.
-Installer rebuilt 2026-07-25 at 222.9MB with all fixes packaged and confirmed inside the .exe.
+### Launch state
 
-**First action:** Launch the clean-profile copy and click "Install it for me" on the onboarding
-screen. Everything about that flow is proven EXCEPT the installer actually completing, which was
-deliberately never executed (it would have stomped Dame's real Claude Code setup).
+**Blubber OS v0.1.2 Windows Early Access is live and verified. There is no remaining launch blocker.**
 
-```powershell
-# clean profile, no ~/.claude, no node/npm on PATH — safe to actually install into
-& "C:\Users\jeffh\Development\HOBBY\blubber-os\tools\smoke-test\cleanenv-run.ps1"
-```
-Then in the app window: "Install it for me". Watch the streamed output. On success it must land
-on "Clean slate" — NOT back on the not-found screen.
+- App repo `main`: `82e4d6d`; release source/tag: `6cec28e` / `v0.1.2`.
+- Release: https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.2
+- Installer: `Blubber.Setup.0.1.2.exe`, 198,701,230 bytes.
+- SHA256: `74430319B7A134BE576C7A90FD0C461D613C4F7147B1A30B584C354A1A5FD49D`.
+- The public asset was downloaded and hash-matched after publication.
+- The nine-stage release pipeline, host clean profile, and separate Windows Sandbox
+  install/launch/shortcut/free-user/uninstall rehearsal all passed.
+- Shopify live theme: Blubber OS `#188479111535` at https://flubberos.myshopify.com
+- Both the homepage hero and Community Edition pricing card now offer:
+  1. `Download for Windows — Free` directly to the v0.1.2 installer.
+  2. `View on GitHub` separately to the public repo.
+- Current storefront source: `blubber-site` local `main` at `46de809`.
+- Desktop plus 390x844 and 320x700 checks passed with correct links, no console errors,
+  and no horizontal overflow.
+- Paid Starter Kit delivery was previously rehearsed successfully through Shopify
+  Digital Products. The app/repo/installer remain free; the Kit is optional.
 
-**Context:** If it lands back on not-found, the installer wrote somewhere `hasInstalledBinary()`
-doesn't probe (`src/app/api/onboarding/detect/route.ts` — currently `~/.local/bin/claude[.exe]`
-and `~/.local/share/claude`). Check where the binary actually landed and widen the probe.
+### First action next time
 
-**Blocking issue:** None.
+Read the current block at the top of `docs/ai-context.md` and confirm the exact requested
+scope. Do **not** reopen the historical v0.1.0/v0.1.1 launch plan or rebuild/re-release v0.1.2
+unless Dame explicitly asks for a new app change.
 
-### Then: the actual launch gate
-**Unsigned .exe.** Every buyer gets a SmartScreen "unrecognized app" warning on first install.
-Needs an Authenticode cert (OV ~$200/yr, EV for instant reputation) wired via
-`win.certificateFile` + `CSC_KEY_PASSWORD` in electron-builder.yml, or Azure Trusted Signing.
-This is a purchase decision, not a code task.
+## BRAND SPLIT — DO NOT REGRESS
 
----
+- Transparent standalone slime `BL`: Windows installer, installed app, shortcut, in-app
+  favicon, website favicon, and tiny OS-mockup icons.
+- Full transparent `BLUBBER` wordmark: visible website header, footer, and Organization JSON-LD.
+- Do not replace the visible website wordmark with the square BL again.
 
-## DECISIONS TO MAKE
-1. **Buy a code-signing cert before launch, or ship unsigned and eat the SmartScreen warning?** OV ~$200/yr is the cheap path; EV costs more but skips the reputation-building period.
-2. **Keep chasing Windows Sandbox, or call the host-side harness good enough?** The sandbox uniquely covers SmartScreen wording, installer branding, shortcut icon, 3D on a non-dev GPU, and uninstall. Diagnosing it needs someone to look at that desktop once and say whether a PowerShell window is even open.
-3. **Open a PR for `chore/smoke-test-harness` or merge straight to main?**
+## ACCEPTED LIMITATION
+
+The Windows installer is unsigned, so SmartScreen may warn. This is disclosed on GitHub,
+in the README, and on the storefront. Code signing is a post-launch purchase/engineering task,
+not a launch blocker.
+
+## SAFE POST-LAUNCH OPTIONS
+
+Only start one of these when Dame requests it:
+
+1. Authenticode/Azure Trusted Signing.
+2. Auto-updater.
+3. GitHub Actions release gate.
+4. Waitlist outbox retry.
+5. CSP hardening.
+6. Onboarding custom-folder follow-up.
 
 ## DON'T FORGET
-- **NATIVE MODULE ABI IS A TOGGLE.** `rebuild:system-node` for build/tests/server, `rebuild:electron` for packaging. Wrong one and every API route 500s WHILE the server still prints "Blubber ready" — it looks up and isn't. Bit twice this session. Always `rebuild:electron` last before packaging. Currently on ELECTRON ABI (packaging-ready).
-- The installer flow is deliberately NOT kit-gated and must stay that way — the kit marker lives inside `~/.claude`, so gating hides it from exactly the people who paid.
-- Temp clean-env install still on disk. Cleanup when done:
-  `Remove-Item C:\Users\jeffh\AppData\Local\Temp\claude\blubber-cleanenv -Recurse -Force`
-- The sandbox results folder must stay OUTSIDE `tools/smoke-test/` — it's mapped ReadOnly, and nested mappings don't override.
-- Slop hook blocks CSS layout-prop animation — transform/opacity/filter only.
-- Never touch the in-app 3D Flubber without an explicit ask.
+
+- Native-module ABI is a toggle: system Node for server tests, Electron ABI last for packaging.
+- `node-pty` is skipped in the installer build intentionally.
+- Never touch the in-app 3D Flubber without an explicit request.
+- Preserve user/project data and make a preflight backup before any release work.
+- Batch release fixes, then run one final expensive package/install verification cycle.
 
 ## FULL CONTEXT
-- `docs/ai-context.md` — master context (architecture, systems, gotchas)
-- `docs/sessions/2026-07-25-session.md` — this session's full summary
-- `docs/decisions/blubber-os-decisions.md` — why the installer isn't kit-gated, why native over npm
-- `tools/smoke-test/cleanenv-run.ps1` — the clean-machine harness that actually works
-- `tools/smoke-test/CHECKLIST.md` — the eyes-only checks the scripts can't cover
+
+- `docs/ai-context.md` — canonical current state plus historical record.
+- `docs/CODEX-HANDOFF.md` — compact handoff and launch proof.
+- `docs/decisions/blubber-os-decisions.md` — durable product/installer decisions.
+- `tools/smoke-test/` — clean-machine verification harness.

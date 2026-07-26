@@ -1,5 +1,5 @@
 # Blubber OS — AI Context
-# Last sync: 2026-07-26 ~12:32 ET (v0.1.2 live; full website wordmark restored and re-verified)
+# Last sync: 2026-07-26 ~13:00 ET (v0.1.2 live; storefront download choices and branding re-verified)
 
 ## ===== v0.1.2 LAUNCH COMPLETE — CURRENT SOURCE OF TRUTH =====
 # This block supersedes v0.1.1 icon/download references below. Do not rebuild or republish
@@ -8,6 +8,8 @@
 # SAFETY / SCOPE
 # - Preflight backup:
 #   C:\Users\jeffh\Development\HOBBY\_backups\blubber-v012-icon-preflight-2026-07-26T10-19-52-04-00
+# - Pre-context-sync copies:
+#   C:\Users\jeffh\Development\HOBBY\_backups\blubber-ai-context-sync-20260726-130044
 # - The backup contains both repo bundles, exact v0.1.1 release artifacts, prior icons/config,
 #   the previous disposable clean-env app, live-Shopify pre-push files, and v0.1.2 proof logs.
 # - No protected project data was changed.
@@ -15,6 +17,7 @@
 # APP / GITHUB
 # - PR #3 squash-merged into main as 6cec28e784ac041a123a3f3b9a2435cdbe2f20da.
 # - Tag v0.1.2 points to that exact source commit.
+# - Current app repo main is 82e4d6d (launch-context and website/app logo-split documentation).
 # - Release: https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.2
 # - Installer: Blubber.Setup.0.1.2.exe, 198,701,230 bytes (189.5 MiB)
 # - SHA256: 74430319B7A134BE576C7A90FD0C461D613C4F7147B1A30B584C354A1A5FD49D
@@ -43,15 +46,20 @@
 # - Live theme: Blubber OS #188479111535 at https://flubberos.myshopify.com
 # - The live theme was backed up file-by-file before the scoped 11-file push. Shopify's generated
 #   templates/index.json warning header was detected and preserved.
-# - Hero Download for Windows points directly to the v0.1.2 installer; View on GitHub remains beside it.
+# - Both free-download placements are explicit: the homepage hero and Community Edition pricing
+#   card each have Download for Windows — Free directly to the v0.1.2 installer, plus a separate
+#   View on GitHub action to the public repo.
 # - Branding split is deliberate: Windows installer/app/shortcut/in-app favicon, website favicon,
 #   and tiny OS-mockup icons use the transparent square BL. The visible website header, footer,
 #   and Organization JSON-LD use the full transparent BLUBBER wordmark.
-# - Live desktop DOM plus 390x844 and 320x700 mobile were verified after the correction:
-#   v0.1.2/189.5 MB copy, correct links, 0 broken images, 0 console errors, and no horizontal overflow.
+# - Live desktop DOM plus 390x844 and 320x700 mobile were verified after the corrections:
+#   v0.1.2/189.5 MB copy, correct hero/pricing links, 44px pricing targets, 0 broken images,
+#   0 console errors, and no horizontal overflow.
 #   Below 360px the redundant header CTA hides; the full wordmark, menu, and hero download remain.
-# - Website wordmark correction source: blubber-site local main 3e659d5. Safety backup:
+# - Current website source: blubber-site local main 46de809. Wordmark correction is 3e659d5;
+#   pricing download/GitHub split is 46de809. Safety backups:
 #   C:\Users\jeffh\Development\HOBBY\_backups\blubber-web-wordmark-restore-20260726-122713
+#   C:\Users\jeffh\Development\HOBBY\_backups\blubber-pricing-cta-20260726-124215
 #
 # PAID / FREE PATHS
 # - Community app/repo/installer remain free. The optional Starter Kit paid-delivery setup from

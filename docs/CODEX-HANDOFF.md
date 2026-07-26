@@ -1,5 +1,5 @@
 # CODEX HANDOFF — Blubber OS v0.1.2 Launch Complete
-# Updated: 2026-07-26 11:05 EDT by Codex
+# Updated: 2026-07-26 13:00 EDT by Codex
 # Read this + docs/ai-context.md before touching anything.
 #
 # STATUS: v0.1.2 IS LIVE. The transparent standalone slime BL appears in the
@@ -7,11 +7,14 @@
 # website favicon, and tiny OS-mockup icons. The visible website header/footer
 # and Organization metadata intentionally use the full BLUBBER wordmark. Do not
 # replace those website brand/signature placements with the square BL again.
+# There is no remaining launch blocker. Older blocker/checklist sections below
+# are preserved as historical evidence and are not the current task list.
 # The current completion block at the top of docs/ai-context.md has the exact
 # proof and supersedes the historical v0.1.1 material below.
 #
 # CURRENT RELEASE
 # - Source/merge: 6cec28e784ac041a123a3f3b9a2435cdbe2f20da (PR #3)
+# - Current app repo main: 82e4d6d (launch and logo-split context docs after the release tag)
 # - Tag/release: v0.1.2 / https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.2
 # - Artifact: Blubber.Setup.0.1.2.exe, 198,701,230 bytes (189.5 MiB)
 # - SHA256: 74430319B7A134BE576C7A90FD0C461D613C4F7147B1A30B584C354A1A5FD49D
@@ -21,10 +24,13 @@
 # - Host clean profile and a separate clean Windows Sandbox install/launch/shortcut/
 #   free-user/uninstall rehearsal both passed with zero failures.
 # - Live Shopify theme #188479111535 shows v0.1.2 with direct installer + GitHub
-#   choices, full BLUBBER website wordmark, compact BL favicon/app-UI marks,
-#   desktop/390px/320px fit, no broken images, and no console errors.
-# - Website correction: blubber-site local main 3e659d5. Pre-change live backup:
+#   choices in both the hero and Community Edition pricing card, full BLUBBER website
+#   wordmark, compact BL favicon/app-UI marks, desktop/390px/320px fit, no broken
+#   images, no console errors, and no horizontal overflow.
+# - Current website source: blubber-site local main 46de809. Wordmark correction:
+#   3e659d5. Pricing download/GitHub split: 46de809. Pre-change live backups:
 #   C:\Users\jeffh\Development\HOBBY\_backups\blubber-web-wordmark-restore-20260726-122713
+#   C:\Users\jeffh\Development\HOBBY\_backups\blubber-pricing-cta-20260726-124215
 # - Safety backup:
 #   C:\Users\jeffh\Development\HOBBY\_backups\blubber-v012-icon-preflight-2026-07-26T10-19-52-04-00
 # - Only accepted launch limitation: installer is unsigned; SmartScreen is disclosed.

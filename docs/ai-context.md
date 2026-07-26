@@ -17,7 +17,7 @@
 # APP / GITHUB
 # - PR #3 squash-merged into main as 6cec28e784ac041a123a3f3b9a2435cdbe2f20da.
 # - Tag v0.1.2 points to that exact source commit.
-# - Current app repo main is 82e4d6d (launch-context and website/app logo-split documentation).
+# - App repo main includes the post-release launch-context and website/app logo-split docs.
 # - Release: https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.2
 # - Installer: Blubber.Setup.0.1.2.exe, 198,701,230 bytes (189.5 MiB)
 # - SHA256: 74430319B7A134BE576C7A90FD0C461D613C4F7147B1A30B584C354A1A5FD49D

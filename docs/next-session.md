@@ -10,7 +10,8 @@ For: next Blubber OS / Claude session
 
 **Blubber OS v0.1.2 Windows Early Access is live and verified. There is no remaining launch blocker.**
 
-- App repo `main`: `82e4d6d`; release source/tag: `6cec28e` / `v0.1.2`.
+- App repo `main` includes the post-release context sync; release source/tag:
+  `6cec28e` / `v0.1.2`.
 - Release: https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.2
 - Installer: `Blubber.Setup.0.1.2.exe`, 198,701,230 bytes.
 - SHA256: `74430319B7A134BE576C7A90FD0C461D613C4F7147B1A30B584C354A1A5FD49D`.

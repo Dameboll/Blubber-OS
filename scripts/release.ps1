@@ -6,8 +6,9 @@
 #
 #   powershell -ExecutionPolicy Bypass -File scripts\release.ps1
 #
-# Order: typecheck -> fresh production build -> native rebuild for Electron
-# ABI -> native load test -> package -> package hygiene scan -> checksum.
+# Order: typecheck -> fresh production build -> scrub paths -> native rebuild
+# for Electron ABI -> native load test -> package -> icon verification ->
+# package hygiene scan -> checksum.
 
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
@@ -27,9 +28,9 @@ function Step($name, [scriptblock]$body) {
     }
 }
 
-Step "1/7 Typecheck" { npx tsc --noEmit }
+Step "1/9 Typecheck" { npx tsc --noEmit }
 
-Step "2/7 Fresh production build" {
+Step "2/9 Fresh production build" {
     # `next build` runs under the SYSTEM node and loads better-sqlite3 during
     # page-data collection — if a previous release run left the native
     # modules on Electron's ABI, the build hard-fails (ERR_DLOPEN_FAILED).
@@ -40,7 +41,7 @@ Step "2/7 Fresh production build" {
     npm run build
 }
 
-Step "2.5/7 Scrub build-machine paths from Next output" {
+Step "3/9 Scrub build-machine paths from Next output" {
     $global:LASTEXITCODE = 0
     # Next embeds the build machine's absolute project path in every compiled
     # route module (resolvedPagePath), the client-reference manifests, and
@@ -74,9 +75,9 @@ Step "2.5/7 Scrub build-machine paths from Next output" {
     Write-Host "scrubbed $scrubbed file(s)"
 }
 
-Step "3/7 Rebuild native modules for Electron ABI" { npm run rebuild:electron }
+Step "4/9 Rebuild native modules for Electron ABI" { npm run rebuild:electron }
 
-Step "4/7 Native module load test (Electron-as-node)" {
+Step "5/9 Native module load test (Electron-as-node)" {
     $env:ELECTRON_RUN_AS_NODE = "1"
     try {
         & ".\node_modules\electron\dist\electron.exe" -e "require('better-sqlite3'); require('node-pty'); console.log('native modules load OK')"
@@ -86,9 +87,13 @@ Step "4/7 Native module load test (Electron-as-node)" {
     }
 }
 
-Step "5/7 Package installer" { npm run electron:build }
+Step "6/9 Package installer" { npm run electron:build }
 
-Step "6/7 Package hygiene scan" {
+Step "7/9 Packaged icon verification" {
+    & "$PSScriptRoot\verify-icons.ps1"
+}
+
+Step "8/9 Package hygiene scan" {
     $global:LASTEXITCODE = 0
     $app = Join-Path $repo "dist-electron\win-unpacked\resources\app"
     if (-not (Test-Path $app)) { throw "unpacked app dir missing: $app" }
@@ -112,7 +117,7 @@ Step "6/7 Package hygiene scan" {
     Write-Host "hygiene scan clean"
 }
 
-Step "7/7 Checksum" {
+Step "9/9 Checksum" {
     $global:LASTEXITCODE = 0
     $installer = Get-ChildItem "dist-electron" -Filter "*.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if (-not $installer) { throw "no installer produced" }

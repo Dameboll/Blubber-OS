@@ -1,7 +1,63 @@
 # Blubber OS — AI Context
-# Last sync: 2026-07-25 ~19:55 ET (v0.1.1 LAUNCHED — paid delivery and live storefront verified)
+# Last sync: 2026-07-26 ~11:05 ET (v0.1.2 LAUNCHED — transparent BL icon release verified end to end)
 
-## ===== v0.1.1 LAUNCH COMPLETE — DO NOT REPEAT =====
+## ===== v0.1.2 LAUNCH COMPLETE — CURRENT SOURCE OF TRUTH =====
+# This block supersedes v0.1.1 icon/download references below. Do not rebuild or republish
+# v0.1.2 unless a new change is intentionally requested.
+#
+# SAFETY / SCOPE
+# - Preflight backup:
+#   C:\Users\jeffh\Development\HOBBY\_backups\blubber-v012-icon-preflight-2026-07-26T10-19-52-04-00
+# - The backup contains both repo bundles, exact v0.1.1 release artifacts, prior icons/config,
+#   the previous disposable clean-env app, live-Shopify pre-push files, and v0.1.2 proof logs.
+# - No protected project data was changed.
+#
+# APP / GITHUB
+# - PR #3 squash-merged into main as 6cec28e784ac041a123a3f3b9a2435cdbe2f20da.
+# - Tag v0.1.2 points to that exact source commit.
+# - Release: https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.2
+# - Installer: Blubber.Setup.0.1.2.exe, 198,701,230 bytes (189.5 MiB)
+# - SHA256: 74430319B7A134BE576C7A90FD0C461D613C4F7147B1A30B584C354A1A5FD49D
+# - The public GitHub asset was downloaded again after publication; byte count and SHA256
+#   matched the local release exactly.
+# - release.ps1 now has 9 fail-closed stages. Typecheck, fresh build, path scrub, Electron ABI
+#   rebuild, native load, packaging, packaged-icon verification, hygiene, and checksum all passed.
+#
+# ICON PROOF
+# - One approved 1024x1024 transparent standalone slime "BL" master drives build/icon.png and
+#   src/app/icon.png. It has no dark tile, wordmark, subtitle, or clipped letter.
+# - The release gate extracts the actual 32x32 associated icons from the NSIS installer and
+#   packaged Blubber.exe. Both were transparent and byte-identical after extraction:
+#   SHA256=5D600D7168F814E345CE4C9F8AEBD7FF40A171AA838508B42CD5181A7178BF3F.
+# - Independent code review approved the release with 0 critical/high/medium/low findings.
+#
+# CLEAN-MACHINE / INSTALLER REHEARSAL
+# - Host clean-profile run passed with no Node/npm/Claude/Git/prior profile. Server returned 200
+#   in 9.5s; pet/quests/top-agents/recent APIs passed; free onboarding returned not-found + kit=false.
+# - A separate Windows Sandbox rehearsal installed the exact public-checksum artifact silently on
+#   a clean VM, verified app version 0.1.2, created a correctly targeted desktop shortcut, matched
+#   installer/app icons, cold-launched to HTTP 200 in 2s, passed the same APIs and free-user path,
+#   then uninstalled with exit 0 and removed the install directory. Result: PASS, 0 failures.
+#
+# LIVE STOREFRONT
+# - Live theme: Blubber OS #188479111535 at https://flubberos.myshopify.com
+# - The live theme was backed up file-by-file before the scoped 11-file push. Shopify's generated
+#   templates/index.json warning header was detected and preserved.
+# - Hero Download for Windows points directly to the v0.1.2 installer; View on GitHub remains beside it.
+# - Live desktop DOM and 390x844 mobile were verified: v0.1.2/189.5 MB copy, correct links, transparent
+#   square BL logo/favicon, 0 broken images, 0 console errors, and no horizontal overflow.
+# - Web assets are optimized while preserving the same art: logo 256x256 and favicon 192x192.
+#
+# PAID / FREE PATHS
+# - Community app/repo/installer remain free. The optional Starter Kit paid-delivery setup from
+#   v0.1.1 remains unchanged and previously passed the Shopify order/delivery/download rehearsal.
+#
+# ACCEPTED EARLY-ACCESS LIMITATION
+# - The installer remains unsigned. SmartScreen disclosure is present on GitHub, in the README,
+#   and on the storefront. Code signing remains deferred.
+## ===== END v0.1.2 LAUNCH COMPLETE =====
+
+## ===== HISTORICAL v0.1.1 LAUNCH COMPLETE — DO NOT REPEAT =====
 # Safety backup:
 #   C:\Users\jeffh\Development\HOBBY\_backups\blubber-launch-preflight-20260725-174933
 # Protected app data: all 12 files in data/ still match the preflight backup byte-for-byte.

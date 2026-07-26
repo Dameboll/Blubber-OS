@@ -1,11 +1,29 @@
-# CODEX HANDOFF — Blubber OS v0.1.1 Launch Complete
-# Updated: 2026-07-25 19:55 EDT by Codex
+# CODEX HANDOFF — Blubber OS v0.1.2 Launch Complete
+# Updated: 2026-07-26 11:05 EDT by Codex
 # Read this + docs/ai-context.md before touching anything.
 #
-# STATUS: LAUNCHED. The paid delivery gate, GitHub release, live Shopify theme,
-# public policies, clean-profile app path, and final checkout rehearsal all passed.
-# Do not repeat the launch sequence. See the completion block at the top of
-# docs/ai-context.md for exact commits, hashes, order evidence, and deferred work.
+# STATUS: v0.1.2 IS LIVE. The transparent standalone slime BL now appears in the
+# actual Windows installer, installed app, desktop shortcut, in-app favicon, and
+# Shopify storefront/favicon. Do not repeat this release. The current completion
+# block at the top of docs/ai-context.md has the exact proof and supersedes the
+# historical v0.1.1 material below.
+#
+# CURRENT RELEASE
+# - Source/merge: 6cec28e784ac041a123a3f3b9a2435cdbe2f20da (PR #3)
+# - Tag/release: v0.1.2 / https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.2
+# - Artifact: Blubber.Setup.0.1.2.exe, 198,701,230 bytes (189.5 MiB)
+# - SHA256: 74430319B7A134BE576C7A90FD0C461D613C4F7147B1A30B584C354A1A5FD49D
+# - Public asset was re-downloaded and hash-matched after publication.
+# - Nine-stage release pipeline passed, including extraction/comparison of the real
+#   installer and packaged app icons.
+# - Host clean profile and a separate clean Windows Sandbox install/launch/shortcut/
+#   free-user/uninstall rehearsal both passed with zero failures.
+# - Live Shopify theme #188479111535 shows v0.1.2 with direct installer + GitHub
+#   choices, correct transparent BL/favicon, mobile fit, no broken images, and no
+#   console errors.
+# - Safety backup:
+#   C:\Users\jeffh\Development\HOBBY\_backups\blubber-v012-icon-preflight-2026-07-26T10-19-52-04-00
+# - Only accepted launch limitation: installer is unsigned; SmartScreen is disclosed.
 
 ## Historical pre-launch state (complete)
 

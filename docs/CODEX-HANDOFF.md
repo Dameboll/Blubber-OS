@@ -2,11 +2,13 @@
 # Updated: 2026-07-26 11:05 EDT by Codex
 # Read this + docs/ai-context.md before touching anything.
 #
-# STATUS: v0.1.2 IS LIVE. The transparent standalone slime BL now appears in the
-# actual Windows installer, installed app, desktop shortcut, in-app favicon, and
-# Shopify storefront/favicon. Do not repeat this release. The current completion
-# block at the top of docs/ai-context.md has the exact proof and supersedes the
-# historical v0.1.1 material below.
+# STATUS: v0.1.2 IS LIVE. The transparent standalone slime BL appears in the
+# actual Windows installer, installed app, desktop shortcut, in-app favicon,
+# website favicon, and tiny OS-mockup icons. The visible website header/footer
+# and Organization metadata intentionally use the full BLUBBER wordmark. Do not
+# replace those website brand/signature placements with the square BL again.
+# The current completion block at the top of docs/ai-context.md has the exact
+# proof and supersedes the historical v0.1.1 material below.
 #
 # CURRENT RELEASE
 # - Source/merge: 6cec28e784ac041a123a3f3b9a2435cdbe2f20da (PR #3)
@@ -19,8 +21,10 @@
 # - Host clean profile and a separate clean Windows Sandbox install/launch/shortcut/
 #   free-user/uninstall rehearsal both passed with zero failures.
 # - Live Shopify theme #188479111535 shows v0.1.2 with direct installer + GitHub
-#   choices, correct transparent BL/favicon, mobile fit, no broken images, and no
-#   console errors.
+#   choices, full BLUBBER website wordmark, compact BL favicon/app-UI marks,
+#   desktop/390px/320px fit, no broken images, and no console errors.
+# - Website correction: blubber-site local main 3e659d5. Pre-change live backup:
+#   C:\Users\jeffh\Development\HOBBY\_backups\blubber-web-wordmark-restore-20260726-122713
 # - Safety backup:
 #   C:\Users\jeffh\Development\HOBBY\_backups\blubber-v012-icon-preflight-2026-07-26T10-19-52-04-00
 # - Only accepted launch limitation: installer is unsigned; SmartScreen is disclosed.

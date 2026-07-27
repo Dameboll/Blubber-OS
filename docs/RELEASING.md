@@ -67,6 +67,32 @@ gh release view v0.1.3 --repo Dameboll/Blubber-OS --json assets
 - **Never re-upload a different .exe under an existing tag.** The published
   sha512 stops matching and every client rejects the download.
 
+## Proven end-to-end on 2026-07-26
+
+A real 0.1.3 → 0.1.4 update was performed on a live install, not simulated:
+
+- The installed v0.1.3 found 0.1.4, downloaded it **differentially** — 35 changed
+  blocks, **750 KB instead of 190 MB** — and verified the sha512 before accepting it.
+- A stale cached update from an earlier test was detected by checksum mismatch and
+  discarded rather than installed. The integrity check works in both directions.
+- On quit, NSIS swapped the install in place. Afterwards: `Blubber.exe` reported
+  0.1.4.0, the uninstall registry entry read `Blubber 0.1.4`, the desktop shortcut
+  survived, and the updated app booted with all API routes returning 200.
+- Uninstall of the updated build removed the directory, both shortcuts, and the
+  registry entry, and preserved user data.
+
+That is why the `.blockmap` is worth uploading: it turned a 190 MB update into 750 KB.
+When the blockmap was deliberately withheld, electron-updater logged the 404 and fell
+back to a full download rather than failing — so a release missing its blockmap still
+updates, just expensively.
+
+**Timing note.** The silent install-on-quit takes roughly 45 seconds, and there is a
+window where `Blubber.exe` already reports the new version while `node_modules` is
+still being written. Launching during that window fails with a missing-module error
+that resolves itself on the next launch. Do not mistake it for a broken update — wait
+for the installer to finish before judging. The "Restart now" path avoids this
+entirely, because NSIS controls the relaunch.
+
 ## Known limitation: pre-0.1.3 installs cannot self-update
 
 v0.1.0 through v0.1.2 shipped without any updater code. Those installs will

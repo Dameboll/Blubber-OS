@@ -1,8 +1,13 @@
 # Blubber OS — AI Context
-# Last sync: 2026-07-26 ~21:50 ET (v0.1.3 LIVE with working auto-update)
+# Last sync: 2026-07-27 ~00:55 ET (v0.1.3 LIVE; auto-update proven end-to-end)
 
 ## ===== v0.1.3 LIVE — AUTO-UPDATE WORKING — CURRENT SOURCE OF TRUTH =====
 # Supersedes the v0.1.2 block below. Do not rebuild or republish v0.1.3.
+#
+# ONE-LINE STATE: free path is launch-ready and verified end-to-end. The PAID path has
+# still never taken a real card (order #1001 was a 100% discount; live checkout only
+# reached the payment page). Eyes-only sandbox items remain unchecked — see
+# tools/smoke-test/CHECKLIST.md. Installer is unsigned by accepted decision.
 #
 # RELEASE
 # - Tag v0.1.3 = 8665266f51dbc529013ee62318a60bacff73d7e6 (main, PR #7 squash-merge).

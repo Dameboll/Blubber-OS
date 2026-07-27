@@ -69,6 +69,7 @@
 
 ## Known gotchas (memory-backed, will bite you)
 
+- **latest.yml**: every release from v0.1.3 on MUST carry `latest.yml` (and ideally the `.blockmap`) as release assets, not just the `.exe`. Without it every installed copy silently finds no update forever, and nothing about the release looks wrong from the build machine. `release.ps1` stage 10 checks it locally; `docs/RELEASING.md` has the upload command. Draft/prerelease releases are invisible to the updater by design.
 - **sqlite ABI**: rebuild for Electron before packaging, for system Node before running server-side tests. Wrong one = every API route 500s.
 - **node-pty**: skipped in the installer build on purpose. Don't "fix" that.
 - **asar is off** intentionally; installer bundles self-contained node. VS Build Tools required on the build machine.

@@ -1,7 +1,8 @@
 # electron-builder.yml
 #
-# Windows NSIS installer only. Mac/Linux targets and auto-update are out of
-# scope. Native modules ARE rebuilt against Electron's ABI for packaged builds
+# Windows NSIS installer only; Mac/Linux targets are out of scope. Auto-update
+# IS wired (see the `publish` block below + electron/updater.js).
+# Native modules ARE rebuilt against Electron's ABI for packaged builds
 # (see electron/main.js header + scripts/electron-rebuild.mjs) -- the packaged
 # app is self-contained and needs no system Node.js.
 #
@@ -36,6 +37,21 @@
 appId: com.dameos.blubber
 productName: Blubber
 artifactName: "${productName}.Setup.${version}.${ext}"
+
+# Auto-update source. This block exists to make electron-builder EMIT the
+# update metadata (latest.yml + a .blockmap next to the installer) and to bake
+# the feed location into the app for electron-updater -- NOT to upload anything.
+# `npm run electron:build` passes --publish never on purpose: uploads stay
+# manual and deliberate (see docs/RELEASING.md), matching the rest of the
+# fail-closed pipeline.
+#
+# The repo is public, so installed copies read releases anonymously -- no token
+# ships with the app. electron-updater ignores draft and prerelease releases,
+# so a half-finished release can never be handed to customers.
+publish:
+  provider: github
+  owner: Dameboll
+  repo: Blubber-OS
 
 # asar MUST be false. electron/main.js spawns the real server.js as a child
 # process (Electron-as-node) and Next.js reads its production build (.next-build),

@@ -68,7 +68,13 @@ if ($listener) {
 $db = Join-Path $appRoot 'data\usage.db'
 Test-Gate 'usage.db created on first run' (Test-Path $db) $(if (Test-Path $db) { "$([math]::Round((Get-Item $db).Length/1KB,1)) KB" } else { $db })
 
-$userData = "$env:APPDATA\Blubber"
+# APPDATA\blubber-os, NOT APPDATA\Blubber. Electron derives userData from the
+# app's package.json `name`, and productName ("Blubber") lives only in
+# electron-builder.yml -- it is never written into the packaged package.json.
+# This gate used to check APPDATA\Blubber and would report a FAIL on a perfectly
+# healthy install. Confirmed against a real v0.1.3 install on 2026-07-26:
+# the installed app wrote APPDATA\blubber-os\{blubber-data,Cache,.updaterId,...}.
+$userData = "$env:APPDATA\blubber-os"
 Test-Gate 'Electron userData created' (Test-Path $userData) $userData
 
 # Free shell, not the paid kit flow. No marker should ever be auto-created.

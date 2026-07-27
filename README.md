@@ -8,9 +8,11 @@
 
 Blubber is a 3D character who lives on your machine, watches your real Claude Code activity, and turns it into a world: live dashboards, agents at workstations, a real terminal, analytics, music, a pet. Your agent work, with a face.
 
-[Download Blubber for Windows](https://github.com/Dameboll/Blubber-OS/releases/download/v0.1.2/Blubber.Setup.0.1.2.exe) · [Get the Starter Kit](https://flubberos.myshopify.com/products/blubber-starter-kit)
+[Download Blubber for Windows](https://github.com/Dameboll/Blubber-OS/releases/download/v0.1.3/Blubber.Setup.0.1.3.exe) · [Get the Starter Kit](https://flubberos.myshopify.com/products/blubber-starter-kit)
 
-**v0.1.2 Early Access:** the Windows installer is not code-signed yet. Windows may show an “unrecognized app” warning; choose **More info → Run anyway** to continue.
+**v0.1.3 Early Access:** the Windows installer is not code-signed yet. Windows may show an “unrecognized app” warning; choose **More info → Run anyway** to continue.
+
+Blubber updates itself from v0.1.3 onward. If you are on 0.1.0–0.1.2, install this one by hand once — those builds shipped before the updater existed.
 
 ![Blubber-OS dashboard](docs/screenshots/dashboard.jpg)
 
@@ -51,7 +53,7 @@ The Community Edition in this repo is the full app. Free, with no feature gates 
 
 ## Install on Windows
 
-1. [Download the v0.1.2 installer](https://github.com/Dameboll/Blubber-OS/releases/download/v0.1.2/Blubber.Setup.0.1.2.exe).
+1. [Download the v0.1.3 installer](https://github.com/Dameboll/Blubber-OS/releases/download/v0.1.3/Blubber.Setup.0.1.3.exe).
 2. Run it. During Early Access, Windows SmartScreen may require **More info → Run anyway** because the installer is not code-signed yet.
 3. Open Blubber and scan your Claude Code workspace. If Claude Code is not installed, choose **Install it for me** or **Look around first**.
 

@@ -68,10 +68,16 @@ real GitHub feed. Every release from here on MUST upload `latest.yml` and the
 `.blockmap` alongside the `.exe` — see `docs/RELEASING.md`. `release.ps1` stage 10
 catches the metadata problems locally, but it cannot check what you uploaded.
 
-**Open gap:** the live storefront still links to the v0.1.2 installer, so new
-customers land on a version that cannot auto-update. Two links (homepage hero,
-Community Edition pricing card) need repointing at the v0.1.3 asset. Not done
-without Dame's go-ahead — live commercial page.
+**Storefront is updated too.** The live theme (#188479111535) points at the v0.1.3
+installer in the hero, the Community Edition pricing card, and the shop section.
+Verified in the rendered page, not just the theme files. Storefront source:
+`blubber-site` private repo `main` at `72e1e4b`.
+
+When updating the live theme, always use a **scoped** `shopify theme push --only <files>`.
+75 files differ between local and live purely because Shopify normalizes locale and
+template JSON on upload; a blanket push overwrites all of them. Back the whole theme
+up with `shopify theme pull` first, then re-pull afterwards and confirm the file count
+is unchanged and only your files moved.
 
 ## DON'T FORGET
 

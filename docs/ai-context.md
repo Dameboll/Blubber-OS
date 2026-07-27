@@ -54,13 +54,24 @@
 # - v0.1.0 - v0.1.2 installs have NO updater code and can never self-update. Those
 #   users must download v0.1.3 by hand once. This is stated in the v0.1.3 release notes.
 #
-# OPEN GAP — STOREFRONT STILL POINTS AT v0.1.2
-# - The live Shopify theme's hero and Community Edition pricing card still link to the
-#   v0.1.2 installer. Anyone buying/downloading from the storefront today lands on a
-#   version that CANNOT auto-update, so they will need a second manual download later.
-#   Updating those two links to the v0.1.3 asset was deliberately NOT done without Dame's
-#   go-ahead — it is a live commercial page. Storefront source: blubber-site (private
-#   repo, main 46de809).
+# STOREFRONT — UPDATED TO v0.1.3 (gap closed 2026-07-26 22:05 ET)
+# - Live theme Blubber OS #188479111535 now points at the v0.1.3 installer everywhere.
+# - Storefront source: blubber-site private repo, main 72e1e4b (PR #1).
+# - Pre-push backup of the ENTIRE live theme (421 files):
+#   C:\Users\jeffh\Development\HOBBY\_backups\blubber-storefront-v013-links-20260726-220049
+# - SCOPED push: `shopify theme push --only` on exactly 4 files (blubber-hero.liquid,
+#   blubber-pricing.liquid, blubber-shop.liquid, templates/index.json). A blanket push
+#   was deliberately avoided — 75 other files differ between local and live because
+#   Shopify normalizes locale/template JSON on upload, and a full push would have
+#   overwritten the live versions of all of them.
+# - Verified after the push by re-pulling the live theme: still 421 files (nothing
+#   deleted), exactly 4 files changed, zero "0.1.2" strings left anywhere in the theme.
+# - Verified in the RENDERED live page: HTTP 200, both download links (hero + Community
+#   Edition pricing card) resolve to the v0.1.3 asset, version line reads
+#   "v0.1.3 · 190 MB", zero 0.1.2 occurrences. The linked asset returns HTTP 206 to a
+#   range request, so it is genuinely downloadable.
+# - templates/index.json is Shopify-generated; its warning header was preserved and the
+#   file was re-validated as parseable JSON after editing.
 ## ===== END v0.1.3 LIVE =====
 
 ## ===== v0.1.2 LAUNCH COMPLETE — CURRENT SOURCE OF TRUTH =====

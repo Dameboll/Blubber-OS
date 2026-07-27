@@ -6,8 +6,9 @@
 # 8665266, Blubber.Setup.0.1.3.exe, 199,230,751 bytes, SHA256
 # 4727286BA4D45B5D396E7D3906A4559E56459ED75B737C24232F647D736B0F41, published with
 # latest.yml + .blockmap. Every future release MUST carry that metadata (see the
-# gotchas below and docs/RELEASING.md). OPEN GAP: the live storefront still links to
-# the v0.1.2 installer, which cannot auto-update.
+# gotchas below and docs/RELEASING.md). The live storefront was updated to v0.1.3 on
+# 2026-07-26 via a SCOPED 4-file shopify theme push (never push the whole theme — 75
+# files differ purely from Shopify's own JSON normalization).
 #
 # The v0.1.2 record below is preserved as history.
 #

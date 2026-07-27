@@ -1,5 +1,5 @@
 # CODEX HANDOFF — Blubber OS
-# Updated: 2026-07-26 21:50 EDT (v0.1.3 released with auto-update)
+# Updated: 2026-07-27 00:55 EDT (v0.1.3 live with auto-update; full lifecycle verified)
 # Read this + docs/ai-context.md before touching anything.
 #
 # CURRENT: v0.1.3 is the live release and ships working auto-update. Tag v0.1.3 =
@@ -9,6 +9,22 @@
 # gotchas below and docs/RELEASING.md). The live storefront was updated to v0.1.3 on
 # 2026-07-26 via a SCOPED 4-file shopify theme push (never push the whole theme — 75
 # files differ purely from Shopify's own JSON normalization).
+#
+# VERIFIED 2026-07-26 against the PUBLISHED artifact, not the local build:
+# - download + hash match, silent install to the correct default dir, both shortcuts,
+#   six API routes 200, free-user path (detect not-found / kit false) on a scrubbed-PATH
+#   virgin profile, clean uninstall preserving user data.
+# - A REAL 0.1.3 -> 0.1.4 auto-update swap: differential download 750 KB instead of
+#   190 MB, sha512 verified, NSIS swap on quit, updated app booted with all APIs 200.
+# - e2e 20/20. UI confirmed by driving the real Electron window with Playwright
+#   (0 console errors) — HTTP 200 was not treated as proof the UI works.
+#
+# NOT VERIFIED — do not claim otherwise:
+# - The PAID path has never taken a real card. Order #1001 was a 100% discount and the
+#   live checkout only reached the payment page. Delivery proven, capture not.
+# - Eyes-only sandbox items (SmartScreen wording, installer UI branding, intro cinematic,
+#   onboarding visuals, folder picker, 3D Flubber rendering/frame rate, accent toggle,
+#   voice-muted default, restart persistence) — see tools/smoke-test/CHECKLIST.md.
 #
 # The v0.1.2 record below is preserved as history.
 #

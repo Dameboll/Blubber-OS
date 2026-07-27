@@ -1,8 +1,17 @@
-# CODEX HANDOFF — Blubber OS v0.1.2 Launch Complete
-# Updated: 2026-07-26 13:00 EDT by Codex
+# CODEX HANDOFF — Blubber OS
+# Updated: 2026-07-26 21:50 EDT (v0.1.3 released with auto-update)
 # Read this + docs/ai-context.md before touching anything.
 #
-# STATUS: v0.1.2 IS LIVE. The transparent standalone slime BL appears in the
+# CURRENT: v0.1.3 is the live release and ships working auto-update. Tag v0.1.3 =
+# 8665266, Blubber.Setup.0.1.3.exe, 199,230,751 bytes, SHA256
+# 4727286BA4D45B5D396E7D3906A4559E56459ED75B737C24232F647D736B0F41, published with
+# latest.yml + .blockmap. Every future release MUST carry that metadata (see the
+# gotchas below and docs/RELEASING.md). OPEN GAP: the live storefront still links to
+# the v0.1.2 installer, which cannot auto-update.
+#
+# The v0.1.2 record below is preserved as history.
+#
+# STATUS AT v0.1.2: v0.1.2 WAS LIVE. The transparent standalone slime BL appears in the
 # actual Windows installer, installed app, desktop shortcut, in-app favicon,
 # website favicon, and tiny OS-mockup icons. The visible website header/footer
 # and Organization metadata intentionally use the full BLUBBER wordmark. Do not

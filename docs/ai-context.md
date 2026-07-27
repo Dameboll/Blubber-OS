@@ -1,9 +1,29 @@
 # Blubber OS — AI Context
-# Last sync: 2026-07-26 ~21:30 ET (auto-updater built, unreleased; v0.1.2 still the live release)
+# Last sync: 2026-07-26 ~21:50 ET (v0.1.3 LIVE with working auto-update)
 
-## ===== AUTO-UPDATER — BUILT 2026-07-26, NOT YET LIVE =====
-# Code is merged and package.json is bumped to 0.1.3. NOTHING auto-updates yet: the
-# updater only starts working once a release is published carrying latest.yml.
+## ===== v0.1.3 LIVE — AUTO-UPDATE WORKING — CURRENT SOURCE OF TRUTH =====
+# Supersedes the v0.1.2 block below. Do not rebuild or republish v0.1.3.
+#
+# RELEASE
+# - Tag v0.1.3 = 8665266f51dbc529013ee62318a60bacff73d7e6 (main, PR #7 squash-merge).
+# - https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.3 — not draft, not prerelease.
+# - Blubber.Setup.0.1.3.exe, 199,230,751 bytes.
+#   SHA256 4727286BA4D45B5D396E7D3906A4559E56459ED75B737C24232F647D736B0F41
+#   GitHub's own asset digest matches that hash exactly.
+# - All four assets uploaded: .exe, latest.yml, .exe.blockmap, SHA256SUMS.txt.
+# - All 10 fail-closed release.ps1 stages passed, including the new stage 10.
+# - Packaged app smoke-tested pre-publish on an isolated profile: /, /api/pet,
+#   /api/quests, /api/top-agents all 200. Exe reports 0.1.3.0.
+# - Preflight backup:
+#   C:\Users\jeffh\Development\HOBBY\_backups\blubber-v013-release-preflight-20260726-213942
+#   data/ verified byte-identical to that backup after the whole release run.
+#
+# AUTO-UPDATE PROVEN AGAINST THE LIVE FEED
+# - A packaged build posing as v0.1.0 (test patch, download disabled, never committed)
+#   hit the real GitHub feed and logged "Found version 0.1.3" -> update available, with
+#   nothing on stderr. The production update path works.
+# - Still unproven: the actual install-and-relaunch swap. That needs a NEWER release than
+#   0.1.3 to exist. First real proof arrives with v0.1.4.
 #
 # WHAT SHIPPED
 # - electron/updater.js — electron-updater against the public GitHub releases. Checks
@@ -32,10 +52,16 @@
 #
 # HARD CONSTRAINT
 # - v0.1.0 - v0.1.2 installs have NO updater code and can never self-update. Those
-#   users must download v0.1.3 by hand once. Say so in the v0.1.3 release notes.
-# - The dist-electron 0.1.3 exe on this machine is a TEST artifact. Build the real one
-#   through release.ps1.
-## ===== END AUTO-UPDATER =====
+#   users must download v0.1.3 by hand once. This is stated in the v0.1.3 release notes.
+#
+# OPEN GAP — STOREFRONT STILL POINTS AT v0.1.2
+# - The live Shopify theme's hero and Community Edition pricing card still link to the
+#   v0.1.2 installer. Anyone buying/downloading from the storefront today lands on a
+#   version that CANNOT auto-update, so they will need a second manual download later.
+#   Updating those two links to the v0.1.3 asset was deliberately NOT done without Dame's
+#   go-ahead — it is a live commercial page. Storefront source: blubber-site (private
+#   repo, main 46de809).
+## ===== END v0.1.3 LIVE =====
 
 ## ===== v0.1.2 LAUNCH COMPLETE — CURRENT SOURCE OF TRUTH =====
 # This block supersedes v0.1.1 icon/download references below. Do not rebuild or republish

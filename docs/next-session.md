@@ -8,7 +8,12 @@ For: next Blubber OS / Claude session
 
 ### Launch state
 
-**Blubber OS v0.1.2 Windows Early Access is live and verified. There is no remaining launch blocker.**
+**Blubber OS v0.1.3 is the current release (2026-07-26) and ships working auto-update.**
+Tag `v0.1.3` = `8665266`, `Blubber.Setup.0.1.3.exe`, 199,230,751 bytes,
+SHA256 `4727286BA4D45B5D396E7D3906A4559E56459ED75B737C24232F647D736B0F41`, published with
+`latest.yml` + `.blockmap`. There is no remaining launch blocker.
+
+The v0.1.2 detail below is kept as the record of the original launch.
 
 - App repo `main` includes the post-release context sync; release source/tag:
   `6cec28e` / `v0.1.2`.
@@ -58,10 +63,15 @@ Only start one of these when Dame requests it:
 4. CSP hardening.
 5. Onboarding custom-folder follow-up.
 
-**Auto-updater is BUILT (2026-07-26) but NOT YET RELEASED.** Code is on `main`;
-`package.json` is bumped to 0.1.3. It goes live the first time a release is
-published carrying `latest.yml` — see `docs/RELEASING.md`. Until v0.1.3 ships,
-no installed copy can update itself.
+**Auto-updater shipped in v0.1.3 (2026-07-26) and is live.** Verified against the
+real GitHub feed. Every release from here on MUST upload `latest.yml` and the
+`.blockmap` alongside the `.exe` — see `docs/RELEASING.md`. `release.ps1` stage 10
+catches the metadata problems locally, but it cannot check what you uploaded.
+
+**Open gap:** the live storefront still links to the v0.1.2 installer, so new
+customers land on a version that cannot auto-update. Two links (homepage hero,
+Community Edition pricing card) need repointing at the v0.1.3 asset. Not done
+without Dame's go-ahead — live commercial page.
 
 ## DON'T FORGET
 

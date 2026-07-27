@@ -56,10 +56,16 @@
 #   v0.1.2/189.5 MB copy, correct hero/pricing links, 44px pricing targets, 0 broken images,
 #   0 console errors, and no horizontal overflow.
 #   Below 360px the redundant header CTA hides; the full wordmark, menu, and hero download remain.
-# - Current website source: blubber-site local main 46de809. Wordmark correction is 3e659d5;
+# - Current website source: blubber-site main 46de809. Wordmark correction is 3e659d5;
 #   pricing download/GitHub split is 46de809. Safety backups:
 #   C:\Users\jeffh\Development\HOBBY\_backups\blubber-web-wordmark-restore-20260726-122713
 #   C:\Users\jeffh\Development\HOBBY\_backups\blubber-pricing-cta-20260726-124215
+# - 2026-07-26: blubber-site is no longer local-only. All 45 commits are pushed to the
+#   PRIVATE repo https://github.com/Dameboll/blubber-site (origin/main = 46de809, default
+#   branch main). Credential scan of the full history before pushing found no real-shape
+#   tokens; the shpat_ hits in old docs/ai-context.md revisions are prose placeholders, and
+#   shopify.txt / .env were never tracked. docs/ stays gitignored there. This supersedes the
+#   "no Git remote" line in the historical v0.1.1 block below.
 #
 # PAID / FREE PATHS
 # - Community app/repo/installer remain free. The optional Starter Kit paid-delivery setup from
@@ -105,7 +111,8 @@
 #
 # STOREFRONT SOURCE
 # - C:\Users\jeffh\Development\HOBBY\blubber-site is clean at local commit ff75d57
-#   (feat: publish Blubber launch storefront). This repo currently has no Git remote.
+#   (feat: publish Blubber launch storefront). This repo had no Git remote at the time.
+#   SUPERSEDED 2026-07-26: it is now pushed to the private repo Dameboll/blubber-site.
 # - Public collection Download for Windows points directly to the verified v0.1.1 asset.
 # - Live copy/art/counts are accurate: 10 agents, 10 skills, 8 commands, 4 guides.
 # - Footer says Apache-2.0; legacy MIT storefront badge and v0.1.0 link are gone.

@@ -77,6 +77,12 @@ function initAutoUpdater(getWindow) {
   // waits ~190 MB for a download that could have happened in the background.
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+  // This app ships the plain `nsis` target, never `nsis-web`, so the web-installer
+  // code path can never apply. electron-updater warns when this is left at its
+  // current default of false and says it will default to true in a future version;
+  // setting it explicitly silences the warning and keeps a path we do not use from
+  // ever being taken.
+  autoUpdater.disableWebInstaller = true;
 
   autoUpdater.on("update-available", (info) => {
     console.log(`[updater] update available: ${info?.version}`);

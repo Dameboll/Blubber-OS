@@ -25,8 +25,24 @@
 # - The REAL INSTALLED app (shipped code, unmodified) read the live feed and reported
 #   "latest version: 0.1.3 ... already on the newest version". app-update.yml is baked
 #   into the install correctly (provider github, Dameboll/Blubber-OS).
-# - Still unproven: the actual install-and-relaunch swap. That needs a NEWER release than
-#   0.1.3 to exist. First real proof arrives with v0.1.4.
+# - FULL SWAP NOW PROVEN (2026-07-26, late session). A real 0.1.4 was built and served
+#   from a local feed to a REAL installed 0.1.3 (only the feed URL was patched; download
+#   and install-on-quit ran shipped behavior). Result: differential download of 750 KB
+#   instead of 190 MB (35 changed blocks), sha512 verified, NSIS swapped in place on
+#   quit, Blubber.exe reported 0.1.4.0, registry read "Blubber 0.1.4", desktop shortcut
+#   survived, updated app booted with all APIs 200, uninstall clean.
+# - A stale cached update from an earlier test was rejected on checksum mismatch and
+#   discarded rather than installed.
+# - Download integrity separately proven: a full 199,230,751-byte download landed
+#   byte-identical to the published installer (SHA256 match).
+# - TIMING TRAP: install-on-quit takes ~45s and Blubber.exe reports the new version
+#   BEFORE node_modules finishes writing. Launching in that window fails with
+#   "Cannot find module 'ts-node'" and resolves itself on the next launch. This bit me
+#   during the rehearsal and looked like a broken update; it is not.
+# - e2e suite re-run against this build: 20/20 passed.
+# - App visually verified via Playwright driving the real Electron window: onboarding
+#   renders (mascot, MEET BLUBBER, Scan my workspace CTA), 0 console errors, no
+#   horizontal overflow. Screenshot taken. HTTP 200 alone was not treated as proof.
 #
 # FULL INSTALLER LIFECYCLE REHEARSED 2026-07-26 (published artifact, all gates passed)
 # - Downloaded Blubber.Setup.0.1.3.exe from the GitHub release; 199,230,751 bytes and

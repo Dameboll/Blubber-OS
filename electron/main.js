@@ -34,6 +34,7 @@ const http = require("node:http");
 const net = require("node:net");
 const crypto = require("node:crypto");
 const { app, BrowserWindow, dialog, ipcMain, shell: electronShell } = require("electron");
+const { initAutoUpdater } = require("./updater");
 
 const HOST = "127.0.0.1";
 
@@ -342,6 +343,10 @@ app.whenReady().then(async () => {
 
   startServer();
   createWindow();
+
+  // Background GitHub-release update checks (packaged builds only). Never
+  // awaited and never throws into startup -- see electron/updater.js.
+  initAutoUpdater(() => mainWindow);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

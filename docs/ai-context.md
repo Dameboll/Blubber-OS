@@ -1,5 +1,41 @@
 # Blubber OS — AI Context
-# Last sync: 2026-07-26 ~13:00 ET (v0.1.2 live; storefront download choices and branding re-verified)
+# Last sync: 2026-07-26 ~21:30 ET (auto-updater built, unreleased; v0.1.2 still the live release)
+
+## ===== AUTO-UPDATER — BUILT 2026-07-26, NOT YET LIVE =====
+# Code is merged and package.json is bumped to 0.1.3. NOTHING auto-updates yet: the
+# updater only starts working once a release is published carrying latest.yml.
+#
+# WHAT SHIPPED
+# - electron/updater.js — electron-updater against the public GitHub releases. Checks
+#   30s after launch, then every 6h. Downloads in the background, then shows ONE native
+#   dialog (Restart now / Later). "Later" installs on next quit. All errors are logged
+#   and swallowed; a failed check can never block startup or show an error box.
+# - electron/main.js — two lines: require + initAutoUpdater(() => mainWindow).
+# - electron-builder.yml — `publish: github Dameboll/Blubber-OS`. This exists to EMIT
+#   latest.yml + .blockmap, not to upload. `npm run electron:build` passes --publish
+#   never so uploads stay manual and deliberate.
+# - scripts/release.ps1 — now 10 stages. Stage 10 fails the release if latest.yml is
+#   missing, disagrees with package.json's version, names a file that isn't there, or
+#   carries a sha512 that doesn't match the real installer.
+# - docs/RELEASING.md — the upload command and the rules that keep updates working.
+#
+# VERIFIED (observed, not assumed)
+# - `npm run electron:build` with --publish never DOES emit latest.yml + .blockmap.
+# - Stage 10's yml parsing and base64 sha512 both match the real 0.1.3 artifact.
+# - Packaged app reached the real GitHub feed and correctly reported that the v0.1.2
+#   release has no latest.yml (404). The window still loaded — failure is non-fatal.
+# - Against a throwaway local feed advertising 9.9.9, a packaged build logged
+#   "Found version 9.9.9" and fired update-available. Download was disabled for that
+#   test so nothing could install.
+# - NOT verified: a real install-and-relaunch swap. That needs two published releases
+#   and can only be proven after v0.1.3 is live.
+#
+# HARD CONSTRAINT
+# - v0.1.0 - v0.1.2 installs have NO updater code and can never self-update. Those
+#   users must download v0.1.3 by hand once. Say so in the v0.1.3 release notes.
+# - The dist-electron 0.1.3 exe on this machine is a TEST artifact. Build the real one
+#   through release.ps1.
+## ===== END AUTO-UPDATER =====
 
 ## ===== v0.1.2 LAUNCH COMPLETE — CURRENT SOURCE OF TRUTH =====
 # This block supersedes v0.1.1 icon/download references below. Do not rebuild or republish

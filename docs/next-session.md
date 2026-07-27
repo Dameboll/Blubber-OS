@@ -53,11 +53,15 @@ not a launch blocker.
 Only start one of these when Dame requests it:
 
 1. Authenticode/Azure Trusted Signing.
-2. Auto-updater.
-3. GitHub Actions release gate.
-4. Waitlist outbox retry.
-5. CSP hardening.
-6. Onboarding custom-folder follow-up.
+2. GitHub Actions release gate.
+3. Waitlist outbox retry.
+4. CSP hardening.
+5. Onboarding custom-folder follow-up.
+
+**Auto-updater is BUILT (2026-07-26) but NOT YET RELEASED.** Code is on `main`;
+`package.json` is bumped to 0.1.3. It goes live the first time a release is
+published carrying `latest.yml` — see `docs/RELEASING.md`. Until v0.1.3 ships,
+no installed copy can update itself.
 
 ## DON'T FORGET
 

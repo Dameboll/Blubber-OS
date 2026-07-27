@@ -27,7 +27,9 @@
 #   choices in both the hero and Community Edition pricing card, full BLUBBER website
 #   wordmark, compact BL favicon/app-UI marks, desktop/390px/320px fit, no broken
 #   images, no console errors, and no horizontal overflow.
-# - Current website source: blubber-site local main 46de809. Wordmark correction:
+# - Current website source: blubber-site main 46de809, now backed up to the PRIVATE repo
+#   https://github.com/Dameboll/blubber-site (pushed 2026-07-26, origin/main = 46de809).
+#   It is no longer local-only. Wordmark correction:
 #   3e659d5. Pricing download/GitHub split: 46de809. Pre-change live backups:
 #   C:\Users\jeffh\Development\HOBBY\_backups\blubber-web-wordmark-restore-20260726-122713
 #   C:\Users\jeffh\Development\HOBBY\_backups\blubber-pricing-cta-20260726-124215

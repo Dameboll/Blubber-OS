@@ -22,7 +22,8 @@ For: next Blubber OS / Claude session
 - Both the homepage hero and Community Edition pricing card now offer:
   1. `Download for Windows — Free` directly to the v0.1.2 installer.
   2. `View on GitHub` separately to the public repo.
-- Current storefront source: `blubber-site` local `main` at `46de809`.
+- Current storefront source: `blubber-site` `main` at `46de809`, pushed 2026-07-26 to the
+  private repo https://github.com/Dameboll/blubber-site. No longer local-only.
 - Desktop plus 390x844 and 320x700 checks passed with correct links, no console errors,
   and no horizontal overflow.
 - Paid Starter Kit delivery was previously rehearsed successfully through Shopify

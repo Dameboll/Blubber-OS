@@ -21,9 +21,35 @@
 # AUTO-UPDATE PROVEN AGAINST THE LIVE FEED
 # - A packaged build posing as v0.1.0 (test patch, download disabled, never committed)
 #   hit the real GitHub feed and logged "Found version 0.1.3" -> update available, with
-#   nothing on stderr. The production update path works.
+#   nothing on stderr.
+# - The REAL INSTALLED app (shipped code, unmodified) read the live feed and reported
+#   "latest version: 0.1.3 ... already on the newest version". app-update.yml is baked
+#   into the install correctly (provider github, Dameboll/Blubber-OS).
 # - Still unproven: the actual install-and-relaunch swap. That needs a NEWER release than
 #   0.1.3 to exist. First real proof arrives with v0.1.4.
+#
+# FULL INSTALLER LIFECYCLE REHEARSED 2026-07-26 (published artifact, all gates passed)
+# - Downloaded Blubber.Setup.0.1.3.exe from the GitHub release; 199,230,751 bytes and
+#   SHA256 both matched the published digest exactly.
+# - Silent install exit 0 -> %LOCALAPPDATA%\Programs\Blubber, ProductVersion 0.1.3.0,
+#   724.5 MB, asar off, .next-build + both native modules + app-update.yml present.
+# - Desktop and Start Menu shortcuts created, both targeting the installed exe.
+# - Installed app: server ready 12.1s; /, /api/pet, /api/quests, /api/top-agents,
+#   /api/recent, /api/prefs all 200.
+# - Scrubbed-PATH virgin profile (no node/npm/claude/git): cold launch 4.1s, APIs 200,
+#   free-user path detect=not-found / kit=false. Self-containment confirmed.
+# - Uninstall exit 0; install dir, both shortcuts, and registry entry removed; user data
+#   correctly preserved.
+# - Full detail + what remains eyes-only: tools/smoke-test/CHECKLIST.md
+#
+# TWO GOTCHAS FOUND DURING THE REHEARSAL (both fixed/recorded, neither a product defect)
+# - userData is APPDATA\blubber-os, NOT APPDATA\Blubber. Electron takes it from the
+#   packaged package.json `name`; productName lives only in electron-builder.yml.
+#   tools/smoke-test/verify-install.ps1 checked the wrong path and would have reported a
+#   FAIL on a healthy install. Fixed.
+# - On a OneDrive-redirected machine the real Desktop is %USERPROFILE%\OneDrive\Desktop.
+#   Checking $env:USERPROFILE\Desktop reports a missing shortcut that is actually there.
+#   Use [Environment]::GetFolderPath('Desktop'). Recorded in the checklist.
 #
 # WHAT SHIPPED
 # - electron/updater.js — electron-updater against the public GitHub releases. Checks

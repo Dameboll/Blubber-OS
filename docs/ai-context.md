@@ -1,5 +1,61 @@
 # Blubber OS — AI Context
-# Last sync: 2026-07-27 ~00:55 ET (v0.1.3 LIVE; auto-update proven end-to-end)
+# Last sync: 2026-07-30 ~13:10 ET (v0.1.4 LIVE; project folders + terminal expansion)
+
+## ===== v0.1.4 LIVE — RELIABLE PROJECTS + BIGGER TERMINAL — CURRENT SOURCE OF TRUTH =====
+# Supersedes the v0.1.3 block below. Do not rebuild or republish v0.1.4.
+#
+# RELEASE
+# - PR #14 squash-merged to main as f76ba2fdd136060a14c504f56c26dc895399e40d.
+# - Tag v0.1.4 resolves to that exact commit.
+# - https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.4 — public, not draft,
+#   not prerelease.
+# - Blubber.Setup.0.1.4.exe, 199,245,146 bytes.
+#   SHA256 47E11A5A98B73ECA69666C19707E6D9B7F093CF530A87ABEA0E1A7F6287CC47A
+# - All four required assets are live: installer, latest.yml, blockmap, SHA256SUMS.
+#   Each was downloaded after publication and matched its local release file exactly.
+#   The live latest.yml says 0.1.4, names the correct installer, and its sha512 matches
+#   the downloaded installer.
+#
+# WHAT SHIPPED
+# - Projects can register arbitrary repository-container folders through Electron's
+#   native Windows picker. Custom roots persist in SQLite and survive restarts.
+# - All project filesystem routes resolve through one contained root registry; renderer
+#   requests cannot register arbitrary paths. Same-name repos under different roots keep
+#   distinct activity/session identities.
+# - Project metadata scanning is asynchronous, batched, bounded, cached, and deduplicated
+#   so large repositories cannot starve unrelated APIs or make the picker appear frozen.
+# - Add Folder and New Project remain usable during initial scans and error states.
+# - Terminal has expand/restore controls that reclaim the sidebar and lower dashboard.
+# - Empty-workspace onboarding completes correctly. Blubber localhost trust/picker tokens
+#   are stripped from PTY, Quick Chat, and installer/plugin child environments.
+#
+# VERIFIED 2026-07-30
+# - npm run typecheck: pass.
+# - Production Next build: pass.
+# - Playwright: 25/25 passed in 3.8 minutes against an isolated HOME/USERPROFILE.
+# - Final code, React, and security reviews: APPROVE, zero actionable findings.
+# - scripts/release.ps1: all 10 stages passed (fresh build, path scrub, Electron ABI,
+#   native load, package, icon, hygiene, checksum, updater metadata).
+# - Exact v0.1.4 NSIS installer lifecycle on a machine with no existing Blubber install:
+#   silent install exit 0 to %LOCALAPPDATA%\Programs\Blubber; ProductVersion 0.1.4.0;
+#   desktop + Start Menu shortcuts and uninstall registry entry created.
+# - Installed app launched with a scrubbed PATH and virgin HOME/APPDATA in 4 seconds.
+#   /, /api/system, /api/project-roots, /api/projects, /api/pet, and
+#   /api/onboarding/detect all returned 200. No ~/.claude state was borrowed.
+# - Silent uninstall exit 0; install directory, shortcuts, and registry entry removed.
+# - Installer remains unsigned; SmartScreen disclosure is still the accepted limitation.
+#
+# AUTO-UPDATE
+# - v0.1.3 and later check GitHub automatically. Public latest.yml + blockmap are present,
+#   internally consistent, and match the live v0.1.4 installer.
+# - The full 0.1.3 -> 0.1.4 differential swap was already proven locally with shipped
+#   updater behavior: 750 KB, sha512 verified, install-on-quit, updated APIs 200.
+# - v0.1.0-v0.1.2 still cannot self-update and need one manual install.
+#
+# STOREFRONT SCOPE
+# - The Shopify storefront was outside the opened repo boundary and was not touched or
+#   reverified in this session. Its last proven download is v0.1.3, which auto-updates.
+## ===== END v0.1.4 LIVE =====
 
 ## ===== v0.1.3 LIVE — AUTO-UPDATE WORKING — CURRENT SOURCE OF TRUTH =====
 # Supersedes the v0.1.2 block below. Do not rebuild or republish v0.1.3.

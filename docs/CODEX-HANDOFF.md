@@ -24,8 +24,11 @@
 #   differential download 750 KB instead of 190 MB, sha512 verification, NSIS swap,
 #   updated APIs 200, and clean uninstall. The now-public v0.1.4 feed carries the exact
 #   validated metadata/assets required for that path.
-# - The live Shopify storefront was NOT touched or reverified in this repo-scoped
-#   session. Its last proven state is v0.1.3; v0.1.3 installs can auto-update to v0.1.4.
+# - The live Shopify storefront was updated to v0.1.4 on 2026-07-30 through a scoped
+#   four-file push to live theme 188479111535. A 421-file pre-push backup was taken;
+#   the post-push pull still had 421 files with exactly those four changed. Rendered
+#   production has two v0.1.4 installer links, zero v0.1.3 references, and the linked
+#   installer returns HTTP 206.
 #
 # NOT VERIFIED — do not claim otherwise:
 # - The PAID path has never taken a real card. Order #1001 was a 100% discount and the

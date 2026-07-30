@@ -16,8 +16,10 @@ longer freeze the app, and the terminal can expand to the full workspace.**
 - Release: https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.4
 - Playwright 25/25, all 10 release stages, three review gates, and the exact
   install/virgin-profile boot/API/uninstall lifecycle passed.
-- The Shopify storefront was outside the repo boundary and was not changed or reverified.
-  Its last proven installer is v0.1.3, which can auto-update to v0.1.4.
+- The live Shopify storefront was updated to v0.1.4 through blubber-site PR #2 and a
+  scoped four-file push to theme `188479111535`. A full 421-file backup was taken;
+  post-push still had 421 files with exactly four changed. Rendered production has
+  two v0.1.4 installer links, zero v0.1.3 references, and the installer returns 206.
 
 ### First action next time
 

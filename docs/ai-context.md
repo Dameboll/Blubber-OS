@@ -52,9 +52,14 @@
 #   updater behavior: 750 KB, sha512 verified, install-on-quit, updated APIs 200.
 # - v0.1.0-v0.1.2 still cannot self-update and need one manual install.
 #
-# STOREFRONT SCOPE
-# - The Shopify storefront was outside the opened repo boundary and was not touched or
-#   reverified in this session. Its last proven download is v0.1.3, which auto-updates.
+# STOREFRONT LIVE
+# - The Shopify storefront was updated to v0.1.4 on 2026-07-30 from blubber-site PR #2
+#   (main 4fc63c1) through a scoped four-file push to live theme 188479111535.
+# - Full live backup before push: C:\Users\jeffh\Development\HOBBY\_backups\
+#   blubber-storefront-v014-links-20260730-141050 (421 files).
+# - Post-push re-pull also contained 421 files, with zero added/removed and exactly the
+#   intended four changed. Rendered production: HTTP 200, two v0.1.4 installer links,
+#   three v0.1.4 mentions, zero v0.1.3 references. Installer range probe: HTTP 206.
 ## ===== END v0.1.4 LIVE =====
 
 ## ===== v0.1.3 LIVE — AUTO-UPDATE WORKING — CURRENT SOURCE OF TRUTH =====

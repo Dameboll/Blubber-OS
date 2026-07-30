@@ -342,6 +342,19 @@
   cursor: not-allowed;
 }
 
+.projects-screen__add-root-btn {
+  background: var(--bg-elevated);
+  border-color: oklch(65% 0 0 / 22%);
+  color: var(--text-primary);
+}
+
+.projects-screen__root-error {
+  margin: 0.55rem 0 0;
+  color: var(--accent-danger);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+}
+
 .projects-screen__hero-mascot {
   flex-shrink: 0;
   display: flex;

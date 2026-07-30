@@ -34,6 +34,8 @@ import './MiniProjects.css';
 
 interface ProjectSummaryEntry {
   root: string;
+  rootLabel?: string;
+  path?: string;
   name: string;
   summary: string | null;
   modifiedAt: string | null;
@@ -116,7 +118,7 @@ function sortTimestamp(p: ProjectSummaryEntry): number {
 }
 
 export default function MiniProjects() {
-  const { openProjectInTab } = useSession();
+  const { openProjectInTab, openTabWith } = useSession();
   const [projects, setProjects] = useState<ProjectSummaryEntry[]>([]);
   const [state, setState] = useState<LoadState>('loading');
 
@@ -246,7 +248,11 @@ export default function MiniProjects() {
                   type="button"
                   className={`mini-projects__card${i === 0 ? ' mini-projects__card--hot' : ''}`}
                   title={`Open ${p.name} in a terminal tab`}
-                  onClick={() => openProjectInTab(p.root, p.name)}
+                  onClick={() =>
+                    p.path
+                      ? openTabWith({ title: p.name, cwd: p.path })
+                      : openProjectInTab(p.root, p.name)
+                  }
                 >
                   <span
                     className="mini-projects__card-plate"
@@ -259,7 +265,7 @@ export default function MiniProjects() {
                       <TypeIcon size={30} />
                     </span>
                     <span className="mini-projects__card-name">{humanizeSlug(p.name)}</span>
-                    <span className="mini-projects__card-root">{p.root}</span>
+                    <span className="mini-projects__card-root">{p.rootLabel ?? p.root}</span>
                   </span>
                 </button>
               );

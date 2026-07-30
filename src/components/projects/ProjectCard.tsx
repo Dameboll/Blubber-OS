@@ -20,24 +20,35 @@ import { platePath, type ProjectPlate } from '../../lib/project-plates';
 // ---------------------------------------------------------------------------
 
 export interface ApiProjectRoot {
+  id?: string;
   label: string;
   root: string;
   projects: string[];
+  custom?: boolean;
 }
 
 export interface ProjectView {
   key: string;
   name: string;
   rawName: string;
+  rootId: string;
   rootLabel: string;
+  rootPath: string;
+  path: string;
 }
 
 export function buildProjectView(root: ApiProjectRoot, rawName: string): ProjectView {
+  const rootId = root.id ?? root.label;
+  const separator = root.root.includes('\\') ? '\\' : '/';
+  const projectPath = root.root.endsWith(separator) ? `${root.root}${rawName}` : `${root.root}${separator}${rawName}`;
   return {
-    key: `${root.label}/${rawName}`,
+    key: `${rootId}/${rawName}`,
     name: humanizeSlug(rawName),
     rawName,
+    rootId,
     rootLabel: root.label,
+    rootPath: root.root,
+    path: projectPath,
   };
 }
 
@@ -111,7 +122,7 @@ export function metaFacts(state: FetchState, meta: ProjectMeta | null, now: Date
 // so a full grid of cards each fetching once on mount is cheap and de-duped
 // server-side. Facts are static-ish (not live-ticking), so no poll — just a
 // single fetch with a cancel guard.
-export function useProjectMeta(rootLabel: string, rawName: string): { meta: ProjectMeta | null; state: FetchState } {
+export function useProjectMeta(rootId: string, rawName: string): { meta: ProjectMeta | null; state: FetchState } {
   const [meta, setMeta] = useState<ProjectMeta | null>(null);
   const [state, setState] = useState<FetchState>('loading');
 
@@ -119,7 +130,7 @@ export function useProjectMeta(rootLabel: string, rawName: string): { meta: Proj
     let cancelled = false;
     setState('loading');
     setMeta(null);
-    const url = `/api/projects/meta?root=${encodeURIComponent(rootLabel)}&name=${encodeURIComponent(rawName)}`;
+    const url = `/api/projects/meta?root=${encodeURIComponent(rootId)}&name=${encodeURIComponent(rawName)}`;
     fetch(url)
       .then((res) => {
         if (!res.ok) throw new Error(`meta fetch failed: ${res.status}`);
@@ -136,7 +147,7 @@ export function useProjectMeta(rootLabel: string, rawName: string): { meta: Proj
     return () => {
       cancelled = true;
     };
-  }, [rootLabel, rawName]);
+  }, [rootId, rawName]);
 
   return { meta, state };
 }
@@ -161,7 +172,7 @@ export interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, selected, starred, now, onSelect, thumbSize = 64, plate }: ProjectCardProps) {
-  const { meta, state } = useProjectMeta(project.rootLabel, project.rawName);
+  const { meta, state } = useProjectMeta(project.rootId, project.rawName);
   const facts = metaFacts(state, meta, now);
   // Per-card plate image handed to ProjectsScreen.css's `::before` pseudo
   // via a CSS custom property (same technique as MusicPlayerScreen's scrub

@@ -33,6 +33,7 @@ import { spawn } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import * as quickchatStore from "../../../server/quickchat-store";
+import { createSafeChildEnv } from "../../../server/child-env";
 import { resolveSpawnCwd } from "../../../server/resolve-path";
 
 export const runtime = "nodejs";
@@ -128,10 +129,11 @@ function runClaudeOneShot(message: string, resumeId: string | null): Promise<One
     // Harden spawn env: strip ANTHROPIC_API_KEY and CLAUDECODE vars so the child
     // always uses the claude.ai subscription login (via stored session), never an
     // invalid/stale API key from the parent environment.
-    const childEnv = { ...process.env };
-    delete childEnv.ANTHROPIC_API_KEY;
-    delete childEnv.CLAUDE_CODE_ENTRYPOINT;
-    delete childEnv.CLAUDECODE;
+    const childEnv = createSafeChildEnv(process.env, [
+      "ANTHROPIC_API_KEY",
+      "CLAUDE_CODE_ENTRYPOINT",
+      "CLAUDECODE",
+    ]);
 
     const child = spawn(file, args, {
       // Falls back to the deepest existing ancestor (ultimately the home dir)

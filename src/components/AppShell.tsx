@@ -126,9 +126,11 @@ interface RosterAgent {
 // codebase already uses everywhere (WeeklyRecap + TerminalScreen both fetch
 // /api/weekly independently, for example).
 interface ApiProjectRoot {
+  id?: string;
   label: string;
   root: string;
   projects: string[];
+  custom?: boolean;
 }
 
 interface ApiTrack {
@@ -523,23 +525,34 @@ export default function AppShell({
   // first switch, keeping the swap between screens instant with no flicker.
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/projects')
-      .then((res) => {
-        if (!res.ok) throw new Error(`projects fetch failed: ${res.status}`);
-        return res.json() as Promise<{ roots: ApiProjectRoot[] }>;
-      })
-      .then((data) => {
-        if (cancelled) return;
-        setProjectRoots(Array.isArray(data?.roots) ? data.roots : []);
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) setProjectsError(err instanceof Error ? err.message : 'Failed to load projects');
-      })
-      .finally(() => {
-        if (!cancelled) setProjectsLoading(false);
-      });
+    let loadSequence = 0;
+    const loadProjects = () => {
+      const sequence = ++loadSequence;
+      setProjectsLoading(true);
+      fetch('/api/projects')
+        .then((res) => {
+          if (!res.ok) throw new Error(`projects fetch failed: ${res.status}`);
+          return res.json() as Promise<{ roots: ApiProjectRoot[] }>;
+        })
+        .then((data) => {
+          if (cancelled || sequence !== loadSequence) return;
+          setProjectRoots(Array.isArray(data?.roots) ? data.roots : []);
+          setProjectsError(null);
+        })
+        .catch((err: unknown) => {
+          if (!cancelled && sequence === loadSequence) {
+            setProjectsError(err instanceof Error ? err.message : 'Failed to load projects');
+          }
+        })
+        .finally(() => {
+          if (!cancelled && sequence === loadSequence) setProjectsLoading(false);
+        });
+    };
+    loadProjects();
+    window.addEventListener('blubber:project-roots-changed', loadProjects);
     return () => {
       cancelled = true;
+      window.removeEventListener('blubber:project-roots-changed', loadProjects);
     };
   }, []);
 
@@ -572,7 +585,7 @@ export default function AppShell({
       const flattened: RecentEntry[] = [];
       for (const root of projectRoots) {
         for (const name of root.projects) {
-          flattened.push({ key: `${root.label}/${name}`, label: name });
+          flattened.push({ key: `${root.id ?? root.root}/${name}`, label: name });
         }
       }
       return flattened.slice(0, 5);

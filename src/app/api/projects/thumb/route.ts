@@ -24,12 +24,13 @@
 
 import fs from "node:fs";
 import fsp from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { DATA_DIR } from "../../../../server/app-dirs";
-
-const ROOT_LABELS = new Set(["ACTIVE", "HOBBY", "general", "research"]);
+import {
+  resolveContainedProjectPath,
+  resolveProjectDir,
+} from "../../../../server/project-roots";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".png": "image/png",
@@ -63,7 +64,6 @@ const MIN_BYTES = 200; // skip 1px spacers / empty files
 const MAX_BYTES = 12 * 1024 * 1024; // skip huge source art if anything smaller exists
 const SCAN_TTL_MS = 60_000;
 
-const devRoot = path.join(os.homedir(), "Development");
 const curatedPath = path.join(DATA_DIR, "project-thumbs.json");
 
 // -- curated picks (re-read only when the file's mtime changes) --------------
@@ -199,18 +199,12 @@ export async function GET(request: NextRequest) {
   const root = searchParams.get("root") ?? "";
   const name = searchParams.get("name") ?? "";
 
-  if (!ROOT_LABELS.has(root)) {
-    return NextResponse.json({ error: "invalid root" }, { status: 400 });
-  }
   if (!name || name.includes("..") || name.includes("/") || name.includes("\\")) {
     return NextResponse.json({ error: "invalid name" }, { status: 400 });
   }
 
-  const projectDir = path.join(devRoot, root, name);
-  const rootLabelDir = path.join(devRoot, root);
-  if (!isInside(rootLabelDir, projectDir)) {
-    return NextResponse.json({ error: "invalid path" }, { status: 400 });
-  }
+  const projectDir = resolveProjectDir(root, name);
+  if (!projectDir) return NextResponse.json({ error: "invalid root" }, { status: 400 });
   try {
     if (!fs.statSync(projectDir).isDirectory()) {
       return NextResponse.json({ error: "not a folder" }, { status: 404 });
@@ -224,11 +218,15 @@ export async function GET(request: NextRequest) {
   if (!assetPath) {
     return NextResponse.json({ error: "no image" }, { status: 404 });
   }
+  const containedAssetPath = resolveContainedProjectPath(projectDir, assetPath);
+  if (!containedAssetPath) {
+    return NextResponse.json({ error: "invalid image path" }, { status: 400 });
+  }
 
-  const ext = path.extname(assetPath).toLowerCase();
+  const ext = path.extname(containedAssetPath).toLowerCase();
   const contentType = CONTENT_TYPES[ext] ?? "application/octet-stream";
   try {
-    const bytes = await fsp.readFile(assetPath);
+    const bytes = await fsp.readFile(containedAssetPath);
     return new NextResponse(new Uint8Array(bytes), {
       status: 200,
       headers: {

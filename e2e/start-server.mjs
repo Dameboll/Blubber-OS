@@ -13,13 +13,20 @@ import path from 'node:path';
 const runtimeRoot = path.join(process.cwd(), 'test-results', 'runtime-profile');
 const dataDir = path.join(runtimeRoot, 'data');
 const musicDir = path.join(runtimeRoot, 'music');
+const homeDir = path.join(runtimeRoot, 'home');
 
-for (const dir of [dataDir, musicDir]) {
+for (const dir of [dataDir, musicDir, homeDir]) {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, '.blubber-e2e-profile'), 'disposable test profile\n');
 }
 
 process.env.BLUBBER_DATA_DIR = dataDir;
 process.env.BLUBBER_MUSIC_DIR = musicDir;
+process.env.BLUBBER_PICKER_TOKEN = 'blubber-e2e-picker';
+// Keep default project roots and ~/.claude transcript indexing inside the
+// disposable profile too. Without this, the isolated test DB still walks the
+// developer's real home directory, making the suite slow and privacy-unsafe.
+process.env.HOME = homeDir;
+process.env.USERPROFILE = homeDir;
 
 await import('../server.js');

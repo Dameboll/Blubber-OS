@@ -24,6 +24,7 @@
 // and its real error output above it.
 
 import { spawn, type ChildProcess } from "node:child_process";
+import { createSafeChildEnv } from "./child-env";
 
 export interface StreamStep {
   /** Human label shown in the UI for this command (e.g. "Installing superpowers"). */
@@ -91,7 +92,11 @@ export function runCommandStream(steps: StreamStep[], signal?: AbortSignal): Rea
         controller.enqueue(line({ type: "step", label: step.label }));
 
         try {
-          child = spawn(step.cmd, step.args, { shell: true, windowsHide: true });
+          child = spawn(step.cmd, step.args, {
+            shell: true,
+            windowsHide: true,
+            env: createSafeChildEnv(),
+          });
         } catch (err) {
           controller.enqueue(line({ type: "error", message: `failed to start ${step.cmd}: ${(err as Error).message}` }));
           controller.enqueue(line({ type: "done", ok: false }));

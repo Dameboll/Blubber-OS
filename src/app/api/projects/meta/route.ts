@@ -1,37 +1,25 @@
-// GET /api/projects/meta?root=<ACTIVE|HOBBY|general|research>&name=<folder>
+// GET /api/projects/meta?root=<root-id>&name=<folder>
 //
-// Real filesystem facts for one project folder — the truthful replacement for
-// the old hash-of-foldername seeded stats on the Projects screen. Returns:
-//   fileCount   real file count (node_modules/.git/build dirs pruned)
-//   sizeBytes   real total size of counted files
-//   createdAt   folder birthtime (real "created")
-//   modifiedAt  most-recent file mtime found (real "last activity")
-//   truncated   true if the walk hit the MAX_FILES safety cap
-//
-// Nothing here is invented: if a fact can't be read it comes back null, and the
-// UI shows an honest empty state rather than a fabricated number. Path-guarded
-// (root allowlist + name has no separators + stays inside the root) exactly
-// like /api/projects/thumb. Per-project TTL cache so repeat loads (and a grid
-// of cards each fetching once) don't re-walk the tree.
+// Real filesystem facts for one allowlisted project folder. Large repositories
+// are walked asynchronously in bounded batches so the metadata cards cannot
+// block the local app server or make the rest of Blubber appear frozen.
 
 import fs from "node:fs";
-import os from "node:os";
+import fsp from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { resolveProjectDir } from "../../../../server/project-roots";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ROOT_LABELS = ["ACTIVE", "HOBBY", "general", "research"] as const;
-type RootLabel = (typeof ROOT_LABELS)[number];
-
-const DEV_ROOT = path.join(os.homedir(), "Development");
 const PRUNE = new Set([
   "node_modules", ".git", ".next", "dist", "build", "out",
   ".turbo", ".cache", ".vercel", "coverage", ".venv", "__pycache__",
 ]);
 const MAX_DEPTH = 5;
 const MAX_FILES = 12_000;
+const STAT_BATCH_SIZE = 64;
 const CACHE_TTL_MS = 10 * 60_000;
 
 export interface ProjectMeta {
@@ -43,21 +31,16 @@ export interface ProjectMeta {
 }
 
 const cache = new Map<string, { meta: ProjectMeta; expiresAt: number }>();
+const inFlight = new Map<string, Promise<ProjectMeta>>();
 
-function resolveDir(rootLabel: string, name: string): string | null {
-  if (!ROOT_LABELS.includes(rootLabel as RootLabel)) return null;
-  if (!name || name.includes("/") || name.includes("\\") || name.includes("..")) return null;
-  const base = path.join(DEV_ROOT, rootLabel);
-  const target = path.join(base, name);
-  const rel = path.relative(base, target);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) return null;
-  return target;
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
 }
 
-function scan(dir: string): ProjectMeta {
+async function scan(dir: string): Promise<ProjectMeta> {
   let createdAt: string | null = null;
   try {
-    createdAt = fs.statSync(dir).birthtime.toISOString();
+    createdAt = (await fsp.stat(dir)).birthtime.toISOString();
   } catch {
     return { fileCount: 0, sizeBytes: 0, createdAt: null, modifiedAt: null, truncated: false };
   }
@@ -71,29 +54,55 @@ function scan(dir: string): ProjectMeta {
   while (stack.length > 0) {
     const item = stack.pop();
     if (!item) break;
+
     let entries: fs.Dirent[];
     try {
-      entries = fs.readdirSync(item.p, { withFileTypes: true });
+      entries = await fsp.readdir(item.p, { withFileTypes: true });
     } catch {
       continue;
     }
+
+    const files: string[] = [];
     for (const entry of entries) {
-      if (fileCount >= MAX_FILES) { truncated = true; break; }
       if (entry.isDirectory()) {
         if (PRUNE.has(entry.name) || entry.name.startsWith(".")) continue;
         if (item.depth < MAX_DEPTH) stack.push({ p: path.join(item.p, entry.name), depth: item.depth + 1 });
       } else if (entry.isFile()) {
-        fileCount++;
-        try {
-          const st = fs.statSync(path.join(item.p, entry.name));
-          sizeBytes += st.size;
-          if (st.mtimeMs > latestMtime) latestMtime = st.mtimeMs;
-        } catch {
-          // Vanished/unreadable file — skip, still counted.
-        }
+        files.push(path.join(item.p, entry.name));
       }
     }
-    if (truncated) break;
+
+    const remaining = MAX_FILES - fileCount;
+    const selectedFiles = files.slice(0, remaining);
+    if (selectedFiles.length < files.length) truncated = true;
+    fileCount += selectedFiles.length;
+
+    for (let i = 0; i < selectedFiles.length; i += STAT_BATCH_SIZE) {
+      const stats = await Promise.all(
+        selectedFiles.slice(i, i + STAT_BATCH_SIZE).map(async (filePath) => {
+          try {
+            return await fsp.stat(filePath);
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      for (const st of stats) {
+        if (!st) continue;
+        sizeBytes += st.size;
+        if (st.mtimeMs > latestMtime) latestMtime = st.mtimeMs;
+      }
+
+      // Project cards request metadata together. Yield between bounded batches
+      // so those scans never freeze unrelated routes or the folder picker.
+      await yieldToEventLoop();
+    }
+
+    if (fileCount >= MAX_FILES) {
+      if (stack.length > 0) truncated = true;
+      break;
+    }
   }
 
   return {
@@ -110,7 +119,7 @@ export async function GET(request: Request) {
   const root = searchParams.get("root") ?? "";
   const name = searchParams.get("name") ?? "";
 
-  const dir = resolveDir(root, name);
+  const dir = resolveProjectDir(root, name);
   if (!dir) return NextResponse.json({ error: "invalid project" }, { status: 400 });
 
   const key = `${root}/${name}`;
@@ -120,7 +129,17 @@ export async function GET(request: Request) {
 
   if (!fs.existsSync(dir)) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const meta = scan(dir);
-  cache.set(key, { meta, expiresAt: now + CACHE_TTL_MS });
-  return NextResponse.json(meta);
+  let pending = inFlight.get(key);
+  if (!pending) {
+    pending = scan(dir);
+    inFlight.set(key, pending);
+  }
+
+  try {
+    const meta = await pending;
+    cache.set(key, { meta, expiresAt: Date.now() + CACHE_TTL_MS });
+    return NextResponse.json(meta);
+  } finally {
+    if (inFlight.get(key) === pending) inFlight.delete(key);
+  }
 }

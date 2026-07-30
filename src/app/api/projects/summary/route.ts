@@ -25,26 +25,31 @@
 
 import fs from "node:fs";
 import fsp from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { ensureIndexed } from "../../../../server/log-indexer";
 import { getProjectActivityRollup } from "../../../../server/db";
+import { isWorkspaceConnected } from "../../../../server/connected-store";
+import {
+  getProjectRoots,
+  resolveProjectEntry,
+  type ProjectRootDefinition,
+} from "../../../../server/project-roots";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ROOT_LABELS = ["ACTIVE", "HOBBY", "general", "research"] as const;
-type RootLabel = (typeof ROOT_LABELS)[number];
-
-const DEV_ROOT = path.join(os.homedir(), "Development");
 const CACHE_TTL_MS = 10 * 60_000;
 const MAX_SUMMARY_LENGTH = 280;
 
 type SummarySource = "claude-md" | "readme" | "ai-context" | null;
 
 export interface ProjectSummary {
+  /** Stable project-root id (legacy defaults remain ACTIVE/HOBBY/etc.). */
   root: string;
+  rootLabel: string;
+  /** Exact allowlisted project directory, used to open custom-root projects. */
+  path: string;
   name: string;
   summary: string | null;
   source: SummarySource;
@@ -68,16 +73,6 @@ const CANDIDATES: { relPath: string; source: SummarySource }[] = [
 ];
 
 const cache = new Map<string, { summary: ProjectSummary; expiresAt: number }>();
-
-function resolveProjectDir(rootLabel: string, name: string): string | null {
-  if (!ROOT_LABELS.includes(rootLabel as RootLabel)) return null;
-  if (!name || name.includes("/") || name.includes("\\") || name.includes("..")) return null;
-  const base = path.join(DEV_ROOT, rootLabel);
-  const target = path.join(base, name);
-  const rel = path.relative(base, target);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) return null;
-  return target;
-}
 
 async function listSubdirectories(root: string): Promise<string[]> {
   try {
@@ -137,21 +132,25 @@ function firstMeaningfulParagraph(raw: string): string | null {
 // deliberately left as honest placeholders here (never guessed) so this
 // function's only job stays "read the doc", not "also know about SQLite".
 function docSummary(
-  root: string,
+  root: ProjectRootDefinition,
   name: string,
   fields: Pick<ProjectSummary, "summary" | "source" | "modifiedAt">
 ): ProjectSummary {
-  return { root, name, lastActivityAt: null, weeklyEventCount: 0, ...fields };
+  return {
+    root: root.id,
+    rootLabel: root.label,
+    path: path.join(root.path, name),
+    name,
+    lastActivityAt: null,
+    weeklyEventCount: 0,
+    ...fields,
+  };
 }
 
-async function summarizeProject(root: string, name: string): Promise<ProjectSummary> {
-  const dir = resolveProjectDir(root, name);
-  if (!dir) return docSummary(root, name, { summary: null, source: null, modifiedAt: null });
-
+async function summarizeProject(root: ProjectRootDefinition, name: string): Promise<ProjectSummary> {
   for (const candidate of CANDIDATES) {
-    const abs = path.join(dir, candidate.relPath);
-    const rel = path.relative(dir, abs);
-    if (rel.startsWith("..") || path.isAbsolute(rel)) continue; // guard, defensive
+    const abs = resolveProjectEntry(root.id, name, candidate.relPath);
+    if (!abs) continue;
     try {
       const [raw, stat] = await Promise.all([fsp.readFile(abs, "utf8"), fsp.stat(abs)]);
       const summary = firstMeaningfulParagraph(raw);
@@ -166,8 +165,8 @@ async function summarizeProject(root: string, name: string): Promise<ProjectSumm
   return docSummary(root, name, { summary: null, source: null, modifiedAt: null });
 }
 
-async function getCachedSummary(root: string, name: string): Promise<ProjectSummary> {
-  const key = `${root}/${name}`;
+async function getCachedSummary(root: ProjectRootDefinition, name: string): Promise<ProjectSummary> {
+  const key = `${root.id}/${name}`;
   const now = Date.now();
   const hit = cache.get(key);
   if (hit && hit.expiresAt > now) return hit.summary;
@@ -179,11 +178,23 @@ async function getCachedSummary(root: string, name: string): Promise<ProjectSumm
 
 export async function GET() {
   try {
+    const workspaceConnected = isWorkspaceConnected();
+    const registeredRoots = getProjectRoots();
+    // Match /api/projects' placeholder-shell boundary. Summaries now include
+    // exact paths, so returning them before workspace consent would leak the
+    // local username and folder layout.
+    if (!workspaceConnected && !registeredRoots.some((root) => root.custom)) {
+      return NextResponse.json({ projects: [] });
+    }
+
+    const roots = workspaceConnected
+      ? registeredRoots
+      : registeredRoots.filter((root) => root.custom);
+    const customRootIds = new Set(roots.filter((root) => root.custom).map((root) => root.id));
     const perRoot = await Promise.all(
-      ROOT_LABELS.map(async (root) => {
-        const rootPath = path.join(DEV_ROOT, root);
-        if (!fs.existsSync(rootPath)) return [] as ProjectSummary[];
-        const names = await listSubdirectories(rootPath);
+      roots.map(async (root) => {
+        if (!fs.existsSync(root.path)) return [] as ProjectSummary[];
+        const names = await listSubdirectories(root.path);
         return Promise.all(names.map((name) => getCachedSummary(root, name)));
       })
     );
@@ -192,11 +203,30 @@ export async function GET() {
     // (agents-live, weekly, recent, top-agents) -- kicks an incremental
     // index pass at most once per 8s and returns immediately; the rollup
     // query right below reads whatever is already persisted in SQLite.
-    ensureIndexed();
-    const rollup = getProjectActivityRollup(7);
+    const rollup: ReturnType<typeof getProjectActivityRollup> = new Map();
+    if (workspaceConnected) {
+      ensureIndexed();
+      for (const [name, activity] of getProjectActivityRollup(7)) {
+        rollup.set(name, activity);
+      }
+    }
 
     const projects = perRoot.flat().map((p) => {
-      const real = rollup.get(p.name);
+      // New rows use the root-qualified key. Default roots also accept legacy
+      // basename-only rows from before project_key existed. Merge both periods
+      // so a migration never drops earlier activity from the same project.
+      const qualified = rollup.get(`${p.root}/${p.name}`);
+      const legacy = customRootIds.has(p.root) ? undefined : rollup.get(p.name);
+      const real =
+        qualified && legacy
+          ? {
+              lastActivityAt:
+                qualified.lastActivityAt > legacy.lastActivityAt
+                  ? qualified.lastActivityAt
+                  : legacy.lastActivityAt,
+              weeklyEventCount: qualified.weeklyEventCount + legacy.weeklyEventCount,
+            }
+          : qualified ?? legacy;
       return {
         ...p,
         lastActivityAt: real?.lastActivityAt ?? null,

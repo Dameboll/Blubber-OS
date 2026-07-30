@@ -139,6 +139,15 @@ test.describe('Onboarding — detect branches', () => {
 
   test("detect 'empty' renders the clean-slate branch and completes onboarding", async ({ page }) => {
     await mockDetect(page, 'empty');
+    let injectCalls = 0;
+    await page.route('**/api/onboarding/inject', (route) => {
+      injectCalls += 1;
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      });
+    });
     await page.goto('/');
 
     await page.getByRole('button', { name: 'Scan my workspace' }).click();
@@ -149,6 +158,7 @@ test.describe('Onboarding — detect branches', () => {
     // Onboarding overlay is gone, the real app shell is mounted.
     await expect(page.getByRole('dialog', { name: 'Welcome to Blubber' })).toHaveCount(0);
     await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+    expect(injectCalls).toBe(1);
   });
 
   test("detect 'found' renders the inject branch and shows a real stats summary", async ({ page }) => {

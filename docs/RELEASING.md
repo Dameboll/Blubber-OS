@@ -34,24 +34,24 @@ only ever shows up as customers quietly staying on an old version.
 Upload everything at once:
 
 ```powershell
-gh release create v0.1.3 `
-  dist-electron\Blubber.Setup.0.1.3.exe `
+gh release create v0.1.4 `
+  dist-electron\Blubber.Setup.0.1.4.exe `
   dist-electron\latest.yml `
-  dist-electron\Blubber.Setup.0.1.3.exe.blockmap `
+  dist-electron\Blubber.Setup.0.1.4.exe.blockmap `
   dist-electron\SHA256SUMS.txt `
-  --repo Dameboll/Blubber-OS --title "Blubber v0.1.3" --notes-file notes.md
+  --repo Dameboll/Blubber-OS --title "Blubber v0.1.4" --notes-file notes.md
 ```
 
 Adding files to a release that already exists:
 
 ```powershell
-gh release upload v0.1.3 dist-electron\latest.yml --repo Dameboll/Blubber-OS
+gh release upload v0.1.4 dist-electron\latest.yml --repo Dameboll/Blubber-OS
 ```
 
 After publishing, confirm the asset list actually contains `latest.yml`:
 
 ```powershell
-gh release view v0.1.3 --repo Dameboll/Blubber-OS --json assets
+gh release view v0.1.4 --repo Dameboll/Blubber-OS --json assets
 ```
 
 ## Rules that keep updates working

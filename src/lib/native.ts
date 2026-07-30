@@ -9,6 +9,13 @@ interface BlubberNative {
   pickFolder(options?: { title?: string }): Promise<string | null>;
 }
 
+export interface AddProjectRootResult {
+  ok: boolean;
+  cancelled?: boolean;
+  error?: string;
+  root?: { id: string; label: string; path: string; custom: boolean };
+}
+
 declare global {
   interface Window {
     blubberNative?: BlubberNative;
@@ -28,6 +35,17 @@ export function isElectron(): boolean {
 export async function pickFolder(title?: string): Promise<string | null> {
   if (typeof window === "undefined" || !window.blubberNative) return null;
   return window.blubberNative.pickFolder({ title });
+}
+
+/** Ask Electron's trusted main process to pick and register a projects folder.
+ * The absolute selected path never comes from renderer-controlled JSON. */
+export async function addProjectRoot(title?: string): Promise<AddProjectRootResult | null> {
+  if (typeof window === "undefined" || !window.blubberNative) return null;
+  const native = window.blubberNative as BlubberNative & {
+    addProjectRoot?: (options?: { title?: string }) => Promise<AddProjectRootResult>;
+  };
+  if (typeof native.addProjectRoot !== "function") return null;
+  return native.addProjectRoot({ title });
 }
 
 // Shopify checkout for the Starter Kit. The free build's "Get the Starter Kit"

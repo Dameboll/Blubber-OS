@@ -65,9 +65,11 @@ import './TabBar.css';
 // names/labels, not pre-built {name,path} pairs, so the shapes below are
 // deliberately different from what TabBar originally assumed.
 interface ApiProjectRoot {
+  id?: string;
   label: string; // "ACTIVE" | "HOBBY" | "general" | "research"
   root: string; // absolute path to that root folder
   projects: string[]; // immediate subdirectory names
+  custom?: boolean;
 }
 
 interface ApiAgentSummary {
@@ -194,29 +196,40 @@ const TabBar = forwardRef<TabBarHandle, TabBarProps>(function TabBar({ onTabsCha
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/projects')
-      .then((res) => {
-        if (!res.ok) throw new Error(`projects fetch failed: ${res.status}`);
-        return res.json() as Promise<{ roots: ApiProjectRoot[] }>;
-      })
-      .then((data) => {
-        if (cancelled) return;
-        const roots = Array.isArray(data?.roots) ? data.roots : [];
-        const adapted: ProjectRoot[] = roots.map((r) => ({
-          root: r.label,
-          path: r.root,
-          folders: r.projects.map((name) => ({ name, path: joinPath(r.root, name) })),
-        }));
-        setProjectRoots(adapted);
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) setProjectsError(err instanceof Error ? err.message : 'Failed to load folders');
-      })
-      .finally(() => {
-        if (!cancelled) setProjectsLoading(false);
-      });
+    let loadSequence = 0;
+    const loadProjects = () => {
+      const sequence = ++loadSequence;
+      setProjectsLoading(true);
+      fetch('/api/projects')
+        .then((res) => {
+          if (!res.ok) throw new Error(`projects fetch failed: ${res.status}`);
+          return res.json() as Promise<{ roots: ApiProjectRoot[] }>;
+        })
+        .then((data) => {
+          if (cancelled || sequence !== loadSequence) return;
+          const roots = Array.isArray(data?.roots) ? data.roots : [];
+          const adapted: ProjectRoot[] = roots.map((r) => ({
+            root: r.label,
+            path: r.root,
+            folders: r.projects.map((name) => ({ name, path: joinPath(r.root, name) })),
+          }));
+          setProjectRoots(adapted);
+          setProjectsError(null);
+        })
+        .catch((err: unknown) => {
+          if (!cancelled && sequence === loadSequence) {
+            setProjectsError(err instanceof Error ? err.message : 'Failed to load folders');
+          }
+        })
+        .finally(() => {
+          if (!cancelled && sequence === loadSequence) setProjectsLoading(false);
+        });
+    };
+    loadProjects();
+    window.addEventListener('blubber:project-roots-changed', loadProjects);
     return () => {
       cancelled = true;
+      window.removeEventListener('blubber:project-roots-changed', loadProjects);
     };
   }, []);
 
@@ -424,7 +437,7 @@ const TabBar = forwardRef<TabBarHandle, TabBarProps>(function TabBar({ onTabsCha
                       <div className="new-picker-status">No folders match &ldquo;{query}&rdquo;.</div>
                     )}
                   {filteredProjectRoots.map((root) => (
-                    <div key={root.root} className="folder-picker-group">
+                    <div key={root.path} className="folder-picker-group">
                       <div className="folder-picker-group-label">{root.root}</div>
                       {root.folders.map((folder) => (
                         <button

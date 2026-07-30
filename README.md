@@ -8,9 +8,9 @@
 
 Blubber is a 3D character who lives on your machine, watches your real Claude Code activity, and turns it into a world: live dashboards, agents at workstations, a real terminal, analytics, music, a pet. Your agent work, with a face.
 
-[Download Blubber for Windows](https://github.com/Dameboll/Blubber-OS/releases/download/v0.1.3/Blubber.Setup.0.1.3.exe) · [Get the Starter Kit](https://flubberos.myshopify.com/products/blubber-starter-kit)
+[Download Blubber for Windows](https://github.com/Dameboll/Blubber-OS/releases/download/v0.1.4/Blubber.Setup.0.1.4.exe) · [Get the Starter Kit](https://flubberos.myshopify.com/products/blubber-starter-kit)
 
-**v0.1.3 Early Access:** the Windows installer is not code-signed yet. Windows may show an “unrecognized app” warning; choose **More info → Run anyway** to continue.
+**v0.1.4 Early Access:** the Windows installer is not code-signed yet. Windows may show an “unrecognized app” warning; choose **More info → Run anyway** to continue.
 
 Blubber updates itself from v0.1.3 onward. If you are on 0.1.0–0.1.2, install this one by hand once — those builds shipped before the updater existed.
 
@@ -33,9 +33,9 @@ The Community Edition in this repo is the full app. Free, with no feature gates 
 | Screen | What it does |
 |---|---|
 | **Dashboard** | Hero Blubber, system status, quick actions, a terminal preview, and a live usage pill row fed by your real session data. |
-| **Terminal** | Real PTY terminal tabs running the `claude` CLI, streamed over a local WebSocket into xterm.js. Tabs persist across navigation; sessions are cleaned up when you close them. |
+| **Terminal** | Real PTY terminal tabs running the `claude` CLI, streamed over a local WebSocket into xterm.js. Tabs persist across navigation, and the terminal can expand across the dashboard when you need more room. |
 | **Agents** | An agent control center. Spawn agents, watch them work at mini workstations, see a live activity feed and your top agents ranked from real usage. |
-| **Projects** | Your actual project folders, sorted by real recency, plus templates and a New Project scaffold. |
+| **Projects** | Your actual project folders, sorted by real recency. Add any repository container with the native folder picker; saved folders survive app restarts. |
 | **Analytics** | Token usage, tool runs, and trends rolled up from your indexed `~/.claude` transcripts into local SQLite. Real numbers or an honest "not enough data yet", never filler. |
 | **Memory** | Surfaces the identity and memory files your Claude Code setup already keeps (`~/.claude/USER.md`, `PERSONA.md`, `SOUL.md`). |
 | **Music** | A local music player with EQ and an audio-reactive Blubber visualizer. Drop tracks in the `music/` folder. |
@@ -53,7 +53,7 @@ The Community Edition in this repo is the full app. Free, with no feature gates 
 
 ## Install on Windows
 
-1. [Download the v0.1.3 installer](https://github.com/Dameboll/Blubber-OS/releases/download/v0.1.3/Blubber.Setup.0.1.3.exe).
+1. [Download the v0.1.4 installer](https://github.com/Dameboll/Blubber-OS/releases/download/v0.1.4/Blubber.Setup.0.1.4.exe).
 2. Run it. During Early Access, Windows SmartScreen may require **More info → Run anyway** because the installer is not code-signed yet.
 3. Open Blubber and scan your Claude Code workspace. If Claude Code is not installed, choose **Install it for me** or **Look around first**.
 

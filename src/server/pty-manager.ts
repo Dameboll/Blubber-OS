@@ -14,6 +14,7 @@
 import os from "node:os";
 import * as pty from "node-pty";
 import type { ResumeSpec } from "../lib/ws-client";
+import { createSafeChildEnv } from "./child-env";
 import { resolveSpawnCwd } from "./resolve-path";
 
 const isWindows = os.platform() === "win32";
@@ -114,6 +115,11 @@ export function spawnSession(opts: SpawnSessionOptions): void {
   }
 
   const { file, args } = buildLaunchCommand(resume);
+  // Server-only capabilities must never enter the interactive Claude shell:
+  // a project command can inspect its own environment. The normal user/Claude
+  // credentials remain untouched; only Blubber's localhost trust secrets and
+  // startup identity nonce are removed.
+  const safePtyEnv = createSafeChildEnv();
 
   let proc: pty.IPty;
   try {
@@ -122,7 +128,7 @@ export function spawnSession(opts: SpawnSessionOptions): void {
       cols: cols ?? DEFAULT_COLS,
       rows: rows ?? DEFAULT_ROWS,
       cwd,
-      env: process.env as Record<string, string>,
+      env: safePtyEnv as Record<string, string>,
       useConpty: isWindows,
     });
   } catch (err) {

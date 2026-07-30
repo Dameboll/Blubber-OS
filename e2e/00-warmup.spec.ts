@@ -77,6 +77,7 @@ const CORE_GET_ROUTES = [
   '/api/agents-live',
   '/api/recent-session',
   '/api/projects',
+  '/api/project-roots',
   '/api/projects/summary',
   '/api/tracks',
   '/api/playlists',

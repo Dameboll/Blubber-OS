@@ -37,14 +37,11 @@ import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { resolveProjectDir, resolveProjectEntry } from "../../../server/project-roots";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ROOT_LABELS = ["ACTIVE", "HOBBY", "general", "research"] as const;
-type RootLabel = (typeof ROOT_LABELS)[number];
-
-const DEV_ROOT = path.join(os.homedir(), "Development");
 const CLAUDE_HOME = path.join(os.homedir(), ".claude");
 const USER_PATH = path.join(CLAUDE_HOME, "USER.md");
 const PERSONA_PATH = path.join(CLAUDE_HOME, "PERSONA.md");
@@ -88,16 +85,6 @@ export interface MemoryProject {
 export interface MemoryResponse {
   identity: OwnerIdentity | null;
   project: MemoryProject | null;
-}
-
-function resolveProjectDir(rootLabel: string, name: string): string | null {
-  if (!ROOT_LABELS.includes(rootLabel as RootLabel)) return null;
-  if (!name || name.includes("/") || name.includes("\\") || name.includes("..")) return null;
-  const base = path.join(DEV_ROOT, rootLabel);
-  const target = path.join(base, name);
-  const rel = path.relative(base, target);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) return null;
-  return target;
 }
 
 async function readFileSafe(abs: string): Promise<string | null> {
@@ -233,7 +220,8 @@ async function readProject(root: string, name: string): Promise<MemoryProject | 
   const dir = resolveProjectDir(root, name);
   if (!dir) return null;
 
-  const contextRaw = await readFileSafe(path.join(dir, "docs", "ai-context.md"));
+  const contextPath = resolveProjectEntry(root, name, path.join("docs", "ai-context.md"));
+  const contextRaw = contextPath ? await readFileSafe(contextPath) : null;
   const context = contextRaw ? firstMeaningfulProse(contextRaw) : null;
 
   // Long-term "shape of the codebase": project CLAUDE.md first, then a
@@ -248,7 +236,8 @@ async function readProject(root: string, name: string): Promise<MemoryProject | 
   let knowledge: string | null = null;
   let knowledgeSource: ProjectDocSource = null;
   for (const candidate of knowledgeCandidates) {
-    const raw = await readFileSafe(path.join(dir, candidate.rel));
+    const candidatePath = resolveProjectEntry(root, name, candidate.rel);
+    const raw = candidatePath ? await readFileSafe(candidatePath) : null;
     if (!raw) continue;
     const prose = firstMeaningfulProse(raw);
     if (prose) {

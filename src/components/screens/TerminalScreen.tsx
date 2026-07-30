@@ -64,8 +64,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircle2,
   Download,
+  Maximize2,
+  Minimize2,
   Minus,
-  Square,
   Terminal as TerminalIcon,
   X,
 } from 'lucide-react';
@@ -180,6 +181,7 @@ export default function TerminalScreen({ className, compact }: TerminalScreenPro
   const [pulseKey, setPulseKey] = useState(0);
   const [reactiveExpression, setReactiveExpression] = useState<FlubberExpression | null>(null);
   const [reactionText, setReactionText] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const [weekly, setWeekly] = useState<WeeklyUsageResponse | null>(null);
   const [weeklyState, setWeeklyState] = useState<FetchState>('loading');
@@ -390,6 +392,7 @@ export default function TerminalScreen({ className, compact }: TerminalScreenPro
   const classes = [
     'terminal-screen',
     compact ? 'terminal-screen--compact' : '',
+    expanded && !compact ? 'terminal-screen--expanded' : '',
     className ?? '',
   ]
     .filter(Boolean)
@@ -410,14 +413,20 @@ export default function TerminalScreen({ className, compact }: TerminalScreenPro
                 <div className="terminal-screen__hero-glow" />
               </div>
             )}
-            <div className="terminal-screen__window-chrome" aria-hidden="true">
-              <span className="terminal-screen__window-icon">
+            <div className="terminal-screen__window-chrome">
+              <span className="terminal-screen__window-icon" aria-hidden="true">
                 <Minus size={12} aria-hidden="true" />
               </span>
-              <span className="terminal-screen__window-icon">
-                <Square size={11} aria-hidden="true" />
-              </span>
-              <span className="terminal-screen__window-icon terminal-screen__window-icon--close">
+              <button
+                type="button"
+                className="terminal-screen__window-icon terminal-screen__window-icon--action"
+                onClick={() => setExpanded((value) => !value)}
+                aria-label={expanded ? 'Restore terminal layout' : 'Expand terminal'}
+                title={expanded ? 'Restore terminal layout' : 'Expand terminal'}
+              >
+                {expanded ? <Minimize2 size={12} aria-hidden="true" /> : <Maximize2 size={12} aria-hidden="true" />}
+              </button>
+              <span className="terminal-screen__window-icon terminal-screen__window-icon--close" aria-hidden="true">
                 <X size={13} aria-hidden="true" />
               </span>
             </div>

@@ -50,6 +50,7 @@ import {
   Database,
   FileText,
   FolderKanban,
+  FolderPlus,
   Globe,
   LayoutGrid,
   List,
@@ -66,6 +67,7 @@ import FlubberCharacter from '../FlubberCharacter';
 import { Panel, Skeleton, SkeletonText, StatChip } from '../ui';
 import { useSession } from '../../context/SessionProvider';
 import { humanizeSlug } from '../../lib/humanize';
+import { addProjectRoot, isElectron } from '../../lib/native';
 import { getProjectIcon } from '../../lib/project-icon';
 import { assignPlates, platePath, type ProjectPlate } from '../../lib/project-plates';
 import {
@@ -156,6 +158,8 @@ interface ApiAgentSummary {
 // powers the "Project Pulse" strip below; nothing here is invented client-side.
 interface ApiProjectSummary {
   root: string;
+  rootLabel?: string;
+  path?: string;
   name: string;
   modifiedAt: string | null;
   lastActivityAt: string | null;
@@ -228,7 +232,7 @@ interface ProjectListRowProps {
 }
 
 function ProjectListRow({ project, selected, now, onSelect, plate }: ProjectListRowProps) {
-  const { meta, state } = useProjectMeta(project.rootLabel, project.rawName);
+  const { meta, state } = useProjectMeta(project.rootId, project.rawName);
   const facts = metaFacts(state, meta, now);
   const plateStyle = plate ? ({ '--card-plate-url': `url('${platePath(plate)}')` } as CSSProperties) : undefined;
   // Same deterministic name -> icon heuristic as the grid tile (ProjectCard,
@@ -282,7 +286,21 @@ function ProjectCardSkeleton() {
   );
 }
 
-function ProjectsScreenSkeleton({ classes }: { classes: string }) {
+interface ProjectsScreenSkeletonProps {
+  classes: string;
+  addingRoot: boolean;
+  rootError: string | null;
+  onAddProjectsFolder: () => void;
+  onNewProject: () => void;
+}
+
+function ProjectsScreenSkeleton({
+  classes,
+  addingRoot,
+  rootError,
+  onAddProjectsFolder,
+  onNewProject,
+}: ProjectsScreenSkeletonProps) {
   return (
     <div className={classes}>
       <div className="projects-screen__main">
@@ -300,7 +318,31 @@ function ProjectsScreenSkeleton({ classes }: { classes: string }) {
             <div className="projects-screen__hero-stats" data-flubber-avoid="true">
               <Skeleton width={110} height={40} radius={10} />
               <Skeleton width={130} height={40} radius={10} />
+              <button
+                type="button"
+                className="projects-screen__new-btn projects-screen__add-root-btn"
+                onClick={onAddProjectsFolder}
+                disabled={addingRoot}
+                title="Add a folder that contains project repositories"
+              >
+                <FolderPlus size={14} aria-hidden="true" />
+                {addingRoot ? 'Adding…' : 'Add Folder'}
+              </button>
+              <button
+                type="button"
+                className="projects-screen__new-btn"
+                onClick={onNewProject}
+                title="Create a real new project folder"
+              >
+                <Plus size={14} aria-hidden="true" />
+                New Project
+              </button>
             </div>
+            {rootError && (
+              <p className="projects-screen__root-error" role="alert">
+                {rootError}
+              </p>
+            )}
           </div>
           <div className="projects-screen__hero-mascot" aria-hidden="true">
             <FlubberCharacter expression="thinking" size={168} mode="character" showToggle={false} />
@@ -344,7 +386,7 @@ interface ProjectOverviewProps {
 }
 
 function ProjectOverview({ project, starred, now, onToggleStar, onOpenProject }: ProjectOverviewProps) {
-  const { meta, state } = useProjectMeta(project.rootLabel, project.rawName);
+  const { meta, state } = useProjectMeta(project.rootId, project.rawName);
   const facts = metaFacts(state, meta, now);
   // Same deterministic type icon as the grid/list — see project-icon.ts.
   const TypeIcon = getProjectIcon(project.rawName);
@@ -618,7 +660,7 @@ function NewProjectFlow({ roster, initialTemplate, onClose, onCreated }: NewProj
 }
 
 export default function ProjectsScreen({ className }: ProjectsScreenProps) {
-  const { openProjectInTab } = useSession();
+  const { openProjectInTab, openTabWith } = useSession();
   const [roots, setRoots] = useState<ApiProjectRoot[]>([]);
   const [fetchState, setFetchState] = useState<ScreenFetchState>('loading');
   const [roster, setRoster] = useState<ApiAgentSummary[]>([]);
@@ -636,6 +678,10 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
   const [showAll, setShowAll] = useState(false);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [newProjectTemplate, setNewProjectTemplate] = useState<string | undefined>(undefined);
+  const [addingRoot, setAddingRoot] = useState(false);
+  const [rootError, setRootError] = useState<string | null>(null);
+  const projectsRequestRef = useRef(0);
+  const mountedRef = useRef(true);
 
   const fetchProjects = useCallback((): Promise<ApiProjectRoot[]> => {
     return fetch('/api/projects')
@@ -671,36 +717,48 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
       .catch(() => []);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    setFetchState('loading');
-    Promise.all([fetchProjects(), fetchRoster(), fetchSummaries()])
-      .then(([projectRoots, agentRoster, summaryRows]) => {
-        if (cancelled) return;
-        setRoots(projectRoots);
-        setRoster(agentRoster);
-        setSummaries(summaryRows);
-        setFetchState('ready');
+  const refreshProjects = useCallback((showLoading: boolean): Promise<ApiProjectRoot[]> => {
+    if (!mountedRef.current) return Promise.resolve([]);
+
+    const requestId = ++projectsRequestRef.current;
+    if (showLoading) setFetchState('loading');
+
+    // Roster and summary data enrich the screen, but neither should hold the
+    // folder picker or project grid hostage while a large workspace is scanned.
+    void fetchRoster().then((agentRoster) => {
+      if (mountedRef.current && projectsRequestRef.current === requestId) setRoster(agentRoster);
+    });
+    void fetchSummaries().then((summaryRows) => {
+      if (mountedRef.current && projectsRequestRef.current === requestId) setSummaries(summaryRows);
+    });
+
+    return fetchProjects()
+      .then((projectRoots) => {
+        if (mountedRef.current && projectsRequestRef.current === requestId) {
+          setRoots(projectRoots);
+          setFetchState('ready');
+        }
+        return projectRoots;
       })
-      .catch(() => {
-        if (!cancelled) setFetchState('error');
+      .catch((error) => {
+        if (mountedRef.current && projectsRequestRef.current === requestId) setFetchState('error');
+        throw error;
       });
-    return () => {
-      cancelled = true;
-    };
   }, [fetchProjects, fetchRoster, fetchSummaries]);
 
+  useEffect(() => {
+    mountedRef.current = true;
+    void refreshProjects(true).catch(() => {});
+    return () => {
+      mountedRef.current = false;
+      projectsRequestRef.current += 1;
+    };
+  }, [refreshProjects]);
+
   const handleRetry = useCallback(() => {
-    setFetchState('loading');
-    Promise.all([fetchProjects(), fetchRoster(), fetchSummaries()])
-      .then(([projectRoots, agentRoster, summaryRows]) => {
-        setRoots(projectRoots);
-        setRoster(agentRoster);
-        setSummaries(summaryRows);
-        setFetchState('ready');
-      })
-      .catch(() => setFetchState('error'));
-  }, [fetchProjects, fetchRoster, fetchSummaries]);
+    setRootError(null);
+    void refreshProjects(true).catch(() => {});
+  }, [refreshProjects]);
 
   // NEW PROJECT: opens the real guided create flow (Item 7). The hero button is
   // template-agnostic; a template card opens the same flow pre-seeded.
@@ -715,13 +773,32 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
   const handleProjectCreated = useCallback(
     (root: string, name: string) => {
       setNewProjectOpen(false);
-      fetchProjects()
-        .then((projectRoots) => setRoots(projectRoots))
-        .catch(() => {});
       openProjectInTab(root, name);
     },
-    [fetchProjects, openProjectInTab],
+    [openProjectInTab],
   );
+
+  const handleAddProjectsFolder = useCallback(async () => {
+    setRootError(null);
+    setAddingRoot(true);
+    try {
+      const result = await addProjectRoot('Choose a folder containing your project repositories');
+      if (!result || result.cancelled) {
+        if (!isElectron()) setRootError('Folder browsing is available in the installed Blubber app.');
+        return;
+      }
+      if (!result.ok) throw new Error(result.error || 'Could not add that projects folder');
+
+      window.dispatchEvent(new CustomEvent('blubber:project-roots-changed'));
+      if (mountedRef.current) await refreshProjects(false);
+    } catch (error) {
+      if (mountedRef.current) {
+        setRootError(error instanceof Error ? error.message : 'Could not add that projects folder');
+      }
+    } finally {
+      if (mountedRef.current) setAddingRoot(false);
+    }
+  }, [refreshProjects]);
 
   // OPEN PROJECT, NO QUESTIONS: switches to the Terminal screen and points
   // Blubber's narration at the exact real folder — see
@@ -729,9 +806,9 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
   // does and does not do yet (no confirm dialog either way).
   const handleOpenProject = useCallback(
     (project: ProjectView) => {
-      openProjectInTab(project.rootLabel, project.rawName);
+      openTabWith({ title: project.rawName, cwd: project.path });
     },
-    [openProjectInTab],
+    [openTabWith],
   );
 
   const toggleStar = useCallback((key: string) => {
@@ -790,7 +867,13 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
   // itself never does.
   const visibleProjects = useMemo(() => {
     const trimmedQuery = query.trim().toLowerCase();
-    if (trimmedQuery) return allProjects.filter((project) => project.name.toLowerCase().includes(trimmedQuery));
+    if (trimmedQuery) {
+      return allProjects.filter(
+        (project) =>
+          project.name.toLowerCase().includes(trimmedQuery) ||
+          project.rawName.toLowerCase().includes(trimmedQuery),
+      );
+    }
     return showAll ? recentProjects : recentProjects.slice(0, RECENT_CAP);
   }, [allProjects, recentProjects, query, showAll]);
 
@@ -827,30 +910,67 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
   const pulseMax = pulseProjects[0]?.weeklyEventCount ?? 0;
 
   const classes = ['projects-screen', className ?? ''].filter(Boolean).join(' ');
+  const newProjectFlow = newProjectOpen ? (
+    <NewProjectFlow
+      roster={roster}
+      initialTemplate={newProjectTemplate}
+      onClose={() => setNewProjectOpen(false)}
+      onCreated={handleProjectCreated}
+    />
+  ) : null;
 
   if (fetchState === 'loading') {
-    return <ProjectsScreenSkeleton classes={classes} />;
+    return (
+      <>
+        <ProjectsScreenSkeleton
+          classes={classes}
+          addingRoot={addingRoot}
+          rootError={rootError}
+          onAddProjectsFolder={handleAddProjectsFolder}
+          onNewProject={() => openNewProject()}
+        />
+        {newProjectFlow}
+      </>
+    );
   }
 
   if (fetchState === 'error') {
     return (
-      <div className={classes}>
-        <Panel accent title="Projects" className="projects-panel">
-          <div className="projects-screen__status-body">
-            <FlubberCharacter expression="worried" size={72} mode="character" showToggle={false} />
-            <div>
-              <p>Couldn&rsquo;t read your project folders.</p>
-              <span className="projects-screen__hint">
-                Check that the Development folder is reachable, then try again.
-              </span>
+      <>
+        <div className={classes}>
+          <Panel accent title="Projects" className="projects-panel">
+            <div className="projects-screen__status-body">
+              <FlubberCharacter expression="worried" size={72} mode="character" showToggle={false} />
+              <div>
+                <p>Couldn&rsquo;t read your project folders.</p>
+                <span className="projects-screen__hint">
+                  Check that the Development folder is reachable, then try again.
+                </span>
+              </div>
             </div>
-          </div>
-          <button type="button" className="projects-screen__pill-btn" onClick={handleRetry}>
-            <RefreshCw size={13} aria-hidden="true" />
-            Retry
-          </button>
-        </Panel>
-      </div>
+            <div className="projects-screen__controls">
+              <button type="button" className="projects-screen__pill-btn" onClick={handleAddProjectsFolder} disabled={addingRoot}>
+                <FolderPlus size={13} aria-hidden="true" />
+                {addingRoot ? 'Adding…' : 'Add Folder'}
+              </button>
+              <button type="button" className="projects-screen__pill-btn" onClick={() => openNewProject()}>
+                <Plus size={13} aria-hidden="true" />
+                New Project
+              </button>
+              <button type="button" className="projects-screen__pill-btn" onClick={handleRetry} disabled={addingRoot}>
+                <RefreshCw size={13} aria-hidden="true" />
+                Retry
+              </button>
+            </div>
+            {rootError && (
+              <p className="projects-screen__root-error" role="alert">
+                {rootError}
+              </p>
+            )}
+          </Panel>
+        </div>
+        {newProjectFlow}
+      </>
     );
   }
 
@@ -874,6 +994,16 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
               <StatChip label="Agents Available" value={roster.length} />
               <button
                 type="button"
+                className="projects-screen__new-btn projects-screen__add-root-btn"
+                onClick={handleAddProjectsFolder}
+                disabled={addingRoot}
+                title="Add a folder that contains project repositories"
+              >
+                <FolderPlus size={14} aria-hidden="true" />
+                {addingRoot ? 'Adding…' : 'Add Folder'}
+              </button>
+              <button
+                type="button"
                 className="projects-screen__new-btn"
                 onClick={() => openNewProject()}
                 title="Create a real new project folder"
@@ -882,6 +1012,11 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
                 New Project
               </button>
             </div>
+            {rootError && (
+              <p className="projects-screen__root-error" role="alert">
+                {rootError}
+              </p>
+            )}
           </div>
 
           <div className="projects-screen__hero-mascot" aria-hidden="true">
@@ -1062,7 +1197,7 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
                   <span className="pulse-row__icon" aria-hidden="true">
                     <Activity size={12} />
                   </span>
-                  <span className="pulse-row__name" title={`${entry.root} / ${entry.name}`}>
+                  <span className="pulse-row__name" title={`${entry.rootLabel ?? entry.root} / ${entry.name}`}>
                     {humanizeSlug(entry.name)}
                   </span>
                   <span className="pulse-row__track">
@@ -1076,14 +1211,7 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
         )}
       </Panel>
 
-      {newProjectOpen && (
-        <NewProjectFlow
-          roster={roster}
-          initialTemplate={newProjectTemplate}
-          onClose={() => setNewProjectOpen(false)}
-          onCreated={handleProjectCreated}
-        />
-      )}
+      {newProjectFlow}
     </div>
   );
 }

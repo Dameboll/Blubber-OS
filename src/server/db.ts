@@ -30,6 +30,9 @@ export interface UsageEventInput {
   /** Real project folder name this event's transcript belongs to (derived from
    * the ~/.claude/projects dir slug by the indexer), or null when unknown. */
   project: string | null;
+  /** Root-qualified identity (`rootId/projectName`) for collision-free project
+   * rollups. Legacy rows may leave this null and fall back to `project`. */
+  projectKey: string | null;
 }
 
 export interface ToolInvocationEventInput {
@@ -40,6 +43,8 @@ export interface ToolInvocationEventInput {
   category: ToolCategory;
   /** See UsageEventInput.project. */
   project: string | null;
+  /** See UsageEventInput.projectKey. */
+  projectKey: string | null;
 }
 
 export interface DailyTotal {
@@ -76,7 +81,9 @@ function createSchema(db: Database.Database): void {
       tokens_in INTEGER NOT NULL DEFAULT 0,
       tokens_out INTEGER NOT NULL DEFAULT 0,
       tokens_cache_read INTEGER NOT NULL DEFAULT 0,
-      tokens_cache_creation INTEGER NOT NULL DEFAULT 0
+      tokens_cache_creation INTEGER NOT NULL DEFAULT 0,
+      project TEXT,
+      project_key TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts);
@@ -138,6 +145,13 @@ function openDb(): Database.Database {
     } catch (err) {
       // Parallel processes (next build page-data workers) can race this ALTER;
       // losing the race is fine — the column exists either way.
+      if (!String(err).includes("duplicate column")) throw err;
+    }
+  }
+  if (!cols.some((c) => c.name === "project_key")) {
+    try {
+      db.exec(`ALTER TABLE events ADD COLUMN project_key TEXT`);
+    } catch (err) {
       if (!String(err).includes("duplicate column")) throw err;
     }
   }
@@ -247,10 +261,13 @@ export function setFileOffset(filePath: string, lastSize: number, lastMtimeMs: n
 // ---------------------------------------------------------------------------
 
 const insertUsageStmt = db.prepare(`
-  INSERT OR IGNORE INTO events
-    (source_id, ts, session_id, event_type, tool_name, category, tokens_in, tokens_out, tokens_cache_read, tokens_cache_creation, project)
+  INSERT INTO events
+    (source_id, ts, session_id, event_type, tool_name, category, tokens_in, tokens_out, tokens_cache_read, tokens_cache_creation, project, project_key)
   VALUES
-    (@sourceId, @ts, @sessionId, 'usage', NULL, NULL, @tokensIn, @tokensOut, @tokensCacheRead, @tokensCacheCreation, @project)
+    (@sourceId, @ts, @sessionId, 'usage', NULL, NULL, @tokensIn, @tokensOut, @tokensCacheRead, @tokensCacheCreation, @project, @projectKey)
+  ON CONFLICT(source_id) DO UPDATE SET
+    project = COALESCE(events.project, excluded.project),
+    project_key = COALESCE(events.project_key, excluded.project_key)
 `);
 
 export function insertUsageEvent(evt: UsageEventInput): void {
@@ -258,10 +275,13 @@ export function insertUsageEvent(evt: UsageEventInput): void {
 }
 
 const insertToolStmt = db.prepare(`
-  INSERT OR IGNORE INTO events
-    (source_id, ts, session_id, event_type, tool_name, category, tokens_in, tokens_out, tokens_cache_read, tokens_cache_creation, project)
+  INSERT INTO events
+    (source_id, ts, session_id, event_type, tool_name, category, tokens_in, tokens_out, tokens_cache_read, tokens_cache_creation, project, project_key)
   VALUES
-    (@sourceId, @ts, @sessionId, 'tool_invocation', @toolName, @category, 0, 0, 0, 0, @project)
+    (@sourceId, @ts, @sessionId, 'tool_invocation', @toolName, @category, 0, 0, 0, 0, @project, @projectKey)
+  ON CONFLICT(source_id) DO UPDATE SET
+    project = COALESCE(events.project, excluded.project),
+    project_key = COALESCE(events.project_key, excluded.project_key)
 `);
 
 export function insertToolInvocationEvent(evt: ToolInvocationEventInput): void {
@@ -791,21 +811,21 @@ export function getProjectActivityRollup(days = 7): Map<string, ProjectActivityR
   const rows = db
     .prepare(
       `SELECT
-         project,
+         COALESCE(project_key, project) AS project_key,
          MAX(ts) AS lastActivityAt,
          SUM(CASE WHEN date(ts) >= date('now', ?) THEN 1 ELSE 0 END) AS weeklyEventCount
        FROM events
-       WHERE project IS NOT NULL AND ts >= ?
-       GROUP BY project`
+       WHERE COALESCE(project_key, project) IS NOT NULL AND ts >= ?
+       GROUP BY COALESCE(project_key, project)`
     )
     .all(`-${days - 1} days`, baseline) as {
-    project: string;
+    project_key: string;
     lastActivityAt: string;
     weeklyEventCount: number;
   }[];
 
   return new Map(
-    rows.map((r) => [r.project, { lastActivityAt: r.lastActivityAt, weeklyEventCount: r.weeklyEventCount || 0 }])
+    rows.map((r) => [r.project_key, { lastActivityAt: r.lastActivityAt, weeklyEventCount: r.weeklyEventCount || 0 }])
   );
 }
 

@@ -22,6 +22,7 @@ import { resetOnboardingState } from "../../../server/onboarding-store";
 import { resetIntroState } from "../../../server/intro-store";
 import { resetKitInstallState } from "../../../server/kit-store";
 import { resetWorkspaceConnected } from "../../../server/connected-store";
+import { resetProjectRoots } from "../../../server/project-roots";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,6 +54,7 @@ export async function POST() {
     // stats fall back to the bundled placeholder dataset until the user scans
     // + injects again during the replayed onboarding.
     resetWorkspaceConnected();
+    resetProjectRoots();
     return NextResponse.json({ ok: true, baseline });
   } catch (err) {
     console.error("[api/reset] reset failed:", err);

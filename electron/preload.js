@@ -18,4 +18,5 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("blubberNative", {
   isElectron: true,
   pickFolder: (options) => ipcRenderer.invoke("blubber:pick-folder", options ?? {}),
+  addProjectRoot: (options) => ipcRenderer.invoke("blubber:add-project-root", options ?? {}),
 });

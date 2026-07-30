@@ -322,12 +322,36 @@ const INERT_SESSION: SessionState = {
  * real cwd, never to invent one. */
 const KNOWN_DEV_ROOTS = ['ACTIVE', 'HOBBY', 'general', 'research'];
 
+interface ProjectIdentityRoot {
+  id: string;
+  path: string;
+}
+
+function normalizedIdentityPath(value: string): string {
+  const normalized = value.replace(/\\/g, '/').replace(/\/+$/, '');
+  return /^[A-Za-z]:\//.test(normalized) ? normalized.toLowerCase() : normalized;
+}
+
 /** Derives (projectRoot, projectName) from a real tab cwd, e.g.
  * "C:\Users\<you>\Development\HOBBY\some-project" -> { projectRoot: 'HOBBY',
  * projectName: 'some-project' }. Both null when the cwd doesn't fall under a
  * known Development root (e.g. the folder picker's generic fallback cwd) —
  * an honest unknown, not a guess. */
-function deriveProjectIdentity(cwd: string): { projectRoot: string | null; projectName: string | null } {
+function deriveProjectIdentity(
+  cwd: string,
+  registeredRoots: ProjectIdentityRoot[] = [],
+): { projectRoot: string | null; projectName: string | null } {
+  const normalizedCwd = normalizedIdentityPath(cwd);
+  const candidates = registeredRoots
+    .map((root) => ({ root, normalizedPath: normalizedIdentityPath(root.path) }))
+    .sort((a, b) => b.normalizedPath.length - a.normalizedPath.length);
+  for (const { root, normalizedPath } of candidates) {
+    const prefix = `${normalizedPath}/`;
+    if (!normalizedCwd.startsWith(prefix)) continue;
+    const projectName = normalizedCwd.slice(prefix.length).split('/')[0] || null;
+    return { projectRoot: root.id, projectName };
+  }
+
   const segments = cwd.split(/[\\/]/).filter(Boolean);
   const devIdx = segments.findIndex((seg) => seg.toLowerCase() === 'development');
   if (devIdx === -1 || devIdx + 1 >= segments.length) return { projectRoot: null, projectName: null };
@@ -440,11 +464,55 @@ export function SessionProvider({ children, onRequestTerminalNav }: SessionProvi
   // onTabsChange callback. -------------------------------------------------
   const [sessions, setSessions] = useState<SessionTab[]>([]);
   const tabControlRef = useRef<TabControlHandle | null>(null);
+  const projectIdentityRootsRef = useRef<ProjectIdentityRoot[]>([]);
+
+  // Load the same persisted root registry used by the project APIs. Refresh
+  // after Add Folder so an already-open custom tab gains project identity as
+  // soon as the new root is registered.
+  useEffect(() => {
+    let cancelled = false;
+    let loadSequence = 0;
+    const loadProjectIdentityRoots = () => {
+      const sequence = ++loadSequence;
+      fetch('/api/project-roots')
+        .then((response) => {
+          if (!response.ok) throw new Error(`project roots fetch failed: ${response.status}`);
+          return response.json() as Promise<{ roots?: Array<{ id: string; path: string }> }>;
+        })
+        .then((data) => {
+          if (cancelled || sequence !== loadSequence) return;
+          const roots = Array.isArray(data.roots)
+            ? data.roots.filter(
+                (root): root is { id: string; path: string } =>
+                  typeof root?.id === 'string' && typeof root?.path === 'string',
+              )
+            : [];
+          projectIdentityRootsRef.current = roots;
+          setSessions((current) =>
+            current.map((session) => ({
+              ...session,
+              ...deriveProjectIdentity(session.cwd, roots),
+            })),
+          );
+        })
+        .catch(() => {
+          // Identity enrichment is informational; legacy root derivation
+          // remains available and terminal spawning must not depend on it.
+        });
+    };
+
+    loadProjectIdentityRoots();
+    window.addEventListener('blubber:project-roots-changed', loadProjectIdentityRoots);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('blubber:project-roots-changed', loadProjectIdentityRoots);
+    };
+  }, []);
 
   const syncSessions = useCallback((tabs: SyncableTab[], activeId: string | null) => {
     setSessions(
       tabs.map((tab) => {
-        const identity = deriveProjectIdentity(tab.cwd);
+        const identity = deriveProjectIdentity(tab.cwd, projectIdentityRootsRef.current);
         return {
           id: tab.id,
           cwd: tab.cwd,

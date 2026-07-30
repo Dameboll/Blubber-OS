@@ -316,6 +316,28 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
     else finish();
   }, [kitDetected, finish]);
 
+  // An installed-but-empty Claude setup is still a real workspace choice.
+  // Previously this branch only dismissed onboarding, leaving
+  // workspace_connected_v1 false forever; the Projects screen therefore kept
+  // serving placeholder folders even after the user created real paths and
+  // restarted. Run the same authoritative connect route as the "found"
+  // branch, then enter at a genuine zero baseline.
+  const handleEmptyConnect = useCallback(async () => {
+    setBusy(true);
+    try {
+      const response = await fetch('/api/onboarding/inject', { method: 'POST' });
+      if (!response.ok) throw new Error(`connect failed: ${response.status}`);
+      finishOrOfferTour();
+    } catch (error) {
+      console.error('[onboarding] empty-workspace connect failed:', error);
+      // Never turn onboarding into a modal cage if persistence is temporarily
+      // unavailable; the user can still enter and retry from Projects.
+      finishOrOfferTour();
+    } finally {
+      setBusy(false);
+    }
+  }, [finishOrOfferTour]);
+
   return (
     <div className="onb" role="dialog" aria-modal="true" aria-label="Welcome to Blubber">
       {/* Dame's animated "main room booting up" loop. Muted + inline, purely
@@ -401,8 +423,13 @@ export default function OnboardingOverlay({ onComplete }: OnboardingOverlayProps
               fills in the moment you start working.
             </p>
             <div className="onb__actions">
-              <button type="button" className="onb__btn onb__btn--primary" onClick={finishOrOfferTour}>
-                Enter Blubber OS
+              <button
+                type="button"
+                className="onb__btn onb__btn--primary"
+                onClick={handleEmptyConnect}
+                disabled={busy}
+              >
+                {busy ? 'Connecting…' : 'Enter Blubber OS'}
               </button>
             </div>
           </>

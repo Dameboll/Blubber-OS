@@ -364,7 +364,9 @@ function distinctProjects(): number {
   try {
     const row = usageDb
       .prepare(
-        `SELECT COUNT(DISTINCT project) AS n FROM events WHERE project IS NOT NULL AND ts >= ?`,
+        `SELECT COUNT(DISTINCT project) AS n
+         FROM events
+         WHERE project IS NOT NULL AND ts >= ?`,
       )
       .get(getStatsBaseline()) as { n: number };
     return row.n;

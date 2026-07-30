@@ -45,6 +45,9 @@ const POLL_TIMEOUT_MS = 15000;
 // must echo it back before the window opens. This is what stops Blubber from
 // ever rendering an unrelated local dev server that happens to own the port.
 const startupNonce = crypto.randomBytes(16).toString("hex");
+// Renderer code never receives this token. Only the trusted main-process
+// folder-picker IPC can register the exact real path returned by the OS.
+const projectPickerToken = crypto.randomBytes(32).toString("hex");
 
 // Resolved at startup (see resolveFreePort) — dev keeps 3000 for muscle
 // memory, packaged runs take any free loopback port so a customer's own
@@ -88,13 +91,44 @@ function resolveFreePort() {
 // Powers both "point Blubber at a workspace" and "install the Starter Kit from
 // the folder you downloaded from Shopify". Returns the chosen absolute path, or
 // null on cancel. openDirectory only — never a file, never multi-select.
-ipcMain.handle("blubber:pick-folder", async (_event, options) => {
+async function pickDirectory(options) {
   const result = await dialog.showOpenDialog(mainWindow ?? undefined, {
     title: options?.title || "Choose a folder",
     properties: ["openDirectory"],
   });
   if (result.canceled || result.filePaths.length === 0) return null;
   return result.filePaths[0];
+}
+
+ipcMain.handle("blubber:pick-folder", async (_event, options) => {
+  return pickDirectory(options);
+});
+
+// Project-root registration stays in the trusted main process: the renderer
+// can request a picker, but it cannot substitute an arbitrary filesystem path.
+ipcMain.handle("blubber:add-project-root", async (_event, options) => {
+  const selectedPath = await pickDirectory(options);
+  if (!selectedPath) return { ok: false, cancelled: true };
+
+  try {
+    const authResponse = await fetch(`${SERVER_URL}/__ws-auth`);
+    if (!authResponse.ok) throw new Error(`auth failed: ${authResponse.status}`);
+    const { token } = await authResponse.json();
+    const response = await fetch(`${SERVER_URL}/api/project-roots`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-blubber-token": token,
+        "x-blubber-picker-token": projectPickerToken,
+      },
+      body: JSON.stringify({ path: selectedPath }),
+    });
+    const payload = await response.json();
+    return { ...payload, ok: response.ok && payload?.ok === true };
+  } catch (error) {
+    console.error("[electron] project folder registration failed:", error);
+    return { ok: false, error: "Could not register that projects folder" };
+  }
 });
 
 /**
@@ -156,6 +190,7 @@ function startServer() {
     // Identity nonce — server.js echoes this from /__blubber-health and the
     // window only opens on an exact match (see waitForBlubberServer).
     BLUBBER_STARTUP_NONCE: startupNonce,
+    BLUBBER_PICKER_TOKEN: projectPickerToken,
     // Durable customer-data locations OUTSIDE the install directory (the
     // uninstaller removes the install dir; before this, it deleted every
     // database, preference, playlist, and uploaded track with it — see

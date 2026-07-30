@@ -31,6 +31,7 @@ import {
   type ToolRunEndInput,
   type ToolCategory,
 } from "./db";
+import { getProjectRoots } from "./project-roots";
 
 const CLAUDE_PROJECTS_DIR = path.join(os.homedir(), ".claude", "projects");
 
@@ -74,45 +75,62 @@ function walkJsonlFiles(dir: string): string[] {
 // event is attributed to an actual project or honestly left null.
 // ---------------------------------------------------------------------------
 
-const DEV_ROOT = path.join(os.homedir(), "Development");
-const DEV_ROOT_LABELS = ["ACTIVE", "HOBBY", "general", "research"] as const;
-
 /** Slug-sanitize the way ~/.claude does: every non-alphanumeric becomes '-'. */
 function slugify(part: string): string {
   return part.replace(/[^A-Za-z0-9]/g, "-");
 }
 
-/** Map of slug-suffix ("Development-HOBBY-my-project") -> project folder name,
- * built from the real filesystem once per indexing pass. Longest-suffix match
- * wins so names containing dashes resolve correctly. */
-function buildProjectResolver(): (filePath: string) => string | null {
-  const suffixes: { suffix: string; name: string }[] = [];
-  for (const root of DEV_ROOT_LABELS) {
+interface ProjectAttribution {
+  name: string;
+  key: string;
+}
+
+function projectSlugSuffix(projectPath: string): string {
+  return path
+    .resolve(projectPath)
+    .split(/[\\/]/)
+    .filter(Boolean)
+    .map(slugify)
+    .join("-");
+}
+
+/** Map of Claude transcript slug suffix -> root-qualified project identity,
+ * built from every allowlisted default/custom root once per indexing pass.
+ * Longest-suffix match wins so nested/dashed path names resolve correctly. */
+export function buildProjectResolver(): (filePath: string) => ProjectAttribution | null {
+  const suffixes: { suffix: string; attribution: ProjectAttribution }[] = [];
+  for (const root of getProjectRoots()) {
     let entries: fs.Dirent[] = [];
     try {
-      entries = fs.readdirSync(path.join(DEV_ROOT, root), { withFileTypes: true });
+      entries = fs.readdirSync(root.path, { withFileTypes: true });
     } catch {
       continue;
     }
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       suffixes.push({
-        suffix: `${slugify("Development")}-${slugify(root)}-${slugify(entry.name)}`,
-        name: entry.name,
+        suffix: projectSlugSuffix(path.join(root.path, entry.name)),
+        attribution: {
+          name: entry.name,
+          key: `${root.id}/${entry.name}`,
+        },
       });
     }
   }
   suffixes.sort((a, b) => b.suffix.length - a.suffix.length);
 
-  const cache = new Map<string, string | null>();
+  const cache = new Map<string, ProjectAttribution | null>();
   return (filePath: string) => {
     const rel = path.relative(CLAUDE_PROJECTS_DIR, filePath);
     const slugDir = rel.split(path.sep)[0] ?? "";
     if (cache.has(slugDir)) return cache.get(slugDir) ?? null;
-    const hit = suffixes.find((s) => slugDir.endsWith(s.suffix));
-    const name = hit ? hit.name : null;
-    cache.set(slugDir, name);
-    return name;
+    const comparableSlug = process.platform === "win32" ? slugDir.toLowerCase() : slugDir;
+    const hit = suffixes.find((entry) =>
+      comparableSlug.endsWith(process.platform === "win32" ? entry.suffix.toLowerCase() : entry.suffix),
+    );
+    const attribution = hit?.attribution ?? null;
+    cache.set(slugDir, attribution);
+    return attribution;
   };
 }
 
@@ -196,7 +214,7 @@ function readSliceSync(filePath: string, start: number, end: number): string {
  * attributed to the transcript's real source project (or null). */
 function extractEventsFromLine(
   line: string,
-  project: string | null
+  attribution: ProjectAttribution | null
 ): {
   usage: UsageEventInput | null;
   tools: ToolInvocationEventInput[];
@@ -213,6 +231,8 @@ function extractEventsFromLine(
   const uuid = obj.uuid;
   const ts = obj.timestamp;
   const sessionId = obj.sessionId ?? null;
+  const project = attribution?.name ?? null;
+  const projectKey = attribution?.key ?? null;
 
   // Lines without a uuid/timestamp (e.g. the very first bookkeeping line in
   // a session file) never carry usage or tool_use blocks worth indexing.
@@ -233,6 +253,7 @@ function extractEventsFromLine(
       tokensCacheRead: rawUsage.cache_read_input_tokens ?? 0,
       tokensCacheCreation: rawUsage.cache_creation_input_tokens ?? 0,
       project,
+      projectKey,
     };
   }
 
@@ -262,6 +283,7 @@ function extractEventsFromLine(
         toolName: resolved.toolName,
         category: resolved.category,
         project,
+        projectKey,
       });
       // Long-running agent/workflow/task tool_use with a real id opens a run.
       if (block.id && RUN_TOOL_NAMES.has(block.name)) {
@@ -294,7 +316,7 @@ function extractEventsFromLine(
  */
 function indexFile(
   filePath: string,
-  project: string | null,
+  attribution: ProjectAttribution | null,
   knownOffset?: { lastSize: number; lastMtimeMs: number },
   maxBytes?: number,
 ): { usageCount: number; toolCount: number; hadNewData: boolean; hadMoreBytes: boolean } {
@@ -336,7 +358,7 @@ function indexFile(
   // cap. Advancing is impossible without splitting a line, so take the whole
   // remainder in one go rather than spin forever on the same offset.
   if (consumedUpTo <= start) {
-    return indexFile(filePath, project, knownOffset, undefined);
+    return indexFile(filePath, attribution, knownOffset, undefined);
   }
 
   const usageEvents: UsageEventInput[] = [];
@@ -347,7 +369,7 @@ function indexFile(
   for (const rawLine of lines) {
     const trimmed = rawLine.trim();
     if (!trimmed) continue;
-    const parsed = extractEventsFromLine(trimmed, project);
+    const parsed = extractEventsFromLine(trimmed, attribution);
     if (parsed.usage) usageEvents.push(parsed.usage);
     if (parsed.tools.length) toolEvents.push(...parsed.tools);
     if (parsed.runStarts.length) runStarts.push(...parsed.runStarts);

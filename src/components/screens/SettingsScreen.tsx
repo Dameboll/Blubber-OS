@@ -745,7 +745,7 @@ export default function SettingsScreen() {
     if (
       typeof window !== 'undefined' &&
       !window.confirm(
-        'Reset the entire dashboard back to zero?\n\nToken usage, agent & skill runs, activity, and the pet all start counting fresh from now. Your ~/.claude history is not deleted — this just draws a new baseline.',
+        'Reset the entire dashboard back to zero?\n\nToken usage, agent & skill runs, activity, and the pet all start counting fresh from now. Saved custom project-folder registrations are also forgotten. Your folders and ~/.claude history are not deleted.',
       )
     ) {
       return;
@@ -1080,7 +1080,7 @@ export default function SettingsScreen() {
               <SettingRow
                 icon={RotateCcw}
                 label="Reset Dashboard"
-                description="Master reset — put every real number (tokens, agent & skill runs, activity, the pet) back to zero and start fresh from now."
+                description="Master reset — zero usage and activity, reset the pet, and forget saved custom project-folder registrations. Your folders are not deleted."
                 danger
               >
                 <button

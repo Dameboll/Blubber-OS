@@ -21,22 +21,21 @@
  */
 
 import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import { NextResponse } from "next/server";
 import { scaffoldProject } from "../../../server/project-scaffold";
 import { isWorkspaceConnected } from "../../../server/connected-store";
 import { getDemoProjectRoots } from "../../../server/demo-dataset";
+import { getProjectRoots } from "../../../server/project-roots";
 
 export const runtime = "nodejs";
 
 export interface ProjectRoot {
+  id: string;
   label: string;
   root: string;
   projects: string[];
+  custom: boolean;
 }
-
-const ROOT_LABELS = ["ACTIVE", "HOBBY", "general", "research"] as const;
 
 async function listSubdirectories(root: string): Promise<string[]> {
   try {
@@ -53,19 +52,27 @@ async function listSubdirectories(root: string): Promise<string[]> {
 }
 
 export async function GET() {
-  if (!isWorkspaceConnected()) {
+  const workspaceConnected = isWorkspaceConnected();
+  const registeredRoots = getProjectRoots();
+  const visibleRoots = workspaceConnected
+    ? registeredRoots
+    : registeredRoots.filter((root) => root.custom);
+
+  // Preserve the deliberate placeholder shell until the user either connects
+  // onboarding OR explicitly chooses a custom projects folder. Adding a root
+  // is itself clear consent to show real local folder names.
+  if (!workspaceConnected && visibleRoots.length === 0) {
     return NextResponse.json({ roots: getDemoProjectRoots() });
   }
 
-  const devRoot = path.join(os.homedir(), "Development");
-
   const roots: ProjectRoot[] = await Promise.all(
-    ROOT_LABELS.map(async (label) => {
-      const root = path.join(devRoot, label);
+    visibleRoots.map(async (definition) => {
       return {
-        label,
-        root,
-        projects: await listSubdirectories(root),
+        id: definition.id,
+        label: definition.label,
+        root: definition.path,
+        custom: definition.custom,
+        projects: await listSubdirectories(definition.path),
       };
     })
   );

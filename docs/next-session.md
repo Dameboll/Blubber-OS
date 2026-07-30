@@ -1,45 +1,47 @@
 # Next Session Brief
-Written: 2026-07-27 ~00:55 ET
+Written: 2026-07-30 ~13:10 ET
 For: next Blubber OS / Claude session
 
 ---
 
 ## PICK UP HERE
 
-**v0.1.3 is the live release and it ships working auto-update. There is no launch blocker
-on the free path.**
+**v0.1.4 is the live GitHub release. Project folders are durable, metadata scans no
+longer freeze the app, and the terminal can expand to the full workspace.**
 
-- Tag `v0.1.3` = `8665266`. `Blubber.Setup.0.1.3.exe`, 199,230,751 bytes.
-- SHA256 `4727286BA4D45B5D396E7D3906A4559E56459ED75B737C24232F647D736B0F41` — GitHub's own
-  asset digest matches.
-- Published with `latest.yml` + `.blockmap`, which is what makes auto-update work at all.
-- Release: https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.3
-- Both download surfaces point at v0.1.3, verified in the rendered pages: the GitHub README
-  and the live Shopify storefront (theme `#188479111535`).
-- Storefront source: `blubber-site` private repo `main` at `72e1e4b`. It is no longer
-  local-only — it was backed up to GitHub on 2026-07-26.
+- Tag `v0.1.4` = `f76ba2f`. `Blubber.Setup.0.1.4.exe`, 199,245,146 bytes.
+- SHA256 `47E11A5A98B73ECA69666C19707E6D9B7F093CF530A87ABEA0E1A7F6287CC47A`.
+- Installer, `latest.yml`, `.blockmap`, and `SHA256SUMS.txt` were downloaded back from
+  GitHub and matched the local release byte-for-byte.
+- Release: https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.4
+- Playwright 25/25, all 10 release stages, three review gates, and the exact
+  install/virgin-profile boot/API/uninstall lifecycle passed.
+- The Shopify storefront was outside the repo boundary and was not changed or reverified.
+  Its last proven installer is v0.1.3, which can auto-update to v0.1.4.
 
 ### First action next time
 
 Read the top block of `docs/ai-context.md` and confirm the exact requested scope. Do **not**
-re-release v0.1.3, reopen the v0.1.0–v0.1.2 launch plans, or rebuild anything unless Dame
+re-release v0.1.4, reopen the v0.1.0–v0.1.3 launch plans, or rebuild anything unless Dame
 explicitly asks for a new change.
 
 ---
 
 ## WHAT IS ACTUALLY VERIFIED (and what is not)
 
-Verified end-to-end on 2026-07-26 against the **published** artifact:
+Verified end-to-end on 2026-07-30:
 
-- Downloaded from the release, byte count and SHA256 matched, silent install landed in the
-  correct default dir, desktop + Start Menu shortcuts correct, six API routes 200.
-- Free-user path on a scrubbed-PATH virgin profile: `detect: not-found` / `kit: false`,
-  cold launch 4.1s with no node/npm/claude/git anywhere. Self-containment proven.
-- **A real 0.1.3 → 0.1.4 auto-update swap**: differential download of 750 KB instead of
-  190 MB, sha512 verified, NSIS swap on quit, updated app booted with all APIs 200,
-  registry and shortcut correct, uninstall clean.
-- e2e suite 20/20. UI visually confirmed by driving the real Electron window with Playwright
-  (onboarding renders, 0 console errors, no horizontal overflow).
+- Every asset was downloaded from the public v0.1.4 release and hash-matched. The public
+  updater metadata says 0.1.4 and its sha512 matches the downloaded installer.
+- The exact installer landed in the default directory, created both shortcuts and the
+  uninstall registry entry, then the installed app cold-launched in 4 seconds under a
+  scrubbed-PATH virgin profile with all tested APIs returning 200.
+- Silent uninstall removed the install directory, shortcuts, and registry entry.
+- Playwright 25/25, production build, 10-stage release pipeline, and code/React/security
+  review gates all passed.
+- **A real 0.1.3 → 0.1.4 auto-update swap** was separately proven before publication:
+  750 KB differential download, sha512 verification, NSIS swap, updated APIs 200, and
+  clean uninstall. The public release now carries those exact required metadata surfaces.
 
 **NOT verified — do not claim these:**
 

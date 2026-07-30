@@ -1,23 +1,31 @@
 # CODEX HANDOFF — Blubber OS
-# Updated: 2026-07-27 00:55 EDT (v0.1.3 live with auto-update; full lifecycle verified)
+# Updated: 2026-07-30 13:10 EDT (v0.1.4 live; project folders + terminal expansion)
 # Read this + docs/ai-context.md before touching anything.
 #
-# CURRENT: v0.1.3 is the live release and ships working auto-update. Tag v0.1.3 =
-# 8665266, Blubber.Setup.0.1.3.exe, 199,230,751 bytes, SHA256
-# 4727286BA4D45B5D396E7D3906A4559E56459ED75B737C24232F647D736B0F41, published with
-# latest.yml + .blockmap. Every future release MUST carry that metadata (see the
-# gotchas below and docs/RELEASING.md). The live storefront was updated to v0.1.3 on
-# 2026-07-26 via a SCOPED 4-file shopify theme push (never push the whole theme — 75
-# files differ purely from Shopify's own JSON normalization).
+# CURRENT: v0.1.4 is the live GitHub release. Tag v0.1.4 and main both resolve to
+# f76ba2fdd136060a14c504f56c26dc895399e40d (PR #14 squash merge).
+# Blubber.Setup.0.1.4.exe is 199,245,146 bytes, SHA256
+# 47E11A5A98B73ECA69666C19707E6D9B7F093CF530A87ABEA0E1A7F6287CC47A.
+# It is public, not draft/prerelease, with the required latest.yml, .blockmap, and
+# SHA256SUMS.txt. All four assets were downloaded back from GitHub and matched the
+# local release byte-for-byte; latest.yml v0.1.4 and its sha512 match the live exe.
 #
-# VERIFIED 2026-07-26 against the PUBLISHED artifact, not the local build:
-# - download + hash match, silent install to the correct default dir, both shortcuts,
-#   six API routes 200, free-user path (detect not-found / kit false) on a scrubbed-PATH
-#   virgin profile, clean uninstall preserving user data.
-# - A REAL 0.1.3 -> 0.1.4 auto-update swap: differential download 750 KB instead of
-#   190 MB, sha512 verified, NSIS swap on quit, updated app booted with all APIs 200.
-# - e2e 20/20. UI confirmed by driving the real Electron window with Playwright
-#   (0 console errors) — HTTP 200 was not treated as proof the UI works.
+# VERIFIED 2026-07-30:
+# - Customer folder feedback shipped: native Windows picker, durable custom roots,
+#   contained project APIs, distinct same-name repository identity, and non-blocking
+#   async metadata scans. Terminal now expands/restores to reclaim the app workspace.
+# - Typecheck + production build passed; Playwright 25/25; code, React, and security
+#   reviews approved with zero actionable findings.
+# - All 10 release.ps1 stages passed. The exact installer silently installed to the
+#   default location, created both shortcuts + registry entry, booted on a scrubbed
+#   virgin profile in 4 seconds with five key APIs 200, then silently uninstalled with
+#   the install directory, shortcuts, and registry entry all removed.
+# - Auto-update mechanics were previously proven by a real 0.1.3 -> 0.1.4 swap:
+#   differential download 750 KB instead of 190 MB, sha512 verification, NSIS swap,
+#   updated APIs 200, and clean uninstall. The now-public v0.1.4 feed carries the exact
+#   validated metadata/assets required for that path.
+# - The live Shopify storefront was NOT touched or reverified in this repo-scoped
+#   session. Its last proven state is v0.1.3; v0.1.3 installs can auto-update to v0.1.4.
 #
 # NOT VERIFIED — do not claim otherwise:
 # - The PAID path has never taken a real card. Order #1001 was a 100% discount and the

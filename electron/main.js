@@ -121,7 +121,7 @@ ipcMain.handle("blubber:add-project-root", async (_event, options) => {
         "x-blubber-token": token,
         "x-blubber-picker-token": projectPickerToken,
       },
-      body: JSON.stringify({ path: selectedPath }),
+      body: JSON.stringify({ path: selectedPath, kind: options?.kind }),
     });
     const payload = await response.json();
     return { ...payload, ok: response.ok && payload?.ok === true };

@@ -13,11 +13,11 @@ import { skipFirstRun } from './helpers';
 
 function runProjectRootStore(
   dataDir: string,
-  action: 'add' | 'read' | 'reset' | 'activity',
+  action: 'add' | 'read' | 'reset' | 'activity' | 'legacy-read',
   selectedPath?: string,
 ): {
   ok?: boolean;
-  roots?: Array<{ id: string; path: string; custom: boolean }>;
+  roots?: Array<{ id: string; path: string; custom: boolean; kind: 'project' | 'container' }>;
   attribution?: { name: string; key: string } | null;
   rollup?: Record<string, { weeklyEventCount: number }>;
 } {
@@ -29,6 +29,16 @@ function runProjectRootStore(
     let result;
     if (action === 'add') result = store.addProjectRoot(process.env.BLUBBER_PROJECT_ROOT_PATH);
     if (action === 'read') result = { roots: store.getProjectRoots() };
+    if (action === 'legacy-read') {
+      const database = require('./src/server/db.ts').db;
+      database.prepare(
+        'INSERT INTO app_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+      ).run('project_roots_v1', JSON.stringify({
+        version: 1,
+        paths: [process.env.BLUBBER_PROJECT_ROOT_PATH],
+      }));
+      result = { roots: store.getProjectRoots() };
+    }
     if (action === 'reset') {
       store.resetProjectRoots();
       result = { roots: store.getProjectRoots() };
@@ -80,7 +90,7 @@ function runProjectRootStore(
   }
   return JSON.parse(result.stdout) as {
     ok?: boolean;
-    roots?: Array<{ id: string; path: string; custom: boolean }>;
+    roots?: Array<{ id: string; path: string; custom: boolean; kind: 'project' | 'container' }>;
     attribution?: { name: string; key: string } | null;
     rollup?: Record<string, { weeklyEventCount: number }>;
   };
@@ -110,6 +120,24 @@ test('custom project folders survive a process restart and master reset clears t
 
   const afterReset = runProjectRootStore(dataDir, 'reset').roots ?? [];
   expect(afterReset.some((root) => root.custom)).toBe(false);
+});
+
+test('legacy v0.1.4 paths that point at repositories migrate as single projects', async ({}, testInfo) => {
+  const dataDir = testInfo.outputPath('legacy-store-data');
+  const selectedPath = testInfo.outputPath('legacy-single-project');
+  fs.mkdirSync(path.join(selectedPath, 'src', 'components'), { recursive: true });
+  fs.writeFileSync(path.join(selectedPath, 'package.json'), '{"name":"legacy-single-project"}');
+
+  const migrated = runProjectRootStore(dataDir, 'legacy-read', selectedPath).roots ?? [];
+  const selected = migrated.find(
+    (root) => root.custom && path.resolve(root.path).toLowerCase() === path.resolve(selectedPath).toLowerCase(),
+  );
+  expect(selected?.kind).toBe('project');
+
+  const afterRestart = runProjectRootStore(dataDir, 'read').roots ?? [];
+  expect(
+    afterRestart.find((root) => root.id === selected!.id)?.kind,
+  ).toBe('project');
 });
 
 test('custom project activity uses a root-qualified identity when names collide', async ({}, testInfo) => {
@@ -164,7 +192,7 @@ test('Projects can add a real repository container through the native picker bri
       value: {
         isElectron: true,
         pickFolder: async () => folderPath,
-        addProjectRoot: async () => {
+        addProjectRoot: async (options?: { kind?: 'project' | 'container' }) => {
           const auth = await fetch('/__ws-auth').then((response) => response.json());
           const response = await fetch('/api/project-roots', {
             method: 'POST',
@@ -173,7 +201,7 @@ test('Projects can add a real repository container through the native picker bri
               'x-blubber-token': auth.token,
               'x-blubber-picker-token': 'blubber-e2e-picker',
             },
-            body: JSON.stringify({ path: folderPath }),
+            body: JSON.stringify({ path: folderPath, kind: options?.kind }),
           });
           return response.json();
         },
@@ -236,6 +264,91 @@ test('Projects can add a real repository container through the native picker bri
       headers: { 'x-blubber-token': token },
     });
     expect(cleanup.ok(), 'custom root cleanup').toBe(true);
+  }
+});
+
+test('Projects can add one repository and safely forget it without deleting files or resetting the dashboard', async ({ page }, testInfo) => {
+  const selectedPath = path.join(testInfo.outputPath('single-project-parent'), 'single-repository');
+  fs.mkdirSync(path.join(selectedPath, 'src', 'components'), { recursive: true });
+  fs.mkdirSync(path.join(selectedPath, 'docs'), { recursive: true });
+  fs.writeFileSync(path.join(selectedPath, 'package.json'), '{"name":"single-repository"}');
+
+  await page.addInitScript((folderPath) => {
+    Object.defineProperty(window, 'blubberNative', {
+      configurable: true,
+      value: {
+        isElectron: true,
+        pickFolder: async () => folderPath,
+        addProjectRoot: async (options?: { kind?: 'project' | 'container' }) => {
+          const auth = await fetch('/__ws-auth').then((response) => response.json());
+          const response = await fetch('/api/project-roots', {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'x-blubber-token': auth.token,
+              'x-blubber-picker-token': 'blubber-e2e-picker',
+            },
+            body: JSON.stringify({ path: folderPath, kind: options?.kind }),
+          });
+          return response.json();
+        },
+      },
+    });
+  }, selectedPath);
+
+  await expect((await page.request.get('/api/project-roots')).status()).toBe(200);
+  const authResponse = await page.request.get('/__ws-auth');
+  const { token } = (await authResponse.json()) as { token: string };
+
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Primary' })
+    .getByRole('button', { name: 'Projects', exact: true })
+    .click();
+  await page.getByRole('button', { name: 'Add Project', exact: true }).click();
+
+  let selected: { id: string; path: string; custom: boolean; kind: string } | undefined;
+  try {
+    await expect
+      .poll(async () => {
+        const roots = (await (await page.request.get('/api/project-roots')).json()) as {
+          roots?: Array<{ id: string; path: string; custom: boolean; kind: string }>;
+        };
+        selected = roots.roots?.find(
+          (root) => root.custom && path.resolve(root.path).toLowerCase() === path.resolve(selectedPath).toLowerCase(),
+        );
+        return selected?.kind;
+      })
+      .toBe('project');
+
+    await expect(page.getByRole('heading', { name: 'Single Repository', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Src', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Docs', exact: true })).toHaveCount(0);
+
+    const projects = (await (await page.request.get('/api/projects')).json()) as {
+      roots?: Array<{ id: string; kind: string; projects: string[] }>;
+    };
+    const selectedProjects = projects.roots?.find((root) => root.id === selected!.id);
+    expect(selectedProjects?.kind).toBe('project');
+    expect(selectedProjects?.projects).toEqual(['single-repository']);
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: 'Forget single-repository from Blubber' }).click();
+    await expect
+      .poll(async () => {
+        const roots = (await (await page.request.get('/api/project-roots')).json()) as {
+          roots?: Array<{ id: string }>;
+        };
+        return roots.roots?.some((root) => root.id === selected!.id) ?? false;
+      })
+      .toBe(false);
+    expect(fs.existsSync(path.join(selectedPath, 'package.json'))).toBe(true);
+  } finally {
+    if (selected) {
+      await page.request.delete(`/api/project-roots?id=${encodeURIComponent(selected.id)}`, {
+        headers: { 'x-blubber-token': token },
+      });
+    }
   }
 });
 

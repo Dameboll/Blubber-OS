@@ -131,6 +131,7 @@ interface ApiProjectRoot {
   root: string;
   projects: string[];
   custom?: boolean;
+  kind?: "project" | "container";
 }
 
 interface ApiTrack {

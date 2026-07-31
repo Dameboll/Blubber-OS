@@ -25,6 +25,7 @@ export interface ApiProjectRoot {
   root: string;
   projects: string[];
   custom?: boolean;
+  kind?: "project" | "container";
 }
 
 export interface ProjectView {
@@ -40,7 +41,12 @@ export interface ProjectView {
 export function buildProjectView(root: ApiProjectRoot, rawName: string): ProjectView {
   const rootId = root.id ?? root.label;
   const separator = root.root.includes('\\') ? '\\' : '/';
-  const projectPath = root.root.endsWith(separator) ? `${root.root}${rawName}` : `${root.root}${separator}${rawName}`;
+  const projectPath =
+    root.kind === "project"
+      ? root.root
+      : root.root.endsWith(separator)
+        ? `${root.root}${rawName}`
+        : `${root.root}${separator}${rawName}`;
   return {
     key: `${rootId}/${rawName}`,
     name: humanizeSlug(rawName),

@@ -70,6 +70,7 @@ interface ApiProjectRoot {
   root: string; // absolute path to that root folder
   projects: string[]; // immediate subdirectory names
   custom?: boolean;
+  kind?: "project" | "container";
 }
 
 interface ApiAgentSummary {
@@ -211,7 +212,10 @@ const TabBar = forwardRef<TabBarHandle, TabBarProps>(function TabBar({ onTabsCha
           const adapted: ProjectRoot[] = roots.map((r) => ({
             root: r.label,
             path: r.root,
-            folders: r.projects.map((name) => ({ name, path: joinPath(r.root, name) })),
+            folders: r.projects.map((name) => ({
+              name,
+              path: r.kind === "project" ? r.root : joinPath(r.root, name),
+            })),
           }));
           setProjectRoots(adapted);
           setProjectsError(null);

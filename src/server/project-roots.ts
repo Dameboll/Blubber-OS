@@ -19,10 +19,16 @@ const MAX_CUSTOM_ROOTS = 24;
 
 export const DEFAULT_PROJECT_ROOT_LABELS = ["ACTIVE", "HOBBY", "general", "research"] as const;
 export type DefaultProjectRootLabel = (typeof DEFAULT_PROJECT_ROOT_LABELS)[number];
+export type ProjectRootKind = "container" | "project";
+
+interface StoredProjectRoot {
+  path: string;
+  kind: ProjectRootKind;
+}
 
 interface StoredProjectRoots {
-  version: 1;
-  paths: string[];
+  version: 2;
+  roots: StoredProjectRoot[];
 }
 
 export interface ProjectRootDefinition {
@@ -31,6 +37,7 @@ export interface ProjectRootDefinition {
   label: string;
   path: string;
   custom: boolean;
+  kind: ProjectRootKind;
 }
 
 export interface AddProjectRootResult {
@@ -56,26 +63,96 @@ function defaultRoots(): ProjectRootDefinition[] {
     label,
     path: path.join(devRoot, label),
     custom: false,
+    kind: "container",
   }));
 }
 
-function readStoredPaths(): string[] {
+const PROJECT_MARKERS = new Set([
+  ".git",
+  "package.json",
+  "pnpm-workspace.yaml",
+  "pyproject.toml",
+  "requirements.txt",
+  "cargo.toml",
+  "go.mod",
+  "go.work",
+  "composer.json",
+  "gemfile",
+  "mix.exs",
+  "pom.xml",
+  "build.gradle",
+  "build.gradle.kts",
+  "settings.gradle",
+  "settings.gradle.kts",
+  "default.project.json",
+]);
+
+/** Legacy v0.1.4 registrations stored only a path. Classify those on read so
+ * a customer who selected one repository is fixed immediately after updating,
+ * without having to remove and re-add it. New registrations always send an
+ * explicit kind from the two picker actions. */
+export function detectProjectRootKind(rootPath: string): ProjectRootKind {
+  try {
+    const entries = fs.readdirSync(rootPath, { withFileTypes: true });
+    for (const entry of entries) {
+      const name = entry.name.toLowerCase();
+      if (PROJECT_MARKERS.has(name)) return "project";
+      if (
+        (entry.isFile() || entry.isDirectory()) &&
+        (name.endsWith(".sln") ||
+          name.endsWith(".csproj") ||
+          name.endsWith(".fsproj") ||
+          name.endsWith(".xcodeproj") ||
+          name.endsWith(".uproject"))
+      ) {
+        return "project";
+      }
+    }
+  } catch {
+    // Missing/unreadable roots remain registered and render as empty instead
+    // of silently changing type or disappearing.
+  }
+  return "container";
+}
+
+function readStoredRoots(): StoredProjectRoot[] {
   const row = db.prepare(`SELECT value FROM app_meta WHERE key = ?`).get(PROJECT_ROOTS_KEY) as
     | { value: string }
     | undefined;
   if (!row) return [];
 
   try {
-    const parsed = JSON.parse(row.value) as Partial<StoredProjectRoots>;
-    if (parsed.version !== 1 || !Array.isArray(parsed.paths)) return [];
-    return parsed.paths.filter((entry): entry is string => typeof entry === "string" && path.isAbsolute(entry));
+    const parsed = JSON.parse(row.value) as {
+      version?: unknown;
+      roots?: unknown;
+      paths?: unknown;
+    };
+    if (parsed.version === 2 && Array.isArray(parsed.roots)) {
+      return parsed.roots.filter(
+        (entry: unknown): entry is StoredProjectRoot => {
+          if (!entry || typeof entry !== "object") return false;
+          const candidate = entry as Partial<StoredProjectRoot>;
+          return (
+            typeof candidate.path === "string" &&
+            path.isAbsolute(candidate.path) &&
+            (candidate.kind === "container" || candidate.kind === "project")
+          );
+        }
+      );
+    }
+    if (parsed.version === 1 && Array.isArray(parsed.paths)) {
+      return parsed.paths
+        .filter((entry: unknown): entry is string => typeof entry === "string" && path.isAbsolute(entry))
+        .map((entry) => ({ path: entry, kind: detectProjectRootKind(entry) }));
+    }
+    return [];
   } catch {
     return [];
   }
 }
 
-function writeStoredPaths(paths: string[]): void {
-  const payload: StoredProjectRoots = { version: 1, paths };
+function writeStoredRoots(roots: StoredProjectRoot[]): void {
+  const payload: StoredProjectRoots = { version: 2, roots };
   db.prepare(
     `INSERT INTO app_meta (key, value) VALUES (?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value`
@@ -95,16 +172,19 @@ function transcriptSlugSuffix(projectPath: string): string {
  * indexed as unattributed before Blubber knew that path. Rewind only matching
  * transcript offsets; source-id upserts backfill project/project_key without
  * double-counting any events. */
-function rewindIndexedTranscriptsForRoot(rootPath: string): void {
+function rewindIndexedTranscriptsForRoot(rootPath: string, kind: ProjectRootKind): void {
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(rootPath, { withFileTypes: true });
   } catch {
     return;
   }
-  const suffixes = entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => transcriptSlugSuffix(path.join(rootPath, entry.name)));
+  const suffixes =
+    kind === "project"
+      ? [transcriptSlugSuffix(rootPath)]
+      : entries
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => transcriptSlugSuffix(path.join(rootPath, entry.name)));
   if (suffixes.length === 0) return;
 
   const claudeProjectsDir = path.join(os.homedir(), ".claude", "projects");
@@ -130,8 +210,8 @@ export function getProjectRoots(): ProjectRootDefinition[] {
   const seen = new Set(defaults.map((root) => canonicalForCompare(root.path)));
   const custom: ProjectRootDefinition[] = [];
 
-  for (const storedPath of readStoredPaths()) {
-    const normalized = path.normalize(storedPath);
+  for (const storedRoot of readStoredRoots()) {
+    const normalized = path.normalize(storedRoot.path);
     const canonical = canonicalForCompare(normalized);
     if (seen.has(canonical)) continue;
     seen.add(canonical);
@@ -140,6 +220,7 @@ export function getProjectRoots(): ProjectRootDefinition[] {
       label: path.basename(normalized) || normalized,
       path: normalized,
       custom: true,
+      kind: storedRoot.kind,
     });
   }
 
@@ -150,7 +231,7 @@ export function hasCustomProjectRoots(): boolean {
   return getProjectRoots().some((root) => root.custom);
 }
 
-export function addProjectRoot(rawPath: string): AddProjectRootResult {
+export function addProjectRoot(rawPath: string, requestedKind?: ProjectRootKind): AddProjectRootResult {
   if (typeof rawPath !== "string" || rawPath.trim().length === 0) {
     return { ok: false, error: "Choose a project folder" };
   }
@@ -172,22 +253,35 @@ export function addProjectRoot(rawPath: string): AddProjectRootResult {
     return { ok: false, error: "Choose a projects folder, not an entire drive" };
   }
 
+  if (requestedKind !== undefined && requestedKind !== "container" && requestedKind !== "project") {
+    return { ok: false, error: "Project folder type must be project or container" };
+  }
+  const kind = requestedKind ?? detectProjectRootKind(resolved);
   const roots = getProjectRoots();
   const existing = roots.find((root) => canonicalForCompare(root.path) === canonicalForCompare(resolved));
-  if (existing) return { ok: true, added: false, root: existing };
+  if (existing) {
+    if (!existing.custom || existing.kind === kind) return { ok: true, added: false, root: existing };
+    const next = readStoredRoots().map((entry) =>
+      canonicalForCompare(entry.path) === canonicalForCompare(resolved) ? { path: resolved, kind } : entry
+    );
+    writeStoredRoots(next);
+    rewindIndexedTranscriptsForRoot(resolved, kind);
+    return { ok: true, added: false, root: { ...existing, kind } };
+  }
 
-  const stored = readStoredPaths();
+  const stored = readStoredRoots();
   if (stored.length >= MAX_CUSTOM_ROOTS) {
     return { ok: false, error: `Blubber supports up to ${MAX_CUSTOM_ROOTS} custom project folders` };
   }
 
-  writeStoredPaths([...stored, resolved]);
-  rewindIndexedTranscriptsForRoot(resolved);
+  writeStoredRoots([...stored, { path: resolved, kind }]);
+  rewindIndexedTranscriptsForRoot(resolved, kind);
   const root: ProjectRootDefinition = {
     id: customRootId(resolved),
     label: path.basename(resolved) || resolved,
     path: resolved,
     custom: true,
+    kind,
   };
   return { ok: true, added: true, root };
 }
@@ -195,10 +289,10 @@ export function addProjectRoot(rawPath: string): AddProjectRootResult {
 export function removeProjectRoot(id: string): boolean {
   const target = getProjectRoots().find((root) => root.custom && root.id === id);
   if (!target) return false;
-  const next = readStoredPaths().filter(
-    (storedPath) => canonicalForCompare(storedPath) !== canonicalForCompare(target.path)
+  const next = readStoredRoots().filter(
+    (storedRoot) => canonicalForCompare(storedRoot.path) !== canonicalForCompare(target.path)
   );
-  writeStoredPaths(next);
+  writeStoredRoots(next);
   return true;
 }
 
@@ -218,7 +312,17 @@ export function resolveProjectRoot(id: string): ProjectRootDefinition | null {
  */
 export function resolveProjectDir(rootId: string, name: string): string | null {
   const root = resolveProjectRoot(rootId);
-  if (!root || !name || name.includes("/") || name.includes("\\") || name.includes("..")) return null;
+  if (!root || !name || name.includes("/") || name.includes("\\")) return null;
+  if (root.kind === "project") {
+    if (name !== root.label) return null;
+    try {
+      const realRoot = fs.realpathSync(root.path);
+      return fs.statSync(realRoot).isDirectory() ? realRoot : null;
+    } catch {
+      return fs.existsSync(root.path) ? null : root.path;
+    }
+  }
+  if (name.includes("..")) return null;
   const target = path.resolve(root.path, name);
   const rel = path.relative(root.path, target);
   if (rel !== name || rel.startsWith("..") || path.isAbsolute(rel)) return null;

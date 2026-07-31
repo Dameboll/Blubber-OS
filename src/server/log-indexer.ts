@@ -100,6 +100,16 @@ function projectSlugSuffix(projectPath: string): string {
 export function buildProjectResolver(): (filePath: string) => ProjectAttribution | null {
   const suffixes: { suffix: string; attribution: ProjectAttribution }[] = [];
   for (const root of getProjectRoots()) {
+    if (root.kind === "project") {
+      suffixes.push({
+        suffix: projectSlugSuffix(root.path),
+        attribution: {
+          name: root.label,
+          key: `${root.id}/${root.label}`,
+        },
+      });
+      continue;
+    }
     let entries: fs.Dirent[] = [];
     try {
       entries = fs.readdirSync(root.path, { withFileTypes: true });

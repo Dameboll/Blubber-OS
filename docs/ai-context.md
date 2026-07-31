@@ -1,7 +1,51 @@
 # Blubber OS — AI Context
-# Last sync: 2026-07-30 ~13:10 ET (v0.1.4 LIVE; project folders + terminal expansion)
+# Last sync: 2026-07-31 ~11:34 ET (v0.1.5 LIVE; project roots + safe Forget)
 
-## ===== v0.1.4 LIVE — RELIABLE PROJECTS + BIGGER TERMINAL — CURRENT SOURCE OF TRUTH =====
+## ===== v0.1.5 LIVE — PROJECTS THAT STAY PROJECTS — CURRENT SOURCE OF TRUTH =====
+# Supersedes the v0.1.4 block below. Do not rebuild or republish v0.1.5.
+#
+# RELEASE
+# - PR #17 squash-merged to main as 6cb1bf0341ffd7be4f9a4842402ec89a6916a4dc.
+# - Tag v0.1.5 resolves to that exact commit.
+# - https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.5 — public, not draft,
+#   not prerelease.
+# - Blubber.Setup.0.1.5.exe, 199,250,628 bytes.
+#   SHA256 C3112689606F25A108F21D8DA82179FFAA822C0BA7575E5A372BD3075F48C6FA
+# - Installer, latest.yml, blockmap, and SHA256SUMS were downloaded after publication
+#   and matched the local artifacts byte-for-byte. Public latest.yml says 0.1.5 and its
+#   sha512 matches the public installer.
+#
+# WHAT SHIPPED
+# - Add Project registers one selected repository as one project; src/docs/public and
+#   other internal directories no longer appear as separate project cards.
+# - Add Folder preserves the container workflow for a directory holding many repos.
+# - Existing v0.1.4 saved roots auto-classify on read, so customers do not need to
+#   remove and re-add their repository after updating.
+# - Each custom root has a safe Forget control. It removes only Blubber's registry
+#   entry, never the folder or any file on disk.
+# - Project-root terminal cwd, metadata, activity, and session identity stay correct.
+#
+# VERIFIED 2026-07-31
+# - npm run typecheck: pass.
+# - Playwright: 27/27 passed.
+# - scripts/release.ps1: all 10 stages passed.
+# - Packaged v0.1.5 cold launch on an isolated profile: dashboard plus
+#   /api/project-roots, /api/projects, /api/pet, and /api/recent all returned HTTP 200.
+# - Installer remains unsigned; SmartScreen disclosure is still the accepted limitation.
+#
+# AUTO-UPDATE
+# - The public non-prerelease v0.1.5 release has all updater assets and consistent
+#   metadata. Installed v0.1.3+ clients will discover it automatically.
+# - v0.1.0-v0.1.2 still require one manual installer run.
+#
+# STOREFRONT
+# - blubber-site PR #3 is merged; main c2d7eef contains the exact four-file v0.1.5
+#   link/version update and Shopify theme check reports zero errors.
+# - The rendered live store is still v0.1.4. Shopify CLI authentication requires an
+#   interactive account selection before backing up and pushing live theme 188479111535.
+## ===== END v0.1.5 LIVE =====
+
+## ===== v0.1.4 LIVE — RELIABLE PROJECTS + BIGGER TERMINAL — HISTORICAL =====
 # Supersedes the v0.1.3 block below. Do not rebuild or republish v0.1.4.
 #
 # RELEASE

@@ -1,34 +1,31 @@
 # CODEX HANDOFF — Blubber OS
-# Updated: 2026-07-30 13:10 EDT (v0.1.4 live; project folders + terminal expansion)
+# Updated: 2026-07-31 11:34 EDT (v0.1.5 live; project-root fix + safe Forget)
 # Read this + docs/ai-context.md before touching anything.
 #
-# CURRENT: v0.1.4 is the live GitHub release. Tag v0.1.4 and main both resolve to
-# f76ba2fdd136060a14c504f56c26dc895399e40d (PR #14 squash merge).
-# Blubber.Setup.0.1.4.exe is 199,245,146 bytes, SHA256
-# 47E11A5A98B73ECA69666C19707E6D9B7F093CF530A87ABEA0E1A7F6287CC47A.
+# CURRENT: v0.1.5 is the live GitHub release. Tag v0.1.5 resolves to
+# 6cb1bf0341ffd7be4f9a4842402ec89a6916a4dc (PR #17 squash merge).
+# Blubber.Setup.0.1.5.exe is 199,250,628 bytes, SHA256
+# C3112689606F25A108F21D8DA82179FFAA822C0BA7575E5A372BD3075F48C6FA.
 # It is public, not draft/prerelease, with the required latest.yml, .blockmap, and
 # SHA256SUMS.txt. All four assets were downloaded back from GitHub and matched the
-# local release byte-for-byte; latest.yml v0.1.4 and its sha512 match the live exe.
+# local release byte-for-byte; latest.yml v0.1.5 and its sha512 match the live exe.
 #
-# VERIFIED 2026-07-30:
-# - Customer folder feedback shipped: native Windows picker, durable custom roots,
-#   contained project APIs, distinct same-name repository identity, and non-blocking
-#   async metadata scans. Terminal now expands/restores to reclaim the app workspace.
-# - Typecheck + production build passed; Playwright 25/25; code, React, and security
-#   reviews approved with zero actionable findings.
-# - All 10 release.ps1 stages passed. The exact installer silently installed to the
-#   default location, created both shortcuts + registry entry, booted on a scrubbed
-#   virgin profile in 4 seconds with five key APIs 200, then silently uninstalled with
-#   the install directory, shortcuts, and registry entry all removed.
+# VERIFIED 2026-07-31:
+# - Add Project now treats the selected repository as one project instead of promoting
+#   its direct children. Add Folder remains the multi-repository container workflow.
+# - Saved v0.1.4 roots migrate automatically, and each custom root has a safe Forget
+#   action that removes only Blubber's registration and never deletes disk content.
+# - Typecheck passed; Playwright 27/27; all 10 release.ps1 stages passed.
+# - The packaged v0.1.5 app cold-booted on an isolated profile; the dashboard plus
+#   /api/project-roots, /api/projects, /api/pet, and /api/recent returned HTTP 200.
 # - Auto-update mechanics were previously proven by a real 0.1.3 -> 0.1.4 swap:
 #   differential download 750 KB instead of 190 MB, sha512 verification, NSIS swap,
-#   updated APIs 200, and clean uninstall. The now-public v0.1.4 feed carries the exact
-#   validated metadata/assets required for that path.
-# - The live Shopify storefront was updated to v0.1.4 on 2026-07-30 through a scoped
-#   four-file push to live theme 188479111535. A 421-file pre-push backup was taken;
-#   the post-push pull still had 421 files with exactly those four changed. Rendered
-#   production has two v0.1.4 installer links, zero v0.1.3 references, and the linked
-#   installer returns HTTP 206.
+#   updated APIs 200, and clean uninstall. The public v0.1.5 feed now carries the exact
+#   validated metadata/assets required for installed v0.1.3+ clients.
+# - blubber-site main c2d7eef contains the scoped four-file v0.1.5 storefront update.
+#   LIVE Shopify is still v0.1.4 because the CLI requires an interactive account login;
+#   do not claim the rendered storefront is v0.1.5 until theme 188479111535 is pushed
+#   and checked.
 #
 # NOT VERIFIED — do not claim otherwise:
 # - The PAID path has never taken a real card. Order #1001 was a 100% discount and the

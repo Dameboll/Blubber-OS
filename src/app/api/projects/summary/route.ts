@@ -32,6 +32,7 @@ import { getProjectActivityRollup } from "../../../../server/db";
 import { isWorkspaceConnected } from "../../../../server/connected-store";
 import {
   getProjectRoots,
+  resolveProjectDir,
   resolveProjectEntry,
   type ProjectRootDefinition,
 } from "../../../../server/project-roots";
@@ -139,7 +140,7 @@ function docSummary(
   return {
     root: root.id,
     rootLabel: root.label,
-    path: path.join(root.path, name),
+    path: resolveProjectDir(root.id, name) ?? root.path,
     name,
     lastActivityAt: null,
     weeklyEventCount: 0,
@@ -194,7 +195,10 @@ export async function GET() {
     const perRoot = await Promise.all(
       roots.map(async (root) => {
         if (!fs.existsSync(root.path)) return [] as ProjectSummary[];
-        const names = await listSubdirectories(root.path);
+        const names =
+          root.kind === "project"
+            ? [root.label]
+            : await listSubdirectories(root.path);
         return Promise.all(names.map((name) => getCachedSummary(root, name)));
       })
     );

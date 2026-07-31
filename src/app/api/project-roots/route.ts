@@ -53,7 +53,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "path must be a string" }, { status: 400 });
   }
 
-  const result = addProjectRoot((body as { path: string }).path);
+  const { path, kind } = body as { path: string; kind?: unknown };
+  if (kind !== undefined && kind !== "project" && kind !== "container") {
+    return NextResponse.json({ ok: false, error: "kind must be project or container" }, { status: 400 });
+  }
+  const result = addProjectRoot(path, kind);
   return NextResponse.json(result, { status: result.ok ? 200 : 400 });
 }
 

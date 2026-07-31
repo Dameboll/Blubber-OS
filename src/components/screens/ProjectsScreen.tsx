@@ -67,7 +67,7 @@ import FlubberCharacter from '../FlubberCharacter';
 import { Panel, Skeleton, SkeletonText, StatChip } from '../ui';
 import { useSession } from '../../context/SessionProvider';
 import { humanizeSlug } from '../../lib/humanize';
-import { addProjectRoot, isElectron } from '../../lib/native';
+import { addProjectRoot, isElectron, type ProjectRootKind } from '../../lib/native';
 import { getProjectIcon } from '../../lib/project-icon';
 import { assignPlates, platePath, type ProjectPlate } from '../../lib/project-plates';
 import {
@@ -290,6 +290,7 @@ interface ProjectsScreenSkeletonProps {
   classes: string;
   addingRoot: boolean;
   rootError: string | null;
+  onAddProject: () => void;
   onAddProjectsFolder: () => void;
   onNewProject: () => void;
 }
@@ -298,6 +299,7 @@ function ProjectsScreenSkeleton({
   classes,
   addingRoot,
   rootError,
+  onAddProject,
   onAddProjectsFolder,
   onNewProject,
 }: ProjectsScreenSkeletonProps) {
@@ -321,12 +323,22 @@ function ProjectsScreenSkeleton({
               <button
                 type="button"
                 className="projects-screen__new-btn projects-screen__add-root-btn"
+                onClick={onAddProject}
+                disabled={addingRoot}
+                title="Add one existing project repository"
+              >
+                <FolderPlus size={14} aria-hidden="true" />
+                {addingRoot ? 'Adding…' : 'Add Project'}
+              </button>
+              <button
+                type="button"
+                className="projects-screen__new-btn projects-screen__add-root-btn"
                 onClick={onAddProjectsFolder}
                 disabled={addingRoot}
                 title="Add a folder that contains project repositories"
               >
                 <FolderPlus size={14} aria-hidden="true" />
-                {addingRoot ? 'Adding…' : 'Add Folder'}
+                Add Folder
               </button>
               <button
                 type="button"
@@ -679,6 +691,7 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [newProjectTemplate, setNewProjectTemplate] = useState<string | undefined>(undefined);
   const [addingRoot, setAddingRoot] = useState(false);
+  const [removingRootId, setRemovingRootId] = useState<string | null>(null);
   const [rootError, setRootError] = useState<string | null>(null);
   const projectsRequestRef = useRef(0);
   const mountedRef = useRef(true);
@@ -778,11 +791,16 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
     [openProjectInTab],
   );
 
-  const handleAddProjectsFolder = useCallback(async () => {
+  const handleAddRoot = useCallback(async (kind: ProjectRootKind) => {
     setRootError(null);
     setAddingRoot(true);
     try {
-      const result = await addProjectRoot('Choose a folder containing your project repositories');
+      const result = await addProjectRoot(
+        kind === 'project'
+          ? 'Choose one existing project repository'
+          : 'Choose a folder containing project repositories',
+        kind,
+      );
       if (!result || result.cancelled) {
         if (!isElectron()) setRootError('Folder browsing is available in the installed Blubber app.');
         return;
@@ -799,6 +817,33 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
       if (mountedRef.current) setAddingRoot(false);
     }
   }, [refreshProjects]);
+
+  const handleForgetRoot = useCallback(async (root: ApiProjectRoot) => {
+    if (!root.custom || !root.id || removingRootId) return;
+    const noun = root.kind === 'project' ? 'project' : 'projects folder';
+    const confirmed = window.confirm(
+      `Forget ${noun} "${root.label}" from Blubber?\n\nNothing on disk will be deleted.`,
+    );
+    if (!confirmed) return;
+
+    setRootError(null);
+    setRemovingRootId(root.id);
+    try {
+      const response = await fetch(`/api/project-roots?id=${encodeURIComponent(root.id)}`, {
+        method: 'DELETE',
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error || 'Could not forget that folder');
+      window.dispatchEvent(new CustomEvent('blubber:project-roots-changed'));
+      if (mountedRef.current) await refreshProjects(false);
+    } catch (error) {
+      if (mountedRef.current) {
+        setRootError(error instanceof Error ? error.message : 'Could not forget that folder');
+      }
+    } finally {
+      if (mountedRef.current) setRemovingRootId(null);
+    }
+  }, [refreshProjects, removingRootId]);
 
   // OPEN PROJECT, NO QUESTIONS: switches to the Terminal screen and points
   // Blubber's narration at the exact real folder — see
@@ -842,6 +887,7 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
   }, [roots]);
 
   const totalProjects = allProjects.length;
+  const customRoots = useMemo(() => roots.filter((root) => root.custom && root.id), [roots]);
 
   // Real recency order — most-recently-touched (by the real doc mtime from
   // /api/projects/summary) first, undated projects last. Stable relative to
@@ -926,7 +972,8 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
           classes={classes}
           addingRoot={addingRoot}
           rootError={rootError}
-          onAddProjectsFolder={handleAddProjectsFolder}
+          onAddProject={() => void handleAddRoot('project')}
+          onAddProjectsFolder={() => void handleAddRoot('container')}
           onNewProject={() => openNewProject()}
         />
         {newProjectFlow}
@@ -949,9 +996,13 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
               </div>
             </div>
             <div className="projects-screen__controls">
-              <button type="button" className="projects-screen__pill-btn" onClick={handleAddProjectsFolder} disabled={addingRoot}>
+              <button type="button" className="projects-screen__pill-btn" onClick={() => void handleAddRoot('project')} disabled={addingRoot}>
                 <FolderPlus size={13} aria-hidden="true" />
-                {addingRoot ? 'Adding…' : 'Add Folder'}
+                {addingRoot ? 'Adding…' : 'Add Project'}
+              </button>
+              <button type="button" className="projects-screen__pill-btn" onClick={() => void handleAddRoot('container')} disabled={addingRoot}>
+                <FolderPlus size={13} aria-hidden="true" />
+                Add Folder
               </button>
               <button type="button" className="projects-screen__pill-btn" onClick={() => openNewProject()}>
                 <Plus size={13} aria-hidden="true" />
@@ -995,12 +1046,22 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
               <button
                 type="button"
                 className="projects-screen__new-btn projects-screen__add-root-btn"
-                onClick={handleAddProjectsFolder}
+                onClick={() => void handleAddRoot('project')}
+                disabled={addingRoot}
+                title="Add one existing project repository"
+              >
+                <FolderPlus size={14} aria-hidden="true" />
+                {addingRoot ? 'Adding…' : 'Add Project'}
+              </button>
+              <button
+                type="button"
+                className="projects-screen__new-btn projects-screen__add-root-btn"
+                onClick={() => void handleAddRoot('container')}
                 disabled={addingRoot}
                 title="Add a folder that contains project repositories"
               >
                 <FolderPlus size={14} aria-hidden="true" />
-                {addingRoot ? 'Adding…' : 'Add Folder'}
+                Add Folder
               </button>
               <button
                 type="button"
@@ -1016,6 +1077,31 @@ export default function ProjectsScreen({ className }: ProjectsScreenProps) {
               <p className="projects-screen__root-error" role="alert">
                 {rootError}
               </p>
+            )}
+            {customRoots.length > 0 && (
+              <div className="projects-screen__registered-roots" aria-label="Added project folders">
+                <span className="projects-screen__registered-label">Added</span>
+                {customRoots.map((root) => (
+                  <span className="projects-screen__registered-root" key={root.id}>
+                    <span className="projects-screen__registered-name" title={root.root}>
+                      {root.label}
+                    </span>
+                    <span className="projects-screen__registered-kind">
+                      {root.kind === 'project' ? 'Project' : 'Folder'}
+                    </span>
+                    <button
+                      type="button"
+                      className="projects-screen__forget-root"
+                      onClick={() => void handleForgetRoot(root)}
+                      disabled={removingRootId !== null}
+                      aria-label={`Forget ${root.label} from Blubber`}
+                      title="Forget from Blubber — files stay on disk"
+                    >
+                      <X size={12} aria-hidden="true" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             )}
           </div>
 

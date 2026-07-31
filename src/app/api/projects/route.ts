@@ -25,7 +25,7 @@ import { NextResponse } from "next/server";
 import { scaffoldProject } from "../../../server/project-scaffold";
 import { isWorkspaceConnected } from "../../../server/connected-store";
 import { getDemoProjectRoots } from "../../../server/demo-dataset";
-import { getProjectRoots } from "../../../server/project-roots";
+import { getProjectRoots, type ProjectRootKind } from "../../../server/project-roots";
 
 export const runtime = "nodejs";
 
@@ -35,6 +35,7 @@ export interface ProjectRoot {
   root: string;
   projects: string[];
   custom: boolean;
+  kind: ProjectRootKind;
 }
 
 async function listSubdirectories(root: string): Promise<string[]> {
@@ -72,7 +73,11 @@ export async function GET() {
         label: definition.label,
         root: definition.path,
         custom: definition.custom,
-        projects: await listSubdirectories(definition.path),
+        kind: definition.kind,
+        projects:
+          definition.kind === "project"
+            ? [definition.label]
+            : await listSubdirectories(definition.path),
       };
     })
   );

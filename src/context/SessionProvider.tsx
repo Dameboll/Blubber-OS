@@ -325,6 +325,8 @@ const KNOWN_DEV_ROOTS = ['ACTIVE', 'HOBBY', 'general', 'research'];
 interface ProjectIdentityRoot {
   id: string;
   path: string;
+  label: string;
+  kind: "project" | "container";
 }
 
 function normalizedIdentityPath(value: string): string {
@@ -346,6 +348,12 @@ function deriveProjectIdentity(
     .map((root) => ({ root, normalizedPath: normalizedIdentityPath(root.path) }))
     .sort((a, b) => b.normalizedPath.length - a.normalizedPath.length);
   for (const { root, normalizedPath } of candidates) {
+    if (
+      root.kind === "project" &&
+      (normalizedCwd === normalizedPath || normalizedCwd.startsWith(`${normalizedPath}/`))
+    ) {
+      return { projectRoot: root.id, projectName: root.label };
+    }
     const prefix = `${normalizedPath}/`;
     if (!normalizedCwd.startsWith(prefix)) continue;
     const projectName = normalizedCwd.slice(prefix.length).split('/')[0] || null;
@@ -477,14 +485,17 @@ export function SessionProvider({ children, onRequestTerminalNav }: SessionProvi
       fetch('/api/project-roots')
         .then((response) => {
           if (!response.ok) throw new Error(`project roots fetch failed: ${response.status}`);
-          return response.json() as Promise<{ roots?: Array<{ id: string; path: string }> }>;
+          return response.json() as Promise<{ roots?: ProjectIdentityRoot[] }>;
         })
         .then((data) => {
           if (cancelled || sequence !== loadSequence) return;
           const roots = Array.isArray(data.roots)
             ? data.roots.filter(
-                (root): root is { id: string; path: string } =>
-                  typeof root?.id === 'string' && typeof root?.path === 'string',
+                (root): root is ProjectIdentityRoot =>
+                  typeof root?.id === 'string' &&
+                  typeof root?.path === 'string' &&
+                  typeof root?.label === 'string' &&
+                  (root?.kind === 'project' || root?.kind === 'container'),
               )
             : [];
           projectIdentityRootsRef.current = roots;

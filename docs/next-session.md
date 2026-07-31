@@ -1,30 +1,29 @@
 # Next Session Brief
-Written: 2026-07-30 ~13:10 ET
+Written: 2026-07-31 ~11:34 ET
 For: next Blubber OS / Claude session
 
 ---
 
 ## PICK UP HERE
 
-**v0.1.4 is the live GitHub release. Project folders are durable, metadata scans no
-longer freeze the app, and the terminal can expand to the full workspace.**
+**v0.1.5 is the live GitHub release. A selected repository stays one project, saved
+v0.1.4 roots migrate automatically, and custom registrations can be safely forgotten.**
 
-- Tag `v0.1.4` = `f76ba2f`. `Blubber.Setup.0.1.4.exe`, 199,245,146 bytes.
-- SHA256 `47E11A5A98B73ECA69666C19707E6D9B7F093CF530A87ABEA0E1A7F6287CC47A`.
+- Tag `v0.1.5` = `6cb1bf0`. `Blubber.Setup.0.1.5.exe`, 199,250,628 bytes.
+- SHA256 `C3112689606F25A108F21D8DA82179FFAA822C0BA7575E5A372BD3075F48C6FA`.
 - Installer, `latest.yml`, `.blockmap`, and `SHA256SUMS.txt` were downloaded back from
   GitHub and matched the local release byte-for-byte.
-- Release: https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.4
-- Playwright 25/25, all 10 release stages, three review gates, and the exact
-  install/virgin-profile boot/API/uninstall lifecycle passed.
-- The live Shopify storefront was updated to v0.1.4 through blubber-site PR #2 and a
-  scoped four-file push to theme `188479111535`. A full 421-file backup was taken;
-  post-push still had 421 files with exactly four changed. Rendered production has
-  two v0.1.4 installer links, zero v0.1.3 references, and the installer returns 206.
+- Release: https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.5
+- Typecheck, Playwright 27/27, all 10 release stages, and packaged isolated-profile
+  boot/API smoke passed.
+- blubber-site PR #3 is merged on main (`c2d7eef`), but the rendered Shopify store is
+  still v0.1.4. Finish the interactive Shopify CLI login, back up live theme
+  `188479111535`, push only the four changed files, then verify rendered HTML.
 
 ### First action next time
 
 Read the top block of `docs/ai-context.md` and confirm the exact requested scope. Do **not**
-re-release v0.1.4, reopen the v0.1.0–v0.1.3 launch plans, or rebuild anything unless Dame
+re-release v0.1.5, reopen the v0.1.0–v0.1.4 launch plans, or rebuild anything unless Dame
 explicitly asks for a new change.
 
 ---

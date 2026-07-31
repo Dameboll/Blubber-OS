@@ -1,5 +1,5 @@
 # Next Session Brief
-Written: 2026-07-31 ~11:34 ET
+Written: 2026-07-31 ~12:03 ET
 For: next Blubber OS / Claude session
 
 ---
@@ -16,9 +16,11 @@ v0.1.4 roots migrate automatically, and custom registrations can be safely forgo
 - Release: https://github.com/Dameboll/Blubber-OS/releases/tag/v0.1.5
 - Typecheck, Playwright 27/27, all 10 release stages, and packaged isolated-profile
   boot/API smoke passed.
-- blubber-site PR #3 is merged on main (`c2d7eef`), but the rendered Shopify store is
-  still v0.1.4. Finish the interactive Shopify CLI login, back up live theme
-  `188479111535`, push only the four changed files, then verify rendered HTML.
+- blubber-site PR #3 is merged on main (`c2d7eef`) and live theme `188479111535`
+  received only the four intended files. Pre/post pulls each contained 421 files with
+  zero added/removed and exactly those four changed. Rendered production has three
+  v0.1.5 mentions, two v0.1.5 installer links, zero v0.1.4 references, and the public
+  installer returned HTTP 206 to a one-byte range probe.
 
 ### First action next time
 

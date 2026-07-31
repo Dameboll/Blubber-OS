@@ -1,5 +1,5 @@
 # Blubber OS — AI Context
-# Last sync: 2026-07-31 ~11:34 ET (v0.1.5 LIVE; project roots + safe Forget)
+# Last sync: 2026-07-31 ~12:03 ET (v0.1.5 app + storefront LIVE)
 
 ## ===== v0.1.5 LIVE — PROJECTS THAT STAY PROJECTS — CURRENT SOURCE OF TRUTH =====
 # Supersedes the v0.1.4 block below. Do not rebuild or republish v0.1.5.
@@ -41,8 +41,14 @@
 # STOREFRONT
 # - blubber-site PR #3 is merged; main c2d7eef contains the exact four-file v0.1.5
 #   link/version update and Shopify theme check reports zero errors.
-# - The rendered live store is still v0.1.4. Shopify CLI authentication requires an
-#   interactive account selection before backing up and pushing live theme 188479111535.
+# - Live Shopify theme Blubber OS #188479111535 received only those four files.
+# - Full pre-push backup: C:\Users\jeffh\Development\HOBBY\_backups\
+#   blubber-storefront-v015-links-20260731-120131 (421 files).
+# - Post-push pull: C:\Users\jeffh\Development\HOBBY\_backups\
+#   blubber-storefront-v015-post-20260731-120223 (421 files).
+# - Comparison: zero files added/removed and exactly the four intended files changed.
+# - Rendered production: HTTP 200, three v0.1.5 mentions, two v0.1.5 installer links,
+#   zero v0.1.4 references. Installer byte-range probe returned HTTP 206.
 ## ===== END v0.1.5 LIVE =====
 
 ## ===== v0.1.4 LIVE — RELIABLE PROJECTS + BIGGER TERMINAL — HISTORICAL =====

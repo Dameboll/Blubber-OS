@@ -1,5 +1,5 @@
 # CODEX HANDOFF — Blubber OS
-# Updated: 2026-07-31 11:34 EDT (v0.1.5 live; project-root fix + safe Forget)
+# Updated: 2026-07-31 12:03 EDT (v0.1.5 app + storefront live)
 # Read this + docs/ai-context.md before touching anything.
 #
 # CURRENT: v0.1.5 is the live GitHub release. Tag v0.1.5 resolves to
@@ -22,10 +22,15 @@
 #   differential download 750 KB instead of 190 MB, sha512 verification, NSIS swap,
 #   updated APIs 200, and clean uninstall. The public v0.1.5 feed now carries the exact
 #   validated metadata/assets required for installed v0.1.3+ clients.
-# - blubber-site main c2d7eef contains the scoped four-file v0.1.5 storefront update.
-#   LIVE Shopify is still v0.1.4 because the CLI requires an interactive account login;
-#   do not claim the rendered storefront is v0.1.5 until theme 188479111535 is pushed
-#   and checked.
+# - blubber-site main c2d7eef and live Shopify theme 188479111535 now carry the scoped
+#   four-file v0.1.5 storefront update. The full pre-push and post-push pulls each had
+#   421 files, zero added/removed, and exactly those four changed. Rendered production
+#   has three v0.1.5 mentions, two v0.1.5 installer links, zero v0.1.4 references, and
+#   the public installer range probe returned HTTP 206.
+# - Pre-push backup: C:\Users\jeffh\Development\HOBBY\_backups\
+#   blubber-storefront-v015-links-20260731-120131
+# - Post-push pull: C:\Users\jeffh\Development\HOBBY\_backups\
+#   blubber-storefront-v015-post-20260731-120223
 #
 # NOT VERIFIED — do not claim otherwise:
 # - The PAID path has never taken a real card. Order #1001 was a 100% discount and the
